@@ -43,6 +43,7 @@ const (
 	MemoryKindStorageReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
+	MemoryKindWrappedFunctionValue
 	MemoryKindHostFunctionValue
 	MemoryKindBoundFunctionValue
 	MemoryKindBigInt
@@ -50,6 +51,7 @@ const (
 	MemoryKindPublishedValue
 	MemoryKindStorageCapabilityControllerValue
 	MemoryKindAccountCapabilityControllerValue
+	MemoryKindStringBuilder
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -198,6 +200,7 @@ const (
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
 	MemoryKindRemoveStatement
+	MemoryKindGuardStatement
 
 	MemoryKindBooleanExpression
 	MemoryKindVoidExpression

@@ -41,14 +41,13 @@ func NewAccountStorageValue(
 
 	var storageValue *SimpleCompositeValue
 
-	methods := map[string]FunctionValue{}
-
-	computeLazyStoredMethod := func(name string, context MemberAccessibleContext) FunctionValue {
+	computeMethod := func(name string, context MemberAccessibleContext, accessedReference ReferenceValue) FunctionValue {
 		switch name {
 		case sema.Account_StorageTypeForEachPublicFunctionName:
 			return newStorageIterationFunction(
 				context,
 				storageValue,
+				accessedReference,
 				sema.Account_StorageTypeForEachPublicFunctionType,
 				address,
 				common.PathDomainPublic,
@@ -59,6 +58,7 @@ func NewAccountStorageValue(
 			return newStorageIterationFunction(
 				context,
 				storageValue,
+				accessedReference,
 				sema.Account_StorageTypeForEachStoredFunctionType,
 				address,
 				common.PathDomainStorage,
@@ -66,22 +66,22 @@ func NewAccountStorageValue(
 			)
 
 		case sema.Account_StorageTypeTypeFunctionName:
-			return authAccountStorageTypeFunction(context, storageValue, address)
+			return authAccountStorageTypeFunction(context, storageValue, accessedReference, address)
 
 		case sema.Account_StorageTypeLoadFunctionName:
-			return authAccountStorageLoadFunction(context, storageValue, address)
+			return authAccountStorageLoadFunction(context, storageValue, accessedReference, address)
 
 		case sema.Account_StorageTypeCopyFunctionName:
-			return authAccountStorageCopyFunction(context, storageValue, address)
+			return authAccountStorageCopyFunction(context, storageValue, accessedReference, address)
 
 		case sema.Account_StorageTypeSaveFunctionName:
-			return authAccountStorageSaveFunction(context, storageValue, address)
+			return authAccountStorageSaveFunction(context, storageValue, accessedReference, address)
 
 		case sema.Account_StorageTypeBorrowFunctionName:
-			return authAccountStorageBorrowFunction(context, storageValue, address)
+			return authAccountStorageBorrowFunction(context, storageValue, accessedReference, address)
 
 		case sema.Account_StorageTypeCheckFunctionName:
-			return authAccountStorageCheckFunction(context, storageValue, address)
+			return authAccountStorageCheckFunction(context, storageValue, accessedReference, address)
 		}
 
 		return nil
@@ -105,18 +105,6 @@ func NewAccountStorageValue(
 		return nil
 	}
 
-	methodsGetter := func(name string, context MemberAccessibleContext) FunctionValue {
-		method, ok := methods[name]
-		if !ok {
-			method = computeLazyStoredMethod(name, context)
-			if method != nil {
-				methods[name] = method
-			}
-		}
-
-		return method
-	}
-
 	var str string
 	stringer := func(context ValueStringContext, seenReferences SeenReferences) string {
 		if str == "" {
@@ -135,7 +123,7 @@ func NewAccountStorageValue(
 		// No fields, only computed fields, and methods.
 		nil,
 		computeField,
-		methodsGetter,
+		computeMethod,
 		nil,
 		stringer,
 	).WithPrivateField(AccountTypePrivateAddressFieldName, address)

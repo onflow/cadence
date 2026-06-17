@@ -360,10 +360,18 @@ func (IntValue) ChildStorables() []atree.Storable {
 func (v IntValue) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagIntValue,
+		0xd8, byte(CBORTagIntValue),
 	})
 	if err != nil {
 		return err
 	}
 	return e.CBOR.EncodeBigInt(v.BigInt)
+}
+
+func (IntValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v IntValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
 }

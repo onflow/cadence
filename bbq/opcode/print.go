@@ -221,6 +221,7 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 			analysis.JumpInfoMap[i] = jumpInfo
 			// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
 			analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+
 		case InstructionJumpIfFalse:
 			target := int(instr.Target)
 			jumpInfo := JumpInfo{
@@ -242,6 +243,7 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 			analysis.JumpInfoMap[i] = jumpInfo
 			// instructions that are jump targets are leaders and instructions immediately after jumps are leaders
 			analysis.BlockLeaders = append(analysis.BlockLeaders, target, i+1)
+
 		case InstructionJumpIfNil:
 			target := int(instr.Target)
 			jumpInfo := JumpInfo{
@@ -265,6 +267,7 @@ func analyzeControlFlow(instructions []Instruction) *FlowAnalysis {
 			analysis.JumpInfoMap[i] = jumpInfo
 			// instructions immediately after jumps are leaders
 			analysis.BlockLeaders = append(analysis.BlockLeaders, i+1)
+
 		case InstructionReturn, InstructionReturnValue:
 			jumpInfo := JumpInfo{
 				Target:   -1, // function exit

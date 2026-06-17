@@ -4367,3 +4367,203 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretDynamicCastContainer(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [Int] {
+              let array: [Int] = [1, 2]
+              let arrayOfOptionals: [Int?] = array
+              return arrayOfOptionals as! [Int]
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			result,
+		)
+	})
+
+	t.Run("dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+		  fun test(): {String: Int} {
+			  let dict: {String: Int} = {"a": 1, "b": 2}
+              let dictOfOptionals: {String: Int?} = dict
+              return dictOfOptionals as! {String: Int}
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewDictionaryValue(
+				inter,
+				interpreter.NewDictionaryStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				interpreter.NewUnmeteredStringValue("a"),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredStringValue("b"),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+			result,
+		)
+	})
+}
+
+func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, targetType string, expectError bool) {
+
+		code := fmt.Sprintf(
+			`
+                entitlement E1
+                entitlement E2
+
+                fun getBorrowType(): Type {
+                    return Type<auth(E1, E2) &Int>()
+                }
+
+                fun test(cap: Capability<auth(E1, E2) &Int>) {
+                    let upcastedCap: %s = cap
+                    let downcastedCap = upcastedCap as! Capability<auth(E1, E2) &Int>
+                }`,
+			targetType,
+		)
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+		borrowType := typeValue.Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			0, // Random ID
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		_, err = inter.Invoke("test", capabilityValue)
+
+		if expectError {
+			RequireError(t, err)
+			var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+			require.ErrorAs(t, err, &forceCastTypeMismatchError)
+		} else {
+			require.NoError(t, err)
+		}
+	}
+
+	const (
+		expectError = true
+		noError     = false
+	)
+
+	t.Run("borrow type with fewer entitlements", func(t *testing.T) {
+		t.Parallel()
+		test(t, "Capability<auth(E1) &Int>", expectError)
+	})
+
+	t.Run("borrow type with no entitlements", func(t *testing.T) {
+		t.Parallel()
+		test(t, "Capability<&Int>", expectError)
+	})
+
+	t.Run("&AnyStruct borrow type", func(t *testing.T) {
+		t.Parallel()
+		test(t, "Capability<&AnyStruct>", expectError)
+	})
+
+	t.Run("untyped capability", func(t *testing.T) {
+		t.Parallel()
+		test(t, "Capability", noError)
+	})
+
+	t.Run("to AnyStruct", func(t *testing.T) {
+		t.Parallel()
+		test(t, "AnyStruct", noError)
+	})
+
+	t.Run("nested in Array", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun test(cap: [Capability<auth(E1, E2) &Int>]) {
+                let upcastedCap: [Capability<&Int>] = cap
+                let downcastedCap = upcastedCap as! [Capability<auth(E1, E2) &Int>]
+            }
+        `
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+		borrowType := typeValue.Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		arrayValue := interpreter.NewArrayValue(
+			inter,
+			interpreter.NewVariableSizedStaticType(
+				inter,
+				interpreter.NewCapabilityStaticType(
+					inter,
+					borrowType,
+				),
+			),
+			common.ZeroAddress,
+			capabilityValue,
+		)
+
+		_, err = inter.Invoke("test", arrayValue)
+
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(t, common.TypeID("[Capability<auth(S.test.E1,S.test.E2)&Int>]"), forceCastTypeMismatchError.ExpectedType.ID())
+		assert.Equal(t, common.TypeID("[Capability<&Int>]"), forceCastTypeMismatchError.ActualType.ID())
+	})
+}

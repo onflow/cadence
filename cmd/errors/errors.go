@@ -356,6 +356,11 @@ func generateErrors() []namedError {
 				Pos: placeholderPosition,
 			},
 		},
+		{"parser.MissingElseInGuardStatementError",
+			&parser.MissingElseInGuardStatementError{
+				GotToken: placeholderToken,
+			},
+		},
 		{"parser.MissingEndOfParenthesizedExpressionError",
 			&parser.MissingEndOfParenthesizedExpressionError{
 				GotToken: placeholderToken,
@@ -825,6 +830,11 @@ func generateErrors() []namedError {
 				Range: placeholderRange,
 			},
 		},
+		{"sema.GuardStatementElseBlockMustExitError",
+			&sema.GuardStatementElseBlockMustExitError{
+				Range: placeholderRange,
+			},
+		},
 		{"sema.ImportedProgramError",
 			&sema.ImportedProgramError{
 				Err:      placeholderError,
@@ -1015,6 +1025,11 @@ func generateErrors() []namedError {
 		},
 		{"sema.InvalidDestructionError",
 			&sema.InvalidDestructionError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.InvalidDictionaryIndexBindingError",
+			&sema.InvalidDictionaryIndexBindingError{
 				Range: placeholderRange,
 			},
 		},
@@ -1746,6 +1761,11 @@ func generateErrors() []namedError {
 		},
 		{"sema.UnsupportedResourceForLoopError",
 			&sema.UnsupportedResourceForLoopError{
+				Range: placeholderRange,
+			},
+		},
+		{"sema.WildcardAddressImportError",
+			&sema.WildcardAddressImportError{
 				Range: placeholderRange,
 			},
 		},

@@ -21,7 +21,10 @@ package interpreter
 import (
 	"math/big"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -51,6 +54,7 @@ type NumberValue interface {
 func getNumberValueFunctionMember(
 	context MemberAccessibleContext,
 	v NumberValue,
+	accessedReference ReferenceValue,
 	name string,
 	typ sema.Type,
 ) FunctionValue {
@@ -60,6 +64,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ToStringFunctionType,
 			NativeNumberToStringFunction,
 		)
@@ -68,6 +73,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ToBigEndianBytesFunctionType,
 			NativeNumberToBigEndianBytesFunction,
 		)
@@ -76,6 +82,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingAddFunction,
 		)
@@ -84,6 +91,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingSubtractFunction,
 		)
@@ -92,6 +100,7 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingMultiplyFunction,
 		)
@@ -100,8 +109,35 @@ func getNumberValueFunctionMember(
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			NativeNumberSaturatingDivideFunction,
+		)
+
+	case sema.FixedPointNumericTypePowFunctionName:
+		funcType, ok := sema.FixedPointPowFunctionTypes[typ]
+		if !ok {
+			return nil
+		}
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			accessedReference,
+			funcType,
+			NativeFixedPointPowFunction,
+		)
+
+	case sema.FixedPointNumericTypeMultiplyDivideFunctionName:
+		funcType, ok := sema.FixedPointMultiplyDivideFunctionTypes[typ]
+		if !ok {
+			return nil
+		}
+		return NewBoundHostFunctionValue(
+			context,
+			v,
+			accessedReference,
+			funcType,
+			NativeFixedPointMultiplyDivideFunction,
 		)
 	}
 
@@ -212,5 +248,46 @@ var NativeNumberSaturatingDivideFunction = NativeFunction(
 	) Value {
 		other := AssertValueOfType[NumberValue](args[0])
 		return receiver.(NumberValue).SaturatingDiv(context, other)
+	},
+)
+
+var NativeFixedPointMultiplyDivideFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		factor := AssertValueOfType[FixedPointValue](args[0])
+		divisor := AssertValueOfType[FixedPointValue](args[1])
+		var rounding fix.RoundingMode
+		if len(args) > 2 {
+			rounding = extractRoundingRule(args[2])
+		} else {
+			rounding = fix.RoundTruncate
+		}
+		return receiver.(FixedPointValue).MultiplyDivide(context, factor, divisor, rounding)
+	},
+)
+
+var NativeFixedPointPowFunction = NativeFunction(
+	func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		receiver Value,
+		args []Value,
+	) Value {
+		switch v := receiver.(type) {
+		case UFix64Value:
+			exponent := AssertValueOfType[Fix64Value](args[0])
+			return v.Pow(context, exponent)
+		case UFix128Value:
+			exponent := AssertValueOfType[Fix128Value](args[0])
+			return v.Pow(context, exponent)
+		default:
+			panic(errors.NewUnreachableError())
+		}
 	},
 )

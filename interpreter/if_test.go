@@ -39,7 +39,7 @@ func TestInterpretIfStatement(t *testing.T) {
 
 		// NOTE: invalid code not supported by compiler,
 		// tests without errors are in the next subtest "without errors"
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			`
            fun testTrue(): Int {
                if true {

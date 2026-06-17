@@ -20,6 +20,7 @@ package sema
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"math/big"
 	"slices"
@@ -177,6 +178,10 @@ type Type interface {
 	TypeAnnotationState() TypeAnnotationState
 	Rewrite(rewrite TypeRewriter) (result Type, rewritten bool)
 
+	// Walk calls the given function for this type and every type it is composed of.
+	// If the function returns false, the walk is stopped entirely.
+	Walk(visit func(ty Type) bool) bool
+
 	// Unify attempts to unify the given type with this type, i.e., resolve type parameters
 	// in generic types (see `GenericType`) using the given type parameters.
 	//
@@ -306,14 +311,16 @@ type TypeIndexableType interface {
 }
 
 type MemberResolver struct {
-	Resolve func(
-		memoryGauge common.MemoryGauge,
-		identifier string,
-		targetRange ast.HasPosition,
-		report func(error),
-	) *Member
-	Kind common.DeclarationKind
+	Resolve ResolveMemberFunc
+	Kind    common.DeclarationKind
 }
+
+type ResolveMemberFunc func(
+	memoryGauge common.MemoryGauge,
+	identifier string,
+	targetRange ast.HasPosition,
+	report func(error),
+) *Member
 
 // supertype of interfaces and composites
 type NominalType interface {
@@ -352,6 +359,16 @@ func VisitThisAndNested(t Type, visit func(ty Type)) {
 	containerType.GetNestedTypes().Foreach(func(_ string, nestedType Type) {
 		VisitThisAndNested(nestedType, visit)
 	})
+}
+
+// WalkType calls the given function for the given type and every type it is composed of.
+// If the function returns false, the walk is stopped entirely.
+// Returns false if the walk was stopped.
+func WalkType(t Type, visit func(ty Type) bool) bool {
+	if t == nil {
+		return true
+	}
+	return t.Walk(visit)
 }
 
 func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdentifier string) Type {
@@ -794,7 +811,8 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 func HasToStringFunction(ty Type) bool {
 	switch ty {
-	case CharacterType:
+	case BoolType,
+		CharacterType:
 		return true
 	default:
 		return IsSubType(ty, NumberType) ||
@@ -929,6 +947,13 @@ func (t *OptionalType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 		}
 	}
 	return applyTypeRewriter(rewrite, result, rewritten)
+}
+
+func (t *OptionalType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
 }
 
 func (t *OptionalType) Unify(
@@ -1172,6 +1197,10 @@ func (t *GenericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *GenericType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (t *GenericType) Unify(
 	other Type,
 	typeArguments *TypeParameterTypeOrderedMap,
@@ -1301,17 +1330,26 @@ func registerSaturatingArithmeticType(t Type) {
 	)
 }
 
-func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[string]MemberResolver) {
+func addSaturatingArithmeticFunctions(
+	t SaturatingArithmeticType,
+	members map[string]MemberResolver,
+) {
+	functionType := SaturatingArithmeticTypeFunctionTypes[t]
 
 	addArithmeticFunction := func(name string, docString string) {
 		members[name] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, _ string, _ ast.HasPosition, _ func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				_ string,
+				_ ast.HasPosition,
+				_ func(error),
+			) *Member {
 				return NewPublicFunctionMember(
 					memoryGauge,
 					t,
 					name,
-					SaturatingArithmeticTypeFunctionTypes[t],
+					functionType,
 					docString,
 				)
 			},
@@ -1352,6 +1390,110 @@ type SaturatingArithmeticSupport struct {
 	Subtract bool
 	Multiply bool
 	Divide   bool
+}
+
+const FixedPointNumericTypePowFunctionName = "pow"
+const fixedPointNumericTypePowFunctionDocString = `
+Returns this value raised to the power of the given exponent.
+The exponent may be negative or fractional.
+`
+
+var FixedPointPowFunctionTypes = map[Type]*FunctionType{}
+
+func registerFixedPointPowFunction(t *FixedPointNumericType, exponentType *FixedPointNumericType) {
+	FixedPointPowFunctionTypes[t] = NewSimpleFunctionType(
+		FunctionPurityView,
+		[]Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "exponent",
+				TypeAnnotation: NewTypeAnnotation(exponentType),
+			},
+		},
+		NewTypeAnnotation(t),
+	)
+}
+
+func addFixedPointPowFunction(
+	t *FixedPointNumericType,
+	members map[string]MemberResolver,
+) {
+	functionType := FixedPointPowFunctionTypes[t]
+
+	members[FixedPointNumericTypePowFunctionName] = MemberResolver{
+		Kind: common.DeclarationKindFunction,
+		Resolve: func(
+			memoryGauge common.MemoryGauge,
+			_ string,
+			_ ast.HasPosition,
+			_ func(error),
+		) *Member {
+			return NewPublicFunctionMember(
+				memoryGauge,
+				t,
+				FixedPointNumericTypePowFunctionName,
+				functionType,
+				fixedPointNumericTypePowFunctionDocString,
+			)
+		},
+	}
+}
+
+const FixedPointNumericTypeMultiplyDivideFunctionName = "multiplyDivide"
+const fixedPointNumericTypeMultiplyDivideFunctionDocString = `
+Returns self * factor / divisor, without intermediate rounding
+`
+
+var FixedPointMultiplyDivideFunctionTypes = map[Type]*FunctionType{}
+
+func registerFixedPointMultiplyDivideFunction(t *FixedPointNumericType) {
+	FixedPointMultiplyDivideFunctionTypes[t] = &FunctionType{
+		Purity: FunctionPurityView,
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "factor",
+				TypeAnnotation: NewTypeAnnotation(t),
+			},
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "divisor",
+				TypeAnnotation: NewTypeAnnotation(t),
+			},
+			{
+				Label:          "rounding",
+				Identifier:     "rounding",
+				TypeAnnotation: RoundingRuleTypeAnnotation,
+			},
+		},
+		Arity:                &Arity{Min: 2, Max: 3},
+		ReturnTypeAnnotation: NewTypeAnnotation(t),
+	}
+}
+
+func addFixedPointMultiplyDivideFunction(
+	t *FixedPointNumericType,
+	members map[string]MemberResolver,
+) {
+	functionType := FixedPointMultiplyDivideFunctionTypes[t]
+
+	members[FixedPointNumericTypeMultiplyDivideFunctionName] = MemberResolver{
+		Kind: common.DeclarationKindFunction,
+		Resolve: func(
+			memoryGauge common.MemoryGauge,
+			_ string,
+			_ ast.HasPosition,
+			_ func(error),
+		) *Member {
+			return NewPublicFunctionMember(
+				memoryGauge,
+				t,
+				FixedPointNumericTypeMultiplyDivideFunctionName,
+				functionType,
+				fixedPointNumericTypeMultiplyDivideFunctionDocString,
+			)
+		},
+	}
 }
 
 // NumericType represent all the types in the integer range
@@ -1499,6 +1641,10 @@ func (t *NumericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *NumericType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (t *NumericType) MinInt() *big.Int {
 	return t.minInt
 }
@@ -1605,9 +1751,11 @@ var _ FractionalRangedType = &FixedPointNumericType{}
 var _ SaturatingArithmeticType = &FixedPointNumericType{}
 
 func NewFixedPointNumericType(typeName string) *FixedPointNumericType {
-	return &FixedPointNumericType{
+	t := &FixedPointNumericType{
 		name: typeName,
 	}
+	registerFixedPointMultiplyDivideFunction(t)
+	return t
 }
 
 func (t *FixedPointNumericType) Tag() TypeTag {
@@ -1645,6 +1793,11 @@ func (t *FixedPointNumericType) WithSaturatingFunctions(saturatingArithmetic Sat
 
 	registerSaturatingArithmeticType(t)
 
+	return t
+}
+
+func (t *FixedPointNumericType) WithPowFunction(exponentType *FixedPointNumericType) *FixedPointNumericType {
+	registerFixedPointPowFunction(t, exponentType)
 	return t
 }
 
@@ -1741,6 +1894,10 @@ func (t *FixedPointNumericType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *FixedPointNumericType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (t *FixedPointNumericType) MinInt() *big.Int {
 	return t.minInt
 }
@@ -1784,6 +1941,10 @@ func (t *FixedPointNumericType) GetMembers() map[string]MemberResolver {
 	// Compute members and cache them
 	computedMembers := map[string]MemberResolver{}
 	addSaturatingArithmeticFunctions(t, computedMembers)
+	if _, ok := FixedPointPowFunctionTypes[t]; ok {
+		addFixedPointPowFunction(t, computedMembers)
+	}
+	addFixedPointMultiplyDivideFunction(t, computedMembers)
 	computedMembers = withBuiltinMembers(t, computedMembers)
 	t.memberResolvers.Store(&computedMembers)
 	return computedMembers
@@ -2109,7 +2270,8 @@ var UFix64Type = NewFixedPointNumericType(UFix64TypeName).
 		Add:      true,
 		Subtract: true,
 		Multiply: true,
-	})
+	}).
+	WithPowFunction(Fix64Type)
 var UFix64TypeAnnotation = NewTypeAnnotation(UFix64Type)
 
 // UFix128Type represents the 128-bit unsigned decimal fixed-point type `UFix128`
@@ -2123,7 +2285,8 @@ var UFix128Type = NewFixedPointNumericType(UFix128TypeName).
 		Add:      true,
 		Subtract: true,
 		Multiply: true,
-	})
+	}).
+	WithPowFunction(Fix128Type)
 var UFix128TypeAnnotation = NewTypeAnnotation(UFix128Type)
 
 // Numeric type ranges
@@ -2446,7 +2609,7 @@ Returns a new array whose elements are produced by applying the mapper function 
 func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 	members := map[string]MemberResolver{
-		"contains": {
+		ArrayTypeContainsFunctionName: {
 			Kind: common.DeclarationKindFunction,
 			Resolve: func(
 				memoryGauge common.MemoryGauge,
@@ -2577,64 +2740,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 			},
 		},
 		ArrayTypeFilterFunctionName: {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-
-				elementType := arrayType.ElementType(false)
-
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayFilterFunctionType(memoryGauge, elementType),
-					arrayTypeFilterFunctionDocString,
-				)
-			},
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayFilterFunctionMemberFuncResolver(arrayType, arrayType),
 		},
 		ArrayTypeMapFunctionName: {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(
-				memoryGauge common.MemoryGauge,
-				identifier string,
-				targetRange ast.HasPosition,
-				report func(error),
-			) *Member {
-				elementType := arrayType.ElementType(false)
-
-				// TODO: maybe allow for resource element type as a reference.
-				if elementType.IsResourceType() {
-					report(
-						&InvalidResourceArrayMemberError{
-							Name:            identifier,
-							DeclarationKind: common.DeclarationKindFunction,
-							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
-						},
-					)
-				}
-
-				return NewPublicFunctionMember(
-					memoryGauge,
-					arrayType,
-					identifier,
-					ArrayMapFunctionType(memoryGauge, arrayType),
-					arrayTypeMapFunctionDocString,
-				)
-			},
+			Kind:    common.DeclarationKindFunction,
+			Resolve: ArrayMapFunctionMemberFuncResolver(arrayType, arrayType),
 		},
 	}
 
@@ -2913,6 +3024,80 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 	return withBuiltinMembers(arrayType, members)
 }
 
+func ArrayMapFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+		elementType := arrayType.ElementType(false)
+
+		// TODO: maybe allow for resource element type as a reference.
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArrayMapFunctionType(
+				memoryGauge,
+				accessedType,
+				arrayType,
+			),
+			arrayTypeMapFunctionDocString,
+		)
+	}
+}
+
+func ArrayFilterFunctionMemberFuncResolver(
+	accessedType Type,
+	arrayType ArrayType,
+) ResolveMemberFunc {
+	return func(
+		memoryGauge common.MemoryGauge,
+		identifier string,
+		targetRange ast.HasPosition,
+		report func(error),
+	) *Member {
+
+		elementType := arrayType.ElementType(false)
+
+		if elementType.IsResourceType() {
+			report(
+				&InvalidResourceArrayMemberError{
+					Name:            identifier,
+					DeclarationKind: common.DeclarationKindFunction,
+					Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+				},
+			)
+		}
+
+		return NewPublicFunctionMember(
+			memoryGauge,
+			arrayType,
+			identifier,
+			ArrayFilterFunctionType(
+				memoryGauge,
+				accessedType,
+				elementType,
+			),
+			arrayTypeFilterFunctionDocString,
+		)
+	}
+}
+
 func ArrayRemoveLastFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityImpure,
@@ -2989,6 +3174,7 @@ func ArrayFirstIndexFunctionType(elementType Type) *FunctionType {
 		),
 	)
 }
+
 func ArrayContainsFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
 		FunctionPurityView,
@@ -3125,9 +3311,25 @@ func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
 	}
 }
 
-func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *FunctionType {
-	// fun filter(_ function: ((T): Bool)): [T]
-	// funcType: elementType -> Bool
+// ArrayFilterFunctionType returns the type for the array function `filter`:
+//
+//	fun (_ function: ((T): Bool)): [T]
+func ArrayFilterFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	elementType Type,
+) *FunctionType {
+
+	if ShouldReturnReference(accessedType, elementType, false) {
+		outerRef, _ := MaybeReferenceType(accessedType)
+		elementType = GetDescendantReferenceType(
+			memoryGauge,
+			elementType,
+			UnauthorizedAccess,
+			outerRef.Authorization,
+		)
+	}
+
 	funcType := &FunctionType{
 		Parameters: []Parameter{
 			{
@@ -3152,11 +3354,19 @@ func ArrayFilterFunctionType(memoryGauge common.MemoryGauge, elementType Type) *
 	}
 }
 
-func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *FunctionType {
-	// For [T] or [T; N]
-	// fun map(_ function: ((T): U)): [U]
-	//               or
-	// fun map(_ function: ((T): U)): [U; N]
+// ArrayMapFunctionType returns the type for the array function `map`:
+// For [T]:
+//
+//	fun (_ function: ((T): U)): [U]
+//
+// For [T; N]:
+//
+//	fun (_ function: ((T): U)): [U; N]
+func ArrayMapFunctionType(
+	memoryGauge common.MemoryGauge,
+	accessedType Type,
+	arrayType ArrayType,
+) *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name: "U",
@@ -3176,12 +3386,23 @@ func ArrayMapFunctionType(memoryGauge common.MemoryGauge, arrayType ArrayType) *
 		panic(errors.NewUnreachableError())
 	}
 
-	// transformFuncType: elementType -> U
+	elementType := arrayType.ElementType(false)
+
+	if ShouldReturnReference(accessedType, elementType, false) {
+		outerRef, _ := MaybeReferenceType(accessedType)
+		elementType = GetDescendantReferenceType(
+			memoryGauge,
+			elementType,
+			UnauthorizedAccess,
+			outerRef.Authorization,
+		)
+	}
+
 	transformFuncType := &FunctionType{
 		Parameters: []Parameter{
 			{
 				Identifier:     "element",
-				TypeAnnotation: NewTypeAnnotation(arrayType.ElementType(false)),
+				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(typeU),
@@ -3322,6 +3543,13 @@ func (t *VariableSizedType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 		}
 	}
 	return applyTypeRewriter(rewrite, result, rewritten)
+}
+
+func (t *VariableSizedType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
 }
 
 func (*VariableSizedType) isValueIndexableType() bool {
@@ -3525,6 +3753,13 @@ func (t *ConstantSizedType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 		}
 	}
 	return applyTypeRewriter(rewrite, result, rewritten)
+}
+
+func (t *ConstantSizedType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
 }
 
 func (*ConstantSizedType) isValueIndexableType() bool {
@@ -4132,8 +4367,9 @@ func (t *FunctionType) IsInvalidType() bool {
 	return t.ReturnTypeAnnotation.Type.IsInvalidType()
 }
 
-func (*FunctionType) IsOrContainsReferenceType() bool {
-	return false
+func (t *FunctionType) IsOrContainsReferenceType() bool {
+	returnType := t.ReturnTypeAnnotation.Type
+	return returnType.IsOrContainsReferenceType()
 }
 
 func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
@@ -4269,6 +4505,26 @@ func (t *FunctionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	}
 
 	return applyTypeRewriter(rewrite, result, anyRewritten)
+}
+
+func (t *FunctionType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	for _, typeParameter := range t.TypeParameters {
+		if typeParameter.TypeBound == nil {
+			continue
+		}
+		if !typeParameter.TypeBound.Walk(visit) {
+			return false
+		}
+	}
+	for i := range t.Parameters {
+		if !t.Parameters[i].TypeAnnotation.Type.Walk(visit) {
+			return false
+		}
+	}
+	return t.ReturnTypeAnnotation.Type.Walk(visit)
 }
 
 func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
@@ -4503,11 +4759,13 @@ var AllBuiltinTypes = common.Concat(
 		PublicKeyType,
 		SignatureAlgorithmType,
 		HashAlgorithmType,
+		RoundingRuleType,
 		StorageCapabilityControllerType,
 		AccountCapabilityControllerType,
 		DeploymentResultType,
 		HashableStructType,
 		&InclusiveRangeType{},
+		StringBuilderType,
 		StructStringerType,
 	},
 )
@@ -4644,6 +4902,14 @@ var AllNumberTypes = common.Concat(
 	},
 )
 
+var AllPathTypes = []Type{
+	PathType,
+	StoragePathType,
+	CapabilityPathType,
+	PublicPathType,
+	PrivatePathType,
+}
+
 var BuiltinEntitlements = map[string]*EntitlementType{}
 
 var BuiltinEntitlementMappings = map[string]*EntitlementMapType{
@@ -4684,7 +4950,13 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			functionType := NumberConversionFunctionType(numberType)
+			var functionType *FunctionType
+			switch numberType {
+			case Fix64Type, UFix64Type:
+				functionType = FixedPoint64ConversionFunctionType(numberType)
+			default:
+				functionType = NumberConversionFunctionType(numberType)
+			}
 
 			addMember := func(member *Member) {
 				if functionType.Members == nil {
@@ -4792,6 +5064,28 @@ func NumberConversionFunctionType(numberType Type) *FunctionType {
 				TypeAnnotation: NumberTypeAnnotation,
 			},
 		},
+		ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
+		ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
+	}
+}
+
+func FixedPoint64ConversionFunctionType(numberType Type) *FunctionType {
+	return &FunctionType{
+		Purity:           FunctionPurityView,
+		TypeFunctionType: numberType,
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: NumberTypeAnnotation,
+			},
+			{
+				Label:          "rounding",
+				Identifier:     "rounding",
+				TypeAnnotation: RoundingRuleTypeAnnotation,
+			},
+		},
+		Arity:                    &Arity{Min: 1, Max: 2},
 		ReturnTypeAnnotation:     NewTypeAnnotation(numberType),
 		ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 	}
@@ -5065,6 +5359,7 @@ type CompositeType struct {
 	ExplicitInterfaceConformances    []*InterfaceType
 	Kind                             common.CompositeKind
 	cachedIdentifiersLock            sync.RWMutex
+	ConstructorAccess                Access
 	ConstructorPurity                FunctionPurity
 	HasComputedMembers               bool
 	// Only applicable for native composite types
@@ -5490,6 +5785,10 @@ func (t *CompositeType) TypeAnnotationState() TypeAnnotationState {
 
 func (t *CompositeType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
+}
+
+func (t *CompositeType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
 }
 
 func (*CompositeType) Unify(
@@ -6300,6 +6599,10 @@ func (t *InterfaceType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *InterfaceType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (*InterfaceType) Unify(
 	_ Type,
 	_ *TypeParameterTypeOrderedMap,
@@ -6575,6 +6878,16 @@ func (t *DictionaryType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 		}
 	}
 	return applyTypeRewriter(rewrite, result, rewritten)
+}
+
+func (t *DictionaryType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if !t.KeyType.Walk(visit) {
+		return false
+	}
+	return t.ValueType.Walk(visit)
 }
 
 func (t *DictionaryType) CheckInstantiated(
@@ -7103,6 +7416,16 @@ func (t *InclusiveRangeType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
+func (t *InclusiveRangeType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if t.MemberType != nil {
+		return t.MemberType.Walk(visit)
+	}
+	return true
+}
+
 func (t *InclusiveRangeType) BaseType() Type {
 	if t.MemberType == nil {
 		return nil
@@ -7356,6 +7679,9 @@ type ReferenceType struct {
 	Authorization Access
 
 	typeID atomic.Pointer[TypeID]
+
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &ReferenceType{}
@@ -7548,8 +7874,24 @@ func (t *ReferenceType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, result, rewritten)
 }
 
+func (t *ReferenceType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	return t.Type.Walk(visit)
+}
+
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
-	return t.Type.GetMembers()
+	t.initializeMembers()
+	return t.memberResolvers
+}
+
+func (t *ReferenceType) initializeMembers() {
+	t.memberResolversOnce.Do(func() {
+		members := maps.Clone(t.Type.GetMembers())
+		t.overloadMembers(members)
+		t.memberResolvers = members
+	})
 }
 
 func (t *ReferenceType) isValueIndexableType() bool {
@@ -7672,6 +8014,26 @@ func (t *ReferenceType) CheckInstantiated(
 	)
 }
 
+func (t *ReferenceType) overloadMembers(members map[string]MemberResolver) {
+	switch ty := t.Type.(type) {
+	case ArrayType:
+		t.overloadArrayReferenceMembers(ty, members)
+	}
+}
+
+func (t *ReferenceType) overloadArrayReferenceMembers(arrayType ArrayType, members map[string]MemberResolver) {
+
+	members[ArrayTypeFilterFunctionName] = MemberResolver{
+		Kind:    common.DeclarationKindFunction,
+		Resolve: ArrayFilterFunctionMemberFuncResolver(t, arrayType),
+	}
+
+	members[ArrayTypeMapFunctionName] = MemberResolver{
+		Kind:    common.DeclarationKindFunction,
+		Resolve: ArrayMapFunctionMemberFuncResolver(t, arrayType),
+	}
+}
+
 const AddressTypeName = "Address"
 
 // AddressType represents the address type
@@ -7758,6 +8120,10 @@ func (*AddressType) TypeAnnotationState() TypeAnnotationState {
 
 func (t *AddressType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
+}
+
+func (t *AddressType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
 }
 
 var AddressTypeMinIntBig = new(big.Int)
@@ -8599,6 +8965,10 @@ func (t *TransactionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *TransactionType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
 	// Return cached members if already computed
 	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
@@ -8898,6 +9268,18 @@ func (t *IntersectionType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *IntersectionType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	for _, interfaceType := range t.Types {
+		if !interfaceType.Walk(visit) {
+			return false
+		}
+	}
+	return true
+}
+
 func (t *IntersectionType) GetMembers() map[string]MemberResolver {
 	// Return cached members if already computed
 	if cachedMembers := t.memberResolvers.Load(); cachedMembers != nil {
@@ -9150,6 +9532,16 @@ func (t *CapabilityType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 		}
 	}
 	return applyTypeRewriter(rewrite, result, rewritten)
+}
+
+func (t *CapabilityType) Walk(visit func(ty Type) bool) bool {
+	if !visit(t) {
+		return false
+	}
+	if t.BorrowType != nil {
+		return t.BorrowType.Walk(visit)
+	}
+	return true
 }
 
 func (t *CapabilityType) Unify(
@@ -9537,7 +9929,7 @@ var PublicKeyTypeVerifyPoPFunctionType = NewSimpleFunctionType(
 	BoolTypeAnnotation,
 )
 
-type CryptoAlgorithm interface {
+type NativeEnumCase interface {
 	RawValue() uint8
 	Name() string
 	DocString() string
@@ -9725,6 +10117,10 @@ func (t *EntitlementType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *EntitlementType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (*EntitlementType) Unify(
 	_ Type,
 	_ *TypeParameterTypeOrderedMap,
@@ -9895,6 +10291,10 @@ func (t *EntitlementMapType) Rewrite(rewrite TypeRewriter) (Type, bool) {
 	return applyTypeRewriter(rewrite, t, false)
 }
 
+func (t *EntitlementMapType) Walk(visit func(ty Type) bool) bool {
+	return visit(t)
+}
+
 func (*EntitlementMapType) Unify(
 	_ Type,
 	_ *TypeParameterTypeOrderedMap,
@@ -10034,6 +10434,7 @@ func init() {
 		PublicKeyType,
 		HashAlgorithmType,
 		SignatureAlgorithmType,
+		RoundingRuleType,
 		AccountType,
 		DeploymentResultType,
 	}

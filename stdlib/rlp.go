@@ -215,7 +215,7 @@ func RLPDecodeList(
 	)
 }
 
-var rlpContractFields = map[string]interpreter.Value{
+var rlpContractMethods = map[string]interpreter.FunctionValue{
 	RLPTypeDecodeListFunctionName:   interpreterRLPDecodeListFunction,
 	RLPTypeDecodeStringFunctionName: interpreterRLPDecodeStringFunction,
 }
@@ -227,9 +227,12 @@ var rlpContractValue = interpreter.NewSimpleCompositeValue(
 	RLPType.ID(),
 	RLPTypeStaticType,
 	nil,
-	rlpContractFields,
 	nil,
 	nil,
+	func(name string, context interpreter.MemberAccessibleContext, _ interpreter.ReferenceValue) interpreter.FunctionValue {
+		// These are host-functions (not bound functions). OK to ignore the accessed-reference.
+		return rlpContractMethods[name]
+	},
 	nil,
 	nil,
 )

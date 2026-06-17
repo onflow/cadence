@@ -84,11 +84,13 @@ func TestEntitlementDeclaration_Doc(t *testing.T) {
 
 		require.Equal(
 			t,
-			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.HardLine{},
-				prettier.Text("entitlement "),
-				prettier.Text("AB"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("access(all)"),
+					prettier.Line{},
+					prettier.Text("entitlement "),
+					prettier.Text("AB"),
+				},
 			},
 			decl.Doc(),
 		)
@@ -113,8 +115,7 @@ func TestEntitlementDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			`access(all)
-entitlement AB`,
+			"access(all) entitlement AB",
 			decl.String(),
 		)
 
@@ -245,24 +246,26 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 
 		require.Equal(
 			t,
-			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.HardLine{},
-				prettier.Text("entitlement "),
-				prettier.Text("mapping "),
-				prettier.Text("AB"),
-				prettier.Space,
-				prettier.Text("{"),
-				prettier.HardLine{},
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.Text(""),
-						prettier.Text(" -> "),
-						prettier.Text(""),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("access(all)"),
+					prettier.Line{},
+					prettier.Text("entitlement "),
+					prettier.Text("mapping "),
+					prettier.Text("AB"),
+					prettier.Space,
+					prettier.Text("{"),
+					prettier.HardLine{},
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Text(""),
+							prettier.Text(" -> "),
+							prettier.Text(""),
+						},
 					},
+					prettier.HardLine{},
+					prettier.Text("}"),
 				},
-				prettier.HardLine{},
-				prettier.Text("}"),
 			},
 			decl.Doc(),
 		)
@@ -307,31 +310,33 @@ func TestEntitlementMappingDeclaration_Doc(t *testing.T) {
 
 		require.Equal(
 			t,
-			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.HardLine{},
-				prettier.Text("entitlement "),
-				prettier.Text("mapping "),
-				prettier.Text("AB"),
-				prettier.Space,
-				prettier.Text("{"),
-				prettier.HardLine{},
-				prettier.Indent{
-					Doc: prettier.Concat{
-						prettier.Concat{
-							prettier.Text("include "),
-							prettier.Text("X"),
-						},
-						prettier.HardLine{},
-						prettier.Concat{
-							prettier.Text("X"),
-							prettier.Text(" -> "),
-							prettier.Text("Y"),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("access(all)"),
+					prettier.Line{},
+					prettier.Text("entitlement "),
+					prettier.Text("mapping "),
+					prettier.Text("AB"),
+					prettier.Space,
+					prettier.Text("{"),
+					prettier.HardLine{},
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.Concat{
+								prettier.Text("include "),
+								prettier.Text("X"),
+							},
+							prettier.HardLine{},
+							prettier.Concat{
+								prettier.Text("X"),
+								prettier.Text(" -> "),
+								prettier.Text("Y"),
+							},
 						},
 					},
+					prettier.HardLine{},
+					prettier.Text("}"),
 				},
-				prettier.HardLine{},
-				prettier.Text("}"),
 			},
 			decl.Doc(),
 		)
@@ -366,10 +371,7 @@ func TestEntitlementMappingDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			`access(all)
-entitlement mapping AB {
- -> 
-}`,
+			"access(all) entitlement mapping AB {\n -> \n}",
 			decl.String(),
 		)
 	})
@@ -413,12 +415,229 @@ entitlement mapping AB {
 
 		require.Equal(
 			t,
-			`access(all)
-entitlement mapping AB {
+			`access(all) entitlement mapping AB {
 include X
     X -> Y
 }`,
 			decl.String(),
+		)
+	})
+}
+
+func TestEntitlementDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without access", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &EntitlementDeclaration{
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
+	})
+
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+
+		decl := &EntitlementDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+			},
+			visited,
+		)
+	})
+}
+
+func TestEntitlementMapRelation_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with input and output", func(t *testing.T) {
+		t.Parallel()
+
+		input := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+		output := &NominalType{
+			Identifier: Identifier{Identifier: "Y"},
+		}
+
+		relation := &EntitlementMapRelation{
+			Input:  input,
+			Output: output,
+		}
+
+		var visited []Element
+		relation.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				input,
+				output,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with nil input", func(t *testing.T) {
+		t.Parallel()
+
+		output := &NominalType{
+			Identifier: Identifier{Identifier: "Y"},
+		}
+
+		relation := &EntitlementMapRelation{
+			Output: output,
+		}
+
+		var visited []Element
+		relation.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				output,
+			},
+			visited,
+		)
+	})
+}
+
+func TestEntitlementMappingDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &EntitlementMappingDeclaration{}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
+	})
+
+	t.Run("with inclusion", func(t *testing.T) {
+		t.Parallel()
+
+		inclusion := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+
+		decl := &EntitlementMappingDeclaration{
+			Elements: []EntitlementMapElement{inclusion},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				inclusion,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with relation", func(t *testing.T) {
+		t.Parallel()
+
+		input := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+		output := &NominalType{
+			Identifier: Identifier{Identifier: "Y"},
+		}
+
+		decl := &EntitlementMappingDeclaration{
+			Elements: []EntitlementMapElement{
+				&EntitlementMapRelation{
+					Input:  input,
+					Output: output,
+				},
+			},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				input,
+				output,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with inclusion and relation", func(t *testing.T) {
+		t.Parallel()
+
+		inclusion := &NominalType{
+			Identifier: Identifier{Identifier: "X"},
+		}
+		input := &NominalType{
+			Identifier: Identifier{Identifier: "A"},
+		}
+		output := &NominalType{
+			Identifier: Identifier{Identifier: "B"},
+		}
+
+		decl := &EntitlementMappingDeclaration{
+			Elements: []EntitlementMapElement{
+				inclusion,
+				&EntitlementMapRelation{
+					Input:  input,
+					Output: output,
+				},
+			},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				inclusion,
+				input,
+				output,
+			},
+			visited,
 		)
 	})
 }

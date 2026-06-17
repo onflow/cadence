@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package stdlib
+package stdlib_test
 
 import (
 	"crypto/rand"
@@ -28,11 +28,12 @@ import (
 
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type testCryptRandomGenerator struct{}
 
-var _ RandomGenerator = testCryptRandomGenerator{}
+var _ stdlib.RandomGenerator = testCryptRandomGenerator{}
 
 func (t testCryptRandomGenerator) ReadRandom(buffer []byte) error {
 	_, err := rand.Read(buffer)
@@ -64,13 +65,15 @@ func TestRandomBasicUniformityWithModulo(t *testing.T) {
 		}
 	}
 
-	// dummy interpreter, just use for ConvertAndBox
-	inter := newInterpreter(t, ``)
-
 	runStatisticsWithModulo := func(modulo int) func(*testing.T, sema.Type) {
 		return func(t *testing.T, ty sema.Type) {
 			// make sure modulo fits in 8 bits
 			require.Less(t, modulo, 1<<8)
+
+			// dummy interpreter/VM, just used for ConvertAndBox.
+			// A fresh one is created per (parallel) subtest, since the engine
+			// context is not safe for concurrent use across goroutines.
+			inter := newInvokable(t, ``)
 
 			moduloValue := interpreter.ConvertAndBoxWithValidation(
 				inter,
@@ -81,7 +84,7 @@ func TestRandomBasicUniformityWithModulo(t *testing.T) {
 
 			f := func() (uint64, error) {
 
-				value := RevertibleRandom(
+				value := stdlib.RevertibleRandom(
 					testCryptRandomGenerator{},
 					nil,
 					ty,

@@ -89,39 +89,39 @@ func invokeFunctionValueWithEval[T any](
 	typeArguments *sema.TypeParameterTypeOrderedMap,
 ) Value {
 
-	parameterTypeCount := len(parameterTypes)
+	// Determine the actual function's type, by unwrapping any bound/wrapped functions.
+	// This is needed because:
+	// - The actual function's parameter types may be more general than the call-site types
+	//   (parameter contravariance), so arguments may need to be boxed.
+	// - The actual function's return type may be more specific than the call-site types
+	//   (return type covariance), so the return value may need to be boxed.
 
-	var transferredArguments []Value
+	innerFunction := function
+	for {
+		switch typedFunction := innerFunction.(type) {
+		case BoundFunctionValue:
+			innerFunction = typedFunction.Function
+			continue
 
-	argumentCount := len(arguments)
-	if argumentCount > 0 {
-		transferredArguments = make([]Value, argumentCount)
-
-		for i, argument := range arguments {
-			argumentType := argumentTypes[i]
-
-			argumentValue := evaluate(argument)
-
-			if i < parameterTypeCount {
-				parameterType := parameterTypes[i]
-				transferredArguments[i] = TransferIfNotResourceAndConvert(
-					context,
-					argumentValue,
-					argumentType,
-					parameterType,
-				)
-			} else {
-				transferredArguments[i] = argumentValue.Transfer(
-					context,
-					atree.Address{},
-					false,
-					nil,
-					nil,
-					true, // argument is standalone.
-				)
-			}
+		case WrappedFunctionValue:
+			innerFunction = typedFunction.InnerFunction
+			continue
 		}
+
+		break
 	}
+
+	actualFunctionType := innerFunction.FunctionType(context)
+
+	transferredArguments := transferArguments(
+		context,
+		arguments,
+		evaluate,
+		actualFunctionType,
+		parameterTypes,
+		argumentTypes,
+		typeArguments,
+	)
 
 	// add the implicit argument to the end of the argument list, if it exists
 	if implicitArgumentValue != nil {
@@ -148,10 +148,9 @@ func invokeFunctionValueWithEval[T any](
 		returnType,
 		context.LocationRange(),
 	)
+	invocation.HasImplicitArgument = implicitArgumentValue != nil
 
 	resultValue := function.Invoke(invocation)
-
-	functionReturnType := function.FunctionType(context).ReturnTypeAnnotation.Type.Resolve(typeArguments)
 
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.
@@ -172,12 +171,100 @@ func invokeFunctionValueWithEval[T any](
 	//
 	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
 
+	functionReturnType := actualFunctionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
+
 	return ConvertAndBoxWithValidation(
 		context,
 		resultValue,
 		functionReturnType,
 		returnType,
 	)
+}
+
+func transferArguments[T any](
+	context InvocationContext,
+	arguments []T,
+	evaluate func(T) Value,
+	actualFunctionType *sema.FunctionType,
+	parameterTypes []sema.Type,
+	argumentTypes []sema.Type,
+	typeArguments *sema.TypeParameterTypeOrderedMap,
+) []Value {
+
+	actualParameters := actualFunctionType.Parameters
+	actualParamsCount := len(actualParameters)
+	parameterTypeCount := len(parameterTypes)
+
+	var transferredArguments []Value
+
+	argumentCount := len(arguments)
+
+	if argumentCount > 0 {
+
+		// Catch and re-panic transfer/conversion errors for arguments as user-errors.
+		defer func() {
+			r := recover()
+			if r == nil {
+				return
+			}
+			if transferError, ok := r.(*ValueTransferTypeError); ok {
+				panic(&InvalidArgumentTypeError{
+					ExpectedType: transferError.ExpectedType,
+					ActualType:   transferError.ActualType,
+				})
+			}
+			panic(r)
+		}()
+
+		transferredArguments = make([]Value, argumentCount)
+
+		for i, argument := range arguments {
+			argumentType := argumentTypes[i]
+
+			argumentValue := evaluate(argument)
+
+			if i < parameterTypeCount {
+
+				// The actual function's parameter types may differ from the call-site parameter types
+				// due to function parameter contravariance.
+				// e.g.:
+				//   fun funcWithOptionalParam(_ a: Int?): UInt8? { ... }
+				//   let f: fun(Int): UInt8? = funcWithOptionalParam
+				//   f(4)  // call-site param type is Int, actual param type is Int?
+				var parameterType sema.Type
+				if i < actualParamsCount {
+					parameterType = actualParameters[i].TypeAnnotation.Type.Resolve(typeArguments)
+				}
+
+				// It is possible that resolving the type-parameter may not always be successful,
+				// because type-parameters are not always explicitly provided.
+				// e.g: `Array.filter` function implicitly derive the type-parameter from the value,
+				// and is not provided explicitly at the invocation.
+				// In that case, use the statically computed type.
+				if parameterType == nil {
+					parameterType = parameterTypes[i]
+				}
+
+				transferredArguments[i] = TransferIfNotResourceAndConvert(
+					context,
+					argumentValue,
+					argumentType,
+					parameterType,
+				)
+			} else {
+				transferredArguments[i] = argumentValue.Transfer(
+					context,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+					true, // argument is standalone.
+				)
+			}
+		}
+	}
+
+	return transferredArguments
 }
 
 func (interpreter *Interpreter) invokeInterpretedFunction(

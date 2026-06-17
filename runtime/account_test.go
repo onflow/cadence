@@ -1223,6 +1223,7 @@ var AccountKeyType = ExportedBuiltinType(sema.AccountKeyType).(*cadence.StructTy
 var PublicKeyType = ExportedBuiltinType(sema.PublicKeyType).(*cadence.StructType)
 var SignAlgoType = ExportedBuiltinType(sema.SignatureAlgorithmType).(*cadence.EnumType)
 var HashAlgoType = ExportedBuiltinType(sema.HashAlgorithmType).(*cadence.EnumType)
+var RoundingRuleEnumType = ExportedBuiltinType(sema.RoundingRuleType).(*cadence.EnumType)
 
 func ExportedBuiltinType(internalType sema.Type) cadence.Type {
 	return ExportType(internalType, map[sema.TypeID]cadence.Type{})
@@ -2917,7 +2918,7 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 		common.ZeroAddress,
 	)
 
-	publicKeyArray1 := publicKey.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName)
+	publicKeyArray1 := publicKey.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField, nil)
 
 	publicKey2 := publicKey.Transfer(
 		inter,
@@ -2933,7 +2934,7 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 		true, // publicKey is standalone
 	)
 
-	publicKeyArray2 := publicKey2.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName)
+	publicKeyArray2 := publicKey2.GetMember(inter, sema.PublicKeyTypePublicKeyFieldName, common.DeclarationKindField, nil)
 
 	require.True(t,
 		publicKeyArray2.(interpreter.EquatableValue).

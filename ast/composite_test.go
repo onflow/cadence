@@ -129,7 +129,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("access(all)"),
-					prettier.HardLine{},
+					prettier.Line{},
 					prettier.Concat{
 						prettier.Text("static"),
 						prettier.Space,
@@ -220,7 +220,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("access(all)"),
-					prettier.HardLine{},
+					prettier.Line{},
 					prettier.Concat{
 						prettier.Text("xyz"),
 						prettier.Text(": "),
@@ -320,8 +320,7 @@ func TestFieldDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			`access(all)
-let xyz: @CD`,
+			"access(all) let xyz: @CD",
 			decl.String(),
 		)
 	})
@@ -374,8 +373,7 @@ let xyz: @CD`,
 
 		require.Equal(
 			t,
-			`access(all)
-xyz: @CD`,
+			"access(all) xyz: @CD",
 			decl.String(),
 		)
 
@@ -471,6 +469,40 @@ func TestFieldDeclaration_Walk(t *testing.T) {
 		})
 
 		assert.Empty(t, visited)
+	})
+
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "E"},
+		}
+		typeAnnotation := &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{Identifier: "Int"},
+			},
+		}
+
+		decl := &FieldDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Identifier:     Identifier{Identifier: "foo"},
+			TypeAnnotation: typeAnnotation,
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+				typeAnnotation,
+			},
+			visited,
+		)
 	})
 }
 
@@ -573,7 +605,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("resource"),
 				prettier.Space,
 				prettier.Text("AB"),
@@ -621,7 +653,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("resource"),
 				prettier.Space,
 				prettier.Text("AB"),
@@ -688,7 +720,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("resource"),
 				prettier.Space,
 				prettier.Text("AB"),
@@ -769,7 +801,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("event"),
 				prettier.Space,
 				prettier.Text("AB"),
@@ -826,7 +858,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("enum"),
 				prettier.Space,
 				prettier.Text("AB"),
@@ -895,8 +927,7 @@ func TestCompositeDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			`access(all)
-resource AB: CD, EF {}`,
+			"access(all) resource AB: CD, EF {}",
 			decl.String(),
 		)
 	})
@@ -918,8 +949,7 @@ resource AB: CD, EF {}`,
 
 		require.Equal(
 			t,
-			`access(all)
-resource AB:  {}`,
+			"access(all) resource AB:  {}",
 			decl.String(),
 		)
 	})
@@ -965,8 +995,7 @@ resource AB:  {}`,
 
 		require.Equal(
 			t,
-			`access(all)
-resource AB: CD, EF {
+			`access(all) resource AB: CD, EF {
     x: X
 }`,
 			decl.String(),
@@ -1007,8 +1036,7 @@ resource AB: CD, EF {
 
 		require.Equal(
 			t,
-			`access(all)
-event AB(e: E)`,
+			"access(all) event AB(e: E)",
 			decl.String(),
 		)
 	})
@@ -1042,11 +1070,57 @@ event AB(e: E)`,
 
 		require.Equal(
 			t,
-			`access(all)
-enum AB: CD {
+			`access(all) enum AB: CD {
     case x
 }`,
 			decl.String(),
+		)
+	})
+}
+
+func TestEnumCaseDeclaration_Walk(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("without access", func(t *testing.T) {
+		t.Parallel()
+
+		decl := &EnumCaseDeclaration{
+			Identifier: Identifier{Identifier: "x"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Empty(t, visited)
+	})
+
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		decl := &EnumCaseDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Identifier: Identifier{Identifier: "x"},
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+			},
+			visited,
 		)
 	})
 }
@@ -1092,28 +1166,125 @@ func TestCompositeDeclaration_Walk(t *testing.T) {
 
 	t.Parallel()
 
-	field := &FieldDeclaration{
-		Identifier: Identifier{Identifier: "field"},
-		TypeAnnotation: &TypeAnnotation{
-			Type: &NominalType{
-				Identifier: Identifier{Identifier: "Int"},
+	t.Run("members only", func(t *testing.T) {
+		t.Parallel()
+
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+			TypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{Identifier: "Int"},
+				},
 			},
-		},
-	}
+		}
 
-	decl := &CompositeDeclaration{
-		Members: NewUnmeteredMembers([]Declaration{field}),
-	}
+		decl := &CompositeDeclaration{
+			Members: NewUnmeteredMembers([]Declaration{field}),
+		}
 
-	var visited []Element
-	decl.Walk(func(element Element) {
-		visited = append(visited, element)
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				field,
+			},
+			visited,
+		)
 	})
 
-	assert.Equal(t,
-		[]Element{
-			field,
-		},
-		visited,
-	)
+	t.Run("with conformances", func(t *testing.T) {
+		t.Parallel()
+
+		conformance1 := &NominalType{
+			Identifier: Identifier{Identifier: "Foo"},
+		}
+		conformance2 := &NominalType{
+			Identifier: Identifier{Identifier: "Bar"},
+		}
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+		}
+
+		decl := &CompositeDeclaration{
+			Conformances: []*NominalType{conformance1, conformance2},
+			Members:      NewUnmeteredMembers([]Declaration{field}),
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				conformance1,
+				conformance2,
+				field,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "E"},
+		}
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+		}
+
+		decl := &CompositeDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Members: NewUnmeteredMembers([]Declaration{field}),
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+				field,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with mapped access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlementMap := &NominalType{
+			Identifier: Identifier{Identifier: "M"},
+		}
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+		}
+
+		decl := &CompositeDeclaration{
+			Access:  NewMappedAccess(entitlementMap, Position{}),
+			Members: NewUnmeteredMembers([]Declaration{field}),
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlementMap,
+				field,
+			},
+			visited,
+		)
+	})
 }

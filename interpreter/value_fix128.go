@@ -370,6 +370,43 @@ func (v Fix128Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	return NewFix128Value(context, valueGetter)
 }
 
+func (v Fix128Value) MultiplyDivide(
+	context NumberValueArithmeticContext,
+	factor FixedPointValue,
+	divisor FixedPointValue,
+	rounding fix.RoundingMode,
+) NumberValue {
+	f, ok := factor.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    factor.StaticType(context),
+		})
+	}
+
+	d, ok := divisor.(Fix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    divisor.StaticType(context),
+		})
+	}
+
+	valueGetter := func() fix.Fix128 {
+		result, err := fix.Fix128(v).FMD(
+			fix.Fix128(f),
+			fix.Fix128(d),
+			rounding,
+		)
+		handleFixedpointError(err)
+		return result
+	}
+
+	return NewFix128Value(context, valueGetter)
+}
+
 func (v Fix128Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(Fix128Value)
 	if !ok {
@@ -500,12 +537,34 @@ func ConvertFix128(memoryGauge common.MemoryGauge, value Value) Fix128Value {
 	return NewFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v Fix128Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Fix128Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
-func (v Fix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Fix128Type)
+func (v Fix128Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Fix128Type,
+	)
 }
 
 func (Fix128Value) RemoveMember(_ ValueTransferContext, _ string) Value {
@@ -557,6 +616,7 @@ func (v Fix128Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -605,6 +665,15 @@ func (v Fix128Value) ToBigInt() *big.Int {
 	return fixedpoint.Fix128ToBigInt(fix.Fix128(v))
 }
 
+func (Fix128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Fix128Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
+}
+
 func handleFixedpointError(err error) {
 	switch err.(type) {
 	// `fix.ErrUnderflow` happens when the value is within the range but is too small
@@ -617,6 +686,8 @@ func handleFixedpointError(err error) {
 		panic(&OverflowError{})
 	case fix.NegativeOverflowError:
 		panic(&UnderflowError{})
+	case fix.DivisionByZeroError:
+		panic(&DivisionByZeroError{})
 	default:
 		panic(err)
 	}

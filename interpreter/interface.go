@@ -35,6 +35,7 @@ type TypeConverter interface {
 
 var _ TypeConverter = &Interpreter{}
 
+// Deprecated: Use TypeConverter.SemaTypeFromStaticType instead.
 func MustConvertStaticToSemaType(staticType StaticType, typeConverter TypeConverter) sema.Type {
 	semaType, err := ConvertStaticToSemaType(typeConverter, staticType)
 	if err != nil {
@@ -75,13 +76,20 @@ type StorageWriter interface {
 var _ StorageWriter = &Interpreter{}
 
 type ValueStaticTypeContext interface {
+	valueStaticTypeContext
+	ValueConversionContext
+}
+
+var _ ValueStaticTypeContext = &Interpreter{}
+
+type valueStaticTypeContext interface {
 	common.Gauge
 	StorageReader
 	TypeConverter
 	IsTypeInfoRecovered(location common.Location) bool
 }
 
-var _ ValueStaticTypeContext = &Interpreter{}
+var _ valueStaticTypeContext = &Interpreter{}
 
 type ValueStaticTypeConformanceContext interface {
 	ValueStaticTypeContext
@@ -91,7 +99,7 @@ type ValueStaticTypeConformanceContext interface {
 var _ ValueStaticTypeConformanceContext = &Interpreter{}
 
 type StorageContext interface {
-	ValueStaticTypeContext
+	valueStaticTypeContext
 	common.MemoryGauge
 	StorageMutationTracker
 	StorageIterationTracker
@@ -118,6 +126,7 @@ type ValueTransferContext interface {
 	ReferenceTracker
 	common.ComputationGauge
 	Tracer
+	ValueConvertContext
 
 	OnResourceOwnerChange(
 		resource *CompositeValue,
@@ -142,6 +151,13 @@ var _ ValueTransferContext = &Interpreter{}
 type ValueCreationContext interface {
 	ArrayCreationContext
 	DictionaryCreationContext
+	ValueConvertContext
+}
+
+var _ ValueCreationContext = &Interpreter{}
+
+type ValueConvertContext interface {
+	NewFunctionWithType(value FunctionValue, staticType FunctionStaticType) FunctionValue
 }
 
 var _ ValueCreationContext = &Interpreter{}
@@ -170,6 +186,7 @@ var _ ValueStringContext = &Interpreter{}
 type ValueCloneContext interface {
 	StorageContext
 	ReferenceTracker
+	ValueConversionContext
 }
 
 var _ ValueCloneContext = &Interpreter{}
@@ -202,6 +219,7 @@ var _ GetReferenceContext = &Interpreter{}
 
 type IterableValueForeachContext interface {
 	ValueTransferContext
+	MemberAccessibleContext
 }
 
 var _ IterableValueForeachContext = &Interpreter{}
@@ -224,12 +242,7 @@ type MemberAccessibleContext interface {
 	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
 	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
 
-	GetMethod(value MemberAccessibleValue, name string) FunctionValue
-	MaybeUpdateStorageReferenceMemberReceiver(
-		storageReference *StorageReferenceValue,
-		referencedValue Value,
-		member Value,
-	) Value
+	GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue
 }
 
 var _ MemberAccessibleContext = &Interpreter{}
@@ -424,7 +437,6 @@ type EventContext interface {
 var _ EventContext = &Interpreter{}
 
 type AttachmentContext interface {
-	ValueStaticTypeContext
 	ReferenceCreationContext
 	SetAttachmentIteration(composite *CompositeValue, state bool) bool
 }
@@ -646,5 +658,9 @@ func (NoOpStringContext) SemaTypeFromStaticType(_ StaticType) sema.Type {
 }
 
 func (NoOpStringContext) SemaAccessFromStaticAuthorization(Authorization) (sema.Access, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpStringContext) NewFunctionWithType(_ FunctionValue, _ FunctionStaticType) FunctionValue {
 	panic(errors.NewUnreachableError())
 }

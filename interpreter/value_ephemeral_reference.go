@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"sync"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/common"
@@ -33,6 +35,11 @@ type EphemeralReferenceValue struct {
 	// BorrowedType is the T in &T
 	BorrowedType  sema.Type
 	Authorization Authorization
+
+	// Referenced value cannot change.
+	// Hence, it's safe to store the static-type.
+	staticType     StaticType
+	staticTypeOnce sync.Once
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -77,6 +84,19 @@ func NewEphemeralReferenceValue(
 	return NewUnmeteredEphemeralReferenceValue(context, authorization, value, borrowedType)
 }
 
+func (v *EphemeralReferenceValue) WithAuthorizationAndBorrowedType(
+	context ReferenceCreationContext,
+	auth Authorization,
+	borrowedType sema.Type,
+) ReferenceValue {
+	return NewEphemeralReferenceValue(
+		context,
+		auth,
+		v.Value,
+		borrowedType,
+	)
+}
+
 func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) Accept(context ValueVisitContext, visitor Visitor) {
@@ -112,11 +132,30 @@ func (v *EphemeralReferenceValue) MeteredString(
 }
 
 func (v *EphemeralReferenceValue) StaticType(context ValueStaticTypeContext) StaticType {
-	return NewReferenceStaticType(
-		context,
-		v.Authorization,
-		v.Value.StaticType(context),
-	)
+	// Compute a static type that:
+	// 1. Preserves the actual type structure (to allow type narrowing, e.g., &{RI} -> &R)
+	// 2. Uses the borrow type's authorization (to prevent entitlement escalation)
+	//
+	// For example:
+	// - Actual: [auth(E) &T], Borrow: [&T] -> Static: [&T] (authorization from borrow type)
+	// - Actual: [&R], Borrow: [&{RI}] -> Static: [&R] (type narrowing preserved)
+
+	v.staticTypeOnce.Do(func() {
+		actualStaticType := v.Value.StaticType(context)
+		innerStaticType := applyTargetTypeAuthorization(
+			context,
+			actualStaticType,
+			v.BorrowedType,
+		)
+
+		v.staticType = NewReferenceStaticType(
+			context,
+			v.Authorization,
+			innerStaticType,
+		)
+	})
+
+	return v.staticType
 }
 
 func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
@@ -131,23 +170,41 @@ func (v *EphemeralReferenceValue) ReferencedValue(_ ValueStaticTypeContext, _ bo
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) GetMember(context MemberAccessibleContext, name string) Value {
-	var result Value
-
-	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, name)
+func (v *EphemeralReferenceValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	// For ephemeral references, "accessedReference" is the value itself.
+	if accessedReference != nil {
+		// Parameter must be always `nil`, since the root of the `GetMember` call
+		// starts with a nil "accessedReference".
+		panic(errors.NewUnreachableError())
 	}
 
-	if result == nil {
-		// NOTE: Must call the `GetMethod` of the `EphemeralReferenceValue`, not of the referenced-value.
-		result = context.GetMethod(v, name)
-	}
-
-	return result
+	return GetReferenceValueMember(
+		context,
+		v,
+		v.Value,
+		name,
+		memberKind,
+	)
 }
 
-func (v *EphemeralReferenceValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getBuiltinFunctionMember(context, v.Value, name)
+func (v *EphemeralReferenceValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	// For ephemeral references, "accessedReference" must be the value itself.
+	// We only reach here via `GetMember` method, and in that method,
+	// the `accessedReference` should be correctly passed in (and not `nil`).
+	if accessedReference != v {
+		panic(errors.NewUnreachableError())
+	}
+
+	return getBuiltinFunctionMember(context, v, name, accessedReference)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(context ValueTransferContext, name string) Value {

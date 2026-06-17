@@ -158,7 +158,13 @@ func NewAccount(
 		sema.AccountReferenceType,
 	)
 
-	payerValue := payer.GetMember(context, sema.AccountTypeAddressFieldName)
+	payerValue := payer.GetMember(
+		context,
+		sema.AccountTypeAddressFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
+
 	if payerValue == nil {
 		panic(errors.NewUnexpectedError("payer address is not set"))
 	}
@@ -628,10 +634,11 @@ func newInterpreterAccountKeysAddFunction(
 	handler AccountKeyAdditionHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountKeys interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
+			accessedReference,
 			sema.Account_KeysTypeAddFunctionType,
 			nativeAccountKeysAddFunction(handler, &addressValue),
 		)
@@ -745,7 +752,7 @@ func newInterpreterAccountKeysGetFunction(
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountKeys interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 
 		// Converted addresses can be cached and don't have to be recomputed on each function invocation
 		address := addressValue.ToAddress()
@@ -753,6 +760,7 @@ func newInterpreterAccountKeysGetFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
+			accessedReference,
 			functionType,
 			nativeAccountKeysGetFunction(provider, &address),
 		)
@@ -835,12 +843,13 @@ func newInterpreterAccountKeysForEachFunction(
 	provider AccountKeyProvider,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountKeys interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
+			accessedReference,
 			sema.Account_KeysTypeForEachFunctionType,
 			nativeAccountKeysForEachFunction(provider, &address),
 		)
@@ -988,11 +997,12 @@ func newInterpreterAccountKeysRevokeFunction(
 	handler AccountKeyRevocationHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountKeys interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountKeys interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountKeys,
+			accessedReference,
 			sema.Account_KeysTypeRevokeFunctionType,
 			nativeAccountKeysRevokeFunction(handler, &addressValue),
 		)
@@ -1082,10 +1092,11 @@ func newInterpreterAccountInboxPublishFunction(
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountInbox interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
+			accessedReference,
 			sema.Account_InboxTypePublishFunctionType,
 			nativeAccountInboxPublishFunction(handler, &providerValue),
 		)
@@ -1176,10 +1187,11 @@ func newInterpreterAccountInboxUnpublishFunction(
 	handler EventEmitter,
 	providerValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountInbox interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
+			accessedReference,
 			sema.Account_InboxTypeUnpublishFunctionType,
 			nativeAccountInboxUnpublishFunction(handler, &providerValue),
 		)
@@ -1289,10 +1301,11 @@ func newInterpreterAccountInboxClaimFunction(
 	handler EventEmitter,
 	recipientValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountInbox interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountInbox interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountInbox,
+			accessedReference,
 			sema.Account_InboxTypeClaimFunctionType,
 			nativeAccountInboxClaimFunction(handler, &recipientValue),
 		)
@@ -1476,11 +1489,12 @@ func newInterpreterAccountContractsGetFunction(
 	provider AccountContractProvider,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountContracts interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
+			accessedReference,
 			sema.Account_ContractsTypeGetFunctionType,
 			nativeAccountContractsGetFunction(provider, &addressValue),
 		)
@@ -1565,7 +1579,7 @@ func newInterpreterAccountContractsBorrowFunction(
 	handler AccountContractsHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountContracts interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 
 		// Converted addresses can be cached and don't have to be recomputed on each function invocation
 		address := addressValue.ToAddress()
@@ -1573,6 +1587,7 @@ func newInterpreterAccountContractsBorrowFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
+			accessedReference,
 			sema.Account_ContractsTypeBorrowFunctionType,
 			nativeAccountContractsBorrowFunction(handler, &address),
 		)
@@ -1777,10 +1792,11 @@ func newInterpreterAccountContractsChangeFunction(
 		functionType = sema.Account_ContractsTypeUpdateFunctionType
 	}
 
-	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountContracts interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
+			accessedReference,
 			functionType,
 			nativeAccountContractsChangeFunction(handler, &addressValue, isUpdate),
 		)
@@ -2176,10 +2192,11 @@ func newInterpreterAccountContractsTryUpdateFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountContracts interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
+			accessedReference,
 			sema.Account_ContractsTypeTryUpdateFunctionType,
 			nativeAccountContractsTryUpdateFunction(handler, &addressValue),
 		)
@@ -2497,11 +2514,12 @@ func newInterpreterAccountContractsRemoveFunction(
 	handler AccountContractRemovalHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountContracts interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountContracts interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountContracts,
+			accessedReference,
 			sema.Account_ContractsTypeRemoveFunctionType,
 			nativeAccountContractsRemoveFunction(handler, &addressValue),
 		)
@@ -2705,7 +2723,13 @@ func NewHashAlgorithmFromValue(
 ) sema.HashAlgorithm {
 	hashAlgoValue := value.(*interpreter.SimpleCompositeValue)
 
-	rawValue := hashAlgoValue.GetMember(context, sema.EnumRawValueFieldName)
+	rawValue := hashAlgoValue.GetMember(
+		context,
+		sema.EnumRawValueFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
+
 	if rawValue == nil {
 		panic("cannot find hash algorithm raw value")
 	}
@@ -2818,11 +2842,12 @@ func newInterpreterAccountStorageCapabilitiesGetControllerFunction(
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
-	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(storageCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
+			accessedReference,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
 			nativeAccountStorageCapabilitiesGetControllerFunction(handler, &address),
 		)
@@ -2899,11 +2924,12 @@ func newInterpreterAccountStorageCapabilitiesGetControllersFunction(
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
-	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(storageCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
+			accessedReference,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
 			nativeAccountStorageCapabilitiesGetControllersFunction(handler, &address),
 		)
@@ -3012,12 +3038,13 @@ func newInterpreterAccountStorageCapabilitiesForEachControllerFunction(
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
-	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(storageCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
+			accessedReference,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
 			nativeAccountStorageCapabilitiesForEachControllerFunction(handler, &address),
 		)
@@ -3157,11 +3184,12 @@ func newInterpreterAccountStorageCapabilitiesIssueFunction(
 	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(storageCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
+			accessedReference,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
 			nativeAccountStorageCapabilitiesIssueFunction(handler, &address),
 		)
@@ -3238,11 +3266,12 @@ func newInterpreterAccountStorageCapabilitiesIssueWithTypeFunction(
 	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(storageCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			storageCapabilities,
+			accessedReference,
 			sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
 			nativeAccountStorageCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
@@ -3409,11 +3438,12 @@ func newInterpreterAccountAccountCapabilitiesIssueFunction(
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerIssueHandler,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 			nativeAccountAccountCapabilitiesIssueFunction(handler, &address),
 		)
@@ -3466,11 +3496,12 @@ func newInterpreterAccountAccountCapabilitiesIssueWithTypeFunction(
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerIssueHandler,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 			nativeAccountAccountCapabilitiesIssueWithTypeFunction(handler, &address),
 		)
@@ -3943,7 +3974,7 @@ func unrecordStorageCapabilityController(
 }
 
 func getStorageCapabilityControllerIDsIterator(
-	context interpreter.StorageContext,
+	context interpreter.ValueIteratorContext,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 ) (
@@ -3961,7 +3992,7 @@ func getStorageCapabilityControllerIDsIterator(
 
 	count = uint64(capabilityIDSet.Count())
 	nextCapabilityID = func() (uint64, bool) {
-		keyValue := iterator.NextKey(context)
+		keyValue := iterator.Next(context)
 		if keyValue == nil {
 			return 0, false
 		}
@@ -4101,10 +4132,11 @@ func newInterpreterAccountCapabilitiesPublishFunction(
 	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
 
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			sema.Account_CapabilitiesTypePublishFunctionType,
 			nativeAccountCapabilitiesPublishFunction(handler, &accountAddressValue),
 		)
@@ -4264,10 +4296,11 @@ func newInterpreterAccountCapabilitiesUnpublishFunction(
 	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
 
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
 			nativeAccountCapabilitiesUnpublishFunction(handler, &addressValue),
 		)
@@ -4363,7 +4396,7 @@ func AccountCapabilitiesUnpublish(
 	return interpreter.NewSomeValueNonCopying(invocationContext, capabilityValue)
 }
 
-func canBorrow(
+func CanBorrow(
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
 ) bool {
@@ -4395,7 +4428,7 @@ func getCheckedCapabilityController(
 ) {
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+	} else if !CanBorrow(wantedBorrowType, capabilityBorrowType) {
 		return nil, nil
 	}
 
@@ -4415,12 +4448,12 @@ func getCheckedCapabilityController(
 	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
 
 	controllerBorrowType, ok :=
-		interpreter.MustConvertStaticToSemaType(controllerBorrowStaticType, context).(*sema.ReferenceType)
+		context.SemaTypeFromStaticType(controllerBorrowStaticType).(*sema.ReferenceType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	if !canBorrow(wantedBorrowType, controllerBorrowType) {
+	if !CanBorrow(wantedBorrowType, controllerBorrowType) {
 		return nil, nil
 	}
 
@@ -4548,7 +4581,7 @@ func newInterpreterAccountCapabilitiesGetFunction(
 	controllerHandler CapabilityControllerHandler,
 	borrow bool,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		var funcType *sema.FunctionType
 		if borrow {
 			funcType = sema.Account_CapabilitiesTypeBorrowFunctionType
@@ -4559,6 +4592,7 @@ func newInterpreterAccountCapabilitiesGetFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			funcType,
 			nativeAccountCapabilitiesGetFunction(controllerHandler, &addressValue, borrow),
 		)
@@ -4684,7 +4718,7 @@ func AccountCapabilitiesGet(
 	}
 
 	capabilityBorrowType, ok :=
-		interpreter.MustConvertStaticToSemaType(capabilityStaticBorrowType, invocationContext).(*sema.ReferenceType)
+		invocationContext.SemaTypeFromStaticType(capabilityStaticBorrowType).(*sema.ReferenceType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -4789,10 +4823,11 @@ func newInterpreterAccountCapabilitiesExistsFunction(
 	context interpreter.FunctionCreationContext,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
 			nativeAccountCapabilitiesExistsFunction(&addressValue),
 		)
@@ -4896,11 +4931,12 @@ func newInterpreterAccountAccountCapabilitiesGetControllerFunction(
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
 			nativeAccountAccountCapabilitiesGetControllerFunction(handler, &address),
 		)
@@ -4953,11 +4989,12 @@ func newInterpreterAccountAccountCapabilitiesGetControllersFunction(
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
 			nativeAccountAccountCapabilitiesGetControllersFunction(handler, &address),
 		)
@@ -5075,12 +5112,13 @@ func newInterpreterAccountAccountCapabilitiesForEachControllerFunction(
 	addressValue interpreter.AddressValue,
 	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
-	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
+	return func(accountCapabilities interpreter.MemberAccessibleValue, accessedReference interpreter.ReferenceValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 
 		return interpreter.NewBoundHostFunctionValue(
 			context,
 			accountCapabilities,
+			accessedReference,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
 			nativeAccountAccountCapabilitiesForEachControllerFunction(handler, &address),
 		)

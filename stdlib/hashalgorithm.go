@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-var hashAlgorithmLookupType = cryptoAlgorithmEnumLookupType(
+var hashAlgorithmLookupType = nativeEnumLookupType(
 	sema.HashAlgorithmType,
 	sema.HashAlgorithms,
 )
@@ -67,11 +67,37 @@ func NewHashAlgorithmCase(
 		nil,
 		nil,
 	)
+
 	value.Fields = map[string]interpreter.Value{
-		sema.EnumRawValueFieldName:                    rawValue,
-		sema.HashAlgorithmTypeHashFunctionName:        newInterpreterHashAlgorithmHashFunction(value, hasher),
-		sema.HashAlgorithmTypeHashWithTagFunctionName: newInterpreterHashAlgorithmHashWithTagFunction(value, hasher),
+		sema.EnumRawValueFieldName: rawValue,
 	}
+
+	// `sema.HashAlgorithmType` has the following members as function-members.
+	// Therefore, include them as functions in the value as well.
+	functions := map[string]interpreter.FunctionValue{}
+
+	value.FunctionMemberGetter = func(
+		name string,
+		_ interpreter.MemberAccessibleContext,
+		_ interpreter.ReferenceValue,
+	) interpreter.FunctionValue {
+
+		// These are host-functions (not bound functions). OK to ignore the accessed-reference.
+		function, ok := functions[name]
+		if !ok {
+			switch name {
+			case sema.HashAlgorithmTypeHashFunctionName:
+				function = newInterpreterHashAlgorithmHashFunction(value, hasher)
+			case sema.HashAlgorithmTypeHashWithTagFunctionName:
+				function = newInterpreterHashAlgorithmHashWithTagFunction(value, hasher)
+			}
+
+			functions[name] = function
+		}
+
+		return function
+	}
+
 	return value, nil
 }
 
@@ -217,7 +243,7 @@ func hash(
 // these functions are left as is, since there are differences in the implementations between interpreter and vm
 func NewInterpreterHashAlgorithmConstructor(hasher Hasher) StandardLibraryValue {
 
-	interpreterHashAlgorithmConstructorValue, _ := interpreterCryptoAlgorithmEnumValueAndCaseValues(
+	interpreterHashAlgorithmConstructorValue, _ := interpreterNativeEnumValueAndCaseValues(
 		hashAlgorithmLookupType,
 		sema.HashAlgorithms,
 		func(rawValue interpreter.UInt8Value) interpreter.MemberAccessibleValue {

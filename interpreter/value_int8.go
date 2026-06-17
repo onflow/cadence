@@ -569,12 +569,34 @@ func (v Int8Value) BitwiseRightShift(context ValueStaticTypeContext, other Integ
 	return NewInt8Value(context, valueGetter)
 }
 
-func (v Int8Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Int8Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
-func (v Int8Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Int8Type)
+func (v Int8Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Int8Type,
+	)
 }
 
 func (Int8Value) RemoveMember(_ ValueTransferContext, _ string) Value {
@@ -621,6 +643,7 @@ func (v Int8Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -642,4 +665,13 @@ func (v Int8Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Int8Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Int8Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Int8Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

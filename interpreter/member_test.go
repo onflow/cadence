@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -732,13 +733,17 @@ func TestInterpretMemberAccessType(t *testing.T) {
 			// Intentionally passing wrong type of value
 			_, err = inter.InvokeUncheckedForTestingOnly("get", storageRef) //nolint:staticcheck
 			RequireError(t, err)
-			var memberAccessTypeError *interpreter.MemberAccessTypeError
-			require.ErrorAs(t, err, &memberAccessTypeError)
+			var dereferenceError *interpreter.DereferenceError
+			require.ErrorAs(t, err, &dereferenceError)
+			require.Equal(t, common.TypeID("S.test.S"), dereferenceError.ExpectedType.ID())
+			require.Equal(t, common.TypeID("S.test.S2"), dereferenceError.ActualType.ID())
 
 			// Intentionally passing wrong type of value
 			_, err = inter.InvokeUncheckedForTestingOnly("set", storageRef) //nolint:staticcheck
 			RequireError(t, err)
-			require.ErrorAs(t, err, &memberAccessTypeError)
+			require.ErrorAs(t, err, &dereferenceError)
+			require.Equal(t, common.TypeID("S.test.S"), dereferenceError.ExpectedType.ID())
+			require.Equal(t, common.TypeID("S.test.S2"), dereferenceError.ActualType.ID())
 		})
 	})
 }
@@ -1459,12 +1464,35 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
                 let arr: [AnyStruct] = [&t1 as auth(E) &T, &t2 as auth(E) &T]
                 let arrRef = &arr as &[AnyStruct]
                 let tRef = arrRef[0]
+                let authTRef = tRef as! &T
             }
             
         `)
 
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
+	})
+
+	t.Run("array reference, authorized reference typed element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            fun test() {
+                let v1: [Int]? = [1]
+
+                let array: [auth(Mutate) &[Int]?] = [&v1 as auth(Mutate) &[Int]?]
+                let arrayRef = &array as &[auth(Mutate) &[Int]?]
+
+                let x: &[Int]? = arrayRef[0]
+
+                // Down-casting should fail
+                let y: auth(Mutate) &[Int] = x as! auth(Mutate) &[Int]
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
 	})
 }
 

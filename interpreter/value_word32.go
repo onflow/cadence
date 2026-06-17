@@ -389,12 +389,34 @@ func (v Word32Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewWord32Value(context, valueGetter)
 }
 
-func (v Word32Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v Word32Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
-func (v Word32Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Word32Type)
+func (v Word32Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Word32Type,
+	)
 }
 
 func (Word32Value) RemoveMember(_ ValueTransferContext, _ string) Value {
@@ -447,6 +469,7 @@ func (v Word32Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -468,4 +491,13 @@ func (v Word32Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Word32Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Word32Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Word32Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

@@ -30,6 +30,20 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 		return InvalidType
 	}
 
+	// Check access for constructor variables
+	if variable.ContainerType != nil {
+		if !checker.isReadableVariable(variable) {
+			checker.report(
+				&InvalidAccessError{
+					Name:              variable.Identifier,
+					RestrictingAccess: variable.Access,
+					DeclarationKind:   variable.DeclarationKind,
+					Range:             ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+				},
+			)
+		}
+	}
+
 	valueType := variable.Type
 
 	if valueType.IsResourceType() {
@@ -387,9 +401,17 @@ func (checker *Checker) visitIndexExpression(
 		// then the element type should also be a reference.
 		// Otherwise, if the member is already a reference, then again, a reference must be returned.
 		returnReference := false
-		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
-			// For index expressions, element are un-authorized.
-			elementType = checker.getDescendantReferenceType(elementType, UnauthorizedAccess)
+		if ShouldReturnReference(valueIndexedType, elementType, isAssignment) {
+			// For index expressions, non-reference elements are un-authorized.
+			// For reference elements, the authorization is the intersection of
+			// the outer (container) reference's authorization and the inner (element) reference's authorization.
+			outerRef, _ := MaybeReferenceType(valueIndexedType)
+			elementType = GetDescendantReferenceType(
+				checker.memoryGauge,
+				elementType,
+				UnauthorizedAccess,
+				outerRef.Authorization,
+			)
 
 			// Store the result in elaboration, so the interpreter can re-use this.
 			returnReference = true

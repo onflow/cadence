@@ -86,32 +86,108 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	return memberType
 }
 
-// getDescendantReferenceType Returns a reference type to a given descendant's (member/element) type.
+// GetDescendantReferenceType Returns a reference type to a given descendant's (member/element) type.
 // Reference to an optional should return an optional reference.
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (checker *Checker) getDescendantReferenceType(
+//
+// When the descendant is already a reference, the outer reference's authorization
+// is intersected with the inner reference's authorization. This prevents authorization
+// escalation when accessing references stored in referenced containers.
+// e.g.: auth(E, F) &[auth(F, G) &T] → auth(F) &T (intersection of {E,F} and {F,G})
+func GetDescendantReferenceType(
+	memoryGauge common.MemoryGauge,
 	descendantType Type,
 	authorization Access,
+	outerAuthorization Access,
 ) Type {
 	switch typ := descendantType.(type) {
 	case *OptionalType:
-		innerType := checker.getDescendantReferenceType(typ.Type, authorization)
-		return NewOptionalType(checker.memoryGauge, innerType)
+		innerType := GetDescendantReferenceType(
+			memoryGauge,
+			typ.Type,
+			authorization,
+			outerAuthorization,
+		)
+		return NewOptionalType(memoryGauge, innerType)
 
 	case *ReferenceType:
-		// If the descendant is already a reference,
-		// then the resulting type should be the same.
-		return typ
+		// Intersect the outer reference's authorization with the inner reference's authorization.
+		// This prevents gaining authorization through nested reference access.
+		// Also, recursively intersect any references within the referenced type,
+		// using the effective (intersected) authorization — not the original outer.
+		// This cascades: if the top-level intersection strips auth,
+		// inner references are also stripped accordingly.
+		intersected := IntersectAccess(outerAuthorization, typ.Authorization)
+		innerType := intersectReferenceAuthorizationsInType(memoryGauge, typ.Type, intersected)
+		if intersected.Equal(typ.Authorization) && innerType == typ.Type {
+			return typ
+		}
+		return NewReferenceType(memoryGauge, intersected, innerType)
 
 	default:
-		return NewReferenceType(checker.memoryGauge, authorization, typ)
+		// Recursively intersect any references within the element type
+		// before wrapping in a reference.
+		innerType := intersectReferenceAuthorizationsInType(memoryGauge, typ, outerAuthorization)
+		return NewReferenceType(memoryGauge, authorization, innerType)
 
 	}
 }
 
-func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
+// intersectReferenceAuthorizationsInType recursively traverses a type and intersects
+// all inner reference type authorizations with outerAuthorization.
+// Returns the original type unchanged if no intersection was applied.
+func intersectReferenceAuthorizationsInType(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	outerAuthorization Access,
+) Type {
+	switch t := typ.(type) {
+	case *ReferenceType:
+		intersected := IntersectAccess(outerAuthorization, t.Authorization)
+		// Cascade: use the effective (intersected) auth for inner recursion
+		innerType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, intersected)
+		if intersected.Equal(t.Authorization) && innerType == t.Type {
+			return t
+		}
+		return NewReferenceType(memoryGauge, intersected, innerType)
+
+	case *OptionalType:
+		innerType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		if innerType == t.Type {
+			return t
+		}
+		return NewOptionalType(memoryGauge, innerType)
+
+	case *VariableSizedType:
+		elementType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		if elementType == t.Type {
+			return t
+		}
+		return NewVariableSizedType(memoryGauge, elementType)
+
+	case *ConstantSizedType:
+		elementType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		if elementType == t.Type {
+			return t
+		}
+		return NewConstantSizedType(memoryGauge, elementType, t.Size)
+
+	case *DictionaryType:
+		keyType := intersectReferenceAuthorizationsInType(memoryGauge, t.KeyType, outerAuthorization)
+		valueType := intersectReferenceAuthorizationsInType(memoryGauge, t.ValueType, outerAuthorization)
+		if keyType == t.KeyType && valueType == t.ValueType {
+			return t
+		}
+		return NewDictionaryType(memoryGauge, keyType, valueType)
+
+	default:
+		return typ
+	}
+}
+
+func ShouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
 	if isAssignment {
 		return false
 	}
@@ -306,6 +382,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 	if checker.PositionInfo != nil {
 		checker.PositionInfo.recordMemberOccurrence(
+			checker.memoryGauge,
 			accessedType,
 			identifier,
 			identifierStartPosition,
@@ -373,22 +450,79 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 	if accessedSelfMember == nil &&
 		member.DeclarationKind == common.DeclarationKindField &&
-		shouldReturnReference(accessedType, resultingType, isAssignment) {
+		ShouldReturnReference(accessedType, resultingType, isAssignment) {
+
+		var pos ast.HasPosition = expression
 
 		authorization := UnauthorizedAccess
 		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
-			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, expression)
+			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
 		}
 
-		resultingType = checker.getDescendantReferenceType(resultingType, authorization)
+		// For non-reference elements, `authorization` is used as the wrapping authorization.
+		// For reference elements, the outer reference's raw authorization is intersected
+		// with the inner reference's authorization (note: mapped access fields cannot have
+		// reference types, so `authorization` and outer auth differ only for non-mapped fields).
+		outerRef, _ := MaybeReferenceType(accessedType)
+		resultingType = GetDescendantReferenceType(
+			checker.memoryGauge,
+			resultingType,
+			authorization,
+			outerRef.Authorization,
+		)
 		returnReference = true
 	}
 
 	return accessedType, resultingType, member, isOptional
 }
 
-// isReadableMember returns true if the given member can be read from
-// in the current location of the checker, along with the authorization with which the result can be used
+// isReadableVariable returns true if the given variable can be read
+// in the current location of the checker.
+// Only applicable for variables with a ContainerType (e.g. constructor variables).
+func (checker *Checker) isReadableVariable(variable *Variable) bool {
+
+	if checker.Config.AccessCheckMode.IsReadableAccess(variable.Access) {
+		return true
+	}
+
+	switch access := variable.Access.(type) {
+	case PrimitiveAccess:
+		if checker.containerTypes[variable.ContainerType] {
+			return true
+		}
+
+		switch ast.PrimitiveAccess(access) {
+		case ast.AccessContract:
+			// If the variable allows access from the containing contract,
+			// check if the current location is contained in the variable's contract
+
+			contractType := containingContractKindedType(variable.ContainerType)
+			if checker.containerTypes[contractType] {
+				return true
+			}
+
+		case ast.AccessAccount:
+			// If the variable allows access from the containing account,
+			// check if the current location is the same as the variable's container location
+
+			if locatedType, ok := variable.ContainerType.(LocatedType); ok {
+				location := locatedType.GetLocation()
+				if common.LocationsInSameAccount(checker.Location, location) {
+					return true
+				}
+
+				memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
+				if memberAccountAccessHandler != nil {
+					return memberAccountAccessHandler(checker, location)
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// isReadableMember returns true if the given member can be read from in the current location of the checker
 func (checker *Checker) isReadableMember(accessedType Type, member *Member) bool {
 
 	// TODO: check if this is correct
@@ -416,14 +550,16 @@ func (checker *Checker) isReadableMember(accessedType Type, member *Member) bool
 			// If the member allows access from the containing account,
 			// check if the current location is the same as the member's container location
 
-			location := member.ContainerType.(LocatedType).GetLocation()
-			if common.LocationsInSameAccount(checker.Location, location) {
-				return true
-			}
+			if locatedType, ok := member.ContainerType.(LocatedType); ok {
+				location := locatedType.GetLocation()
+				if common.LocationsInSameAccount(checker.Location, location) {
+					return true
+				}
 
-			memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
-			if memberAccountAccessHandler != nil {
-				return memberAccountAccessHandler(checker, location)
+				memberAccountAccessHandler := checker.Config.MemberAccountAccessHandler
+				if memberAccountAccessHandler != nil {
+					return memberAccountAccessHandler(checker, location)
+				}
 			}
 		}
 

@@ -199,7 +199,7 @@ func fill(slice []Value, n int) []Value {
 
 func (vm *VM) pushCallFrame(
 	functionValue *CompiledFunctionValue,
-	receiver Value,
+	receiver, base Value,
 	arguments []Value,
 	returnType bbq.StaticType,
 ) {
@@ -214,6 +214,10 @@ func (vm *VM) pushCallFrame(
 	passedInLocalsCount := len(arguments)
 	if receiver != nil {
 		vm.locals = append(vm.locals, receiver)
+		passedInLocalsCount++
+	}
+	if base != nil {
+		vm.locals = append(vm.locals, base)
 		passedInLocalsCount++
 	}
 
@@ -287,6 +291,17 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 	}
 
 	return poppedCallFrame
+}
+
+// callerLocation returns the location of the function that invoked the
+// currently executing function, or nil if there is no caller.
+// (i.e. the current function is the top-level invocation)
+func (vm *VM) callerLocation() common.Location {
+	callstackLen := len(vm.callstack)
+	if callstackLen < 2 {
+		return nil
+	}
+	return vm.callstack[callstackLen-2].function.Executable.Location
 }
 
 func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
@@ -370,7 +385,16 @@ func (vm *VM) InvokeMethodExternally(
 		}
 	}
 
-	boundFunction := NewBoundFunctionValue(context, receiver, functionValue, nil)
+	// External invocation happen on non-references.
+	var accessedReference interpreter.ReferenceValue = nil
+
+	boundFunction := NewBoundFunctionValue(
+		context,
+		receiver,
+		accessedReference,
+		functionValue,
+		nil,
+	)
 
 	return vm.prepareAndInvokeExternally(boundFunction, arguments)
 }
@@ -411,6 +435,7 @@ func (vm *VM) prepareAndInvokeExternallyWithValidation(
 		functionValue,
 		preparedArguments,
 		returnType,
+		validateConvertAndBox,
 	)
 }
 
@@ -418,18 +443,27 @@ func (vm *VM) invokeExternally(
 	functionValue FunctionValue,
 	arguments []Value,
 	returnType sema.Type,
+	withValidation bool,
 ) (Value, error) {
 	// NOTE: can't fill argument types, as they are unknown
 
 	staticReturnType := interpreter.ConvertSemaToStaticType(vm.context, returnType)
 
+	// Argument validation is disabled means an invalid argument is passed intentionally.
+	// Therefore, skip the argument conversion as well (argument needs to be passed as-is).
+	skipArgumentConversion := !withValidation
+
 	invokeFunction(
 		vm,
 		functionValue,
+		nil,
 		arguments,
 		nil,
 		nil,
+		nil,
 		staticReturnType,
+		skipArgumentConversion,
+		withValidation,
 	)
 
 	// Runs the VM for compiled functions.
@@ -534,6 +568,9 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeValue, signers []Value) error {
 	context := vm.context
 
+	// Transaction invocation happens on the concrete value.
+	var accessedReference interpreter.ReferenceValue = nil
+
 	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
 	if prepareVariable == nil {
 		if len(signers) > 0 {
@@ -551,6 +588,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 	boundPrepareFunction := NewBoundFunctionValue(
 		context,
 		transaction,
+		accessedReference,
 		prepareFunction,
 		nil,
 	)
@@ -573,9 +611,14 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 
 	executeValue := executeVariable.GetValue(context)
 	executeFunction := executeValue.(FunctionValue)
+
+	// Transaction invocation happens on the concrete value.
+	var accessedReference interpreter.ReferenceValue = nil
+
 	boundExecuteFunction := NewBoundFunctionValue(
 		context,
 		transaction,
+		accessedReference,
 		executeFunction,
 		nil,
 	)
@@ -597,17 +640,17 @@ func opReturnValue(vm *VM, ins opcode.InstructionReturnValue) {
 	// Defensively check the return value's actual type matches the expected return type.
 	if poppedCallFrame != nil {
 		expectedReturnType := poppedCallFrame.returnType
-		checkValueTransferTypes(context, value, expectedReturnType)
+		value = checkAndConvertReturnValue(context, value, expectedReturnType)
 	}
 
 	vm.push(value)
 }
 
-func checkValueTransferTypes(
+func checkAndConvertReturnValue(
 	context *Context,
 	value interpreter.Value,
 	expectedValueType bbq.StaticType,
-) {
+) interpreter.Value {
 	actualValueType := value.StaticType(context)
 
 	if !context.IsSubType(actualValueType, expectedValueType) {
@@ -618,6 +661,17 @@ func checkValueTransferTypes(
 			ActualType:   actualSemaType,
 		})
 	}
+
+	if actualValueType == expectedValueType ||
+		actualValueType.Equal(expectedValueType) {
+		return value
+	}
+
+	return ConvertAndBox(
+		context,
+		value,
+		expectedValueType,
+	)
 }
 
 func opReturn(vm *VM) {
@@ -948,79 +1002,51 @@ func checkIndexedType(
 func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load type arguments
 	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-
-	// Load arguments
-	arguments := vm.popN(int(ins.ArgCount))
-
-	// Load the invoked value
-	functionValue := vm.pop()
-
-	// Return value type
-	returnType := vm.loadType(ins.ReturnType)
-
-	// Add base to front of arguments if the function is bound and base is defined.
-	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
-		base := boundFunction.Base
-		if base != nil {
-			arguments = append([]Value{base}, arguments...)
-		}
-	}
-
-	invokeFunction(
-		vm,
-		functionValue,
-		arguments,
-		typeArguments,
-		nil,
-		returnType,
-	)
-}
-
-func opInvokeTyped(vm *VM, ins opcode.InstructionInvokeTyped) {
-	// Load type arguments
-	typeArguments := loadTypeArguments(vm, ins.TypeArgs)
-	argumentTypes := loadArgumentTypes(vm, ins.ArgTypes)
+	argumentTypes := loadTypes(vm, ins.ArgTypes)
+	parameterTypes := loadTypes(vm, ins.ParamTypes)
 
 	// Load arguments
 	arguments := vm.popN(len(ins.ArgTypes))
 
+	// Load base: Only applicable for attachment constructors.
+	var base Value
+	if ins.HasImplicitArgument {
+		base = vm.pop()
+	}
+
 	// Load the invoked value
 	functionValue := vm.pop()
 
 	// Return value type
 	returnType := vm.loadType(ins.ReturnType)
 
-	// Add base to front of arguments if the function is bound and base is defined.
-	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
-		base := boundFunction.Base
-		if base != nil {
-			arguments = append([]Value{base}, arguments...)
-			argumentTypes = append(
-				[]bbq.StaticType{base.StaticType(vm.context)},
-				argumentTypes...,
-			)
-		}
-	}
-
 	invokeFunction(
 		vm,
 		functionValue,
+		base,
 		arguments,
 		typeArguments,
 		argumentTypes,
+		parameterTypes,
 		returnType,
+		ins.SkipArgumentConversion,
+		true,
 	)
 }
 
 func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
+	context := vm.context
+
 	globalIndex := ins.Method
 	globals := vm.callFrame.function.Executable.Globals
 
 	variable := globals[globalIndex]
-	method := variable.GetValue(vm.context).(FunctionValue)
+	method := variable.GetValue(context).(FunctionValue)
 
 	receiver := vm.pop()
 
+	// TODO: Double check this (this is also how the interpreter does it)
+	// Do the target-type check **before** updating the receiver for attachments
 	checkMemberAccessTargetType(
 		vm,
 		ins.ReceiverType,
@@ -1028,15 +1054,22 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	)
 
 	var base *interpreter.EphemeralReferenceValue
-	if val, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
-		if refValue, ok := val.Value.(*interpreter.CompositeValue); ok && refValue.Kind == common.CompositeKindAttachment {
-			base, receiver = AttachmentBaseAndSelfValues(vm.context, refValue, method)
+
+	if reference, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if compositeValue, ok := reference.Value.(*interpreter.CompositeValue); ok &&
+			compositeValue.Kind == common.CompositeKindAttachment {
+			base = attachmentBaseForMethod(context, compositeValue, method, reference)
 		}
 	}
 
+	// Ignore casting failures. Only interested in the receiver as a reference.
+	// If the receiver is not a reference, then `accessedReference` must be `nil`.
+	accessedReference, _ := receiver.(interpreter.ReferenceValue)
+
 	boundFunction := NewBoundFunctionValue(
-		vm.context,
+		context,
 		receiver,
+		accessedReference,
 		method,
 		base,
 	)
@@ -1044,13 +1077,48 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 	vm.push(boundFunction)
 }
 
+func opGetMethodDynamic(vm *VM, ins opcode.InstructionGetMethodDynamic) {
+	context := vm.context
+
+	fieldName := getRawStringConstant(vm, ins.MethodName)
+
+	receiver := vm.pop().(interpreter.MemberAccessibleValue)
+
+	checkMemberAccessTargetType(
+		vm,
+		ins.ReceiverType,
+		receiver,
+	)
+
+	// Ignore casting failures. Only interested in the receiver as a reference.
+	// If the receiver is not a reference, then `accessedReference` must be `nil`.
+	accessedReference, _ := receiver.(interpreter.ReferenceValue)
+
+	method, ok := context.GetMethod(receiver, fieldName, accessedReference).(*BoundFunctionValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if method == nil {
+		panic(&interpreter.UseBeforeInitializationError{
+			Name: fieldName,
+		})
+	}
+
+	vm.push(method)
+}
+
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
+	base Value,
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
+	parameterTypes []bbq.StaticType,
 	returnType bbq.StaticType,
+	skipArgumentConversion bool,
+	withValidation bool,
 ) {
 	context := vm.context
 	common.UseComputation(context, common.FunctionInvocationComputationUsage)
@@ -1062,6 +1130,26 @@ func invokeFunction(
 	boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue)
 	if isBoundFunction {
 		functionValue = boundFunction.Method
+
+		// Only override the base if the bound function actually carries one
+		// (i.e. for attachment methods). `BoundFunctionValue.Base` is a concrete
+		// pointer type, so assigning a nil pointer directly to the `base Value`
+		// interface would produce a non-nil (typed-nil) interface value.
+		if boundFunction.Base != nil {
+			base = boundFunction.Base
+		}
+	}
+
+	if !skipArgumentConversion {
+		arguments = convertAndBoxArguments(
+			context,
+			originalFunctionValue,
+			arguments,
+			typeArguments,
+			argumentTypes,
+			parameterTypes,
+			withValidation,
+		)
 	}
 
 	var receiver Value
@@ -1079,6 +1167,7 @@ func invokeFunction(
 		vm.pushCallFrame(
 			functionValue,
 			receiver,
+			base,
 			arguments,
 			returnType,
 		)
@@ -1086,7 +1175,7 @@ func invokeFunction(
 	case *NativeFunctionValue:
 		if isBoundFunction {
 			// For built-in functions, pass the dereferenced receiver.
-			receiver = boundFunction.DereferencedReceiver(context)
+			receiver = boundFunction.MaybeDereferencedReceiver(context)
 		}
 
 		if interpreter.TracingEnabled {
@@ -1113,15 +1202,142 @@ func invokeFunction(
 			arguments,
 		)
 
-		// Defensively check the return value's actual type matches the expected return type.
+		// Defensively check whether the return value's actual type matches the
+		// expected return type. If so, then convert the value to the expected type.
 		// For compiled functions, this happens when unwinding the call-frame.
-		checkValueTransferTypes(context, result, returnType)
+		result = checkAndConvertReturnValue(context, result, returnType)
 
 		vm.push(result)
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func convertAndBoxArguments(
+	context *Context,
+	originalFunctionValue FunctionValue,
+	arguments []Value,
+	typeArguments []bbq.StaticType,
+	argumentTypes []bbq.StaticType,
+	parameterTypes []bbq.StaticType,
+	withValidation bool,
+) []Value {
+	// Convert arguments to match the actual function's parameter types.
+	// When a function is invoked through a variable with a more specific function type,
+	// arguments may need boxing/conversion (e.g., Int -> Int? for parameter contravariance).
+	// Use the original function value (before BoundFunctionValue unwrapping) to get the
+	// resolved function type, since NativeFunctionValue.FunctionType() may panic
+	// for receiver-dependent types (e.g., Optional.map).
+	actualFuncType := originalFunctionValue.FunctionType(context)
+	actualParams := actualFuncType.Parameters
+
+	paramIndex := 0
+
+	// Catch and re-panic transfer/conversion errors for arguments as user-errors.
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		if transferError, ok := r.(*interpreter.ValueTransferTypeError); ok {
+			panic(&interpreter.InvalidArgumentTypeError{
+				ExpectedType: transferError.ExpectedType,
+				ActualType:   transferError.ActualType,
+			})
+		}
+		panic(r)
+	}()
+
+	var typeArgumentsMap *sema.TypeParameterTypeOrderedMap
+
+	for currentArgIndex, arg := range arguments {
+		var paramType bbq.StaticType
+		if paramIndex < len(actualParams) {
+			if typeArgumentsMap == nil {
+				typeArgumentsMap = reconstructTypeArguments(context, actualFuncType, typeArguments)
+			}
+
+			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(typeArgumentsMap)
+			if paramSemaType != nil {
+				paramType = interpreter.ConvertSemaToStaticType(context, paramSemaType)
+			}
+		}
+
+		// It is possible that resolving the type-parameter may not always be successful,
+		// because type-parameters are not always explicitly provided.
+		// e.g: `Array.filter` function implicitly derive the type-parameter from the value,
+		// and is not provided explicitly at the invocation.
+		// In that case, use the statically computed type.
+		if paramType == nil && paramIndex < len(parameterTypes) {
+			paramType = parameterTypes[paramIndex]
+		}
+
+		paramIndex++
+
+		convertAndBox := ConvertAndBox
+		if withValidation {
+			// Argument types may not always be available.
+			// e.g: Invoking the function externally.
+			var argumentType bbq.StaticType
+			if currentArgIndex < len(argumentTypes) {
+				argumentType = argumentTypes[currentArgIndex]
+			} else {
+				argumentType = arg.StaticType(context)
+			}
+
+			convertAndBox = func(context *Context, value Value, targetType bbq.StaticType) Value {
+				return ConvertAndBoxWithValidation(context, value, argumentType, targetType)
+			}
+		}
+
+		arguments[currentArgIndex] = convertAndBox(
+			context,
+			arg,
+			paramType,
+		)
+	}
+
+	return arguments
+}
+
+// reconstructTypeArguments builds a TypeParameterTypeOrderedMap by pairing
+// the function's declared TypeParameters with the concrete type arguments
+// resolved at compile time and passed through the invoke instruction.
+//
+// The pairing is positional: the i-th type argument corresponds to the i-th
+// declared type parameter. The type parameters must either be all bound, or none:
+// `typeArguments` is therefore either empty, or has exactly one entry per declared
+// type parameter (see `loadTypeArguments` in the compiler, which enforces this).
+func reconstructTypeArguments(
+	context *Context,
+	funcType *sema.FunctionType,
+	typeArguments []bbq.StaticType,
+) *sema.TypeParameterTypeOrderedMap {
+	typeParameterMap := &sema.TypeParameterTypeOrderedMap{}
+
+	typeParameters := funcType.TypeParameters
+
+	typeArgumentsLength := len(typeArguments)
+	typeParametersLength := len(typeParameters)
+
+	// The type parameters are either all bound, or none.
+	if typeArgumentsLength != 0 && typeArgumentsLength != typeParametersLength {
+		panic(errors.NewUnexpectedError(
+			"invalid number of type arguments: got %d, expected 0 or %d",
+			typeArgumentsLength,
+			typeParametersLength,
+		))
+	}
+
+	for i, typeArgument := range typeArguments {
+		semaType := context.SemaTypeFromStaticType(typeArgument)
+		if semaType != nil {
+			typeParameterMap.Set(typeParameters[i], semaType)
+		}
+	}
+
+	return typeParameterMap
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
@@ -1136,34 +1352,16 @@ func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
 	return typeArguments
 }
 
-func loadArgumentTypes(vm *VM, argTypes []uint16) []bbq.StaticType {
-	var argumentTypes []bbq.StaticType
-	if len(argTypes) > 0 {
-		argumentTypes = make([]bbq.StaticType, 0, len(argTypes))
-		for _, typeIndex := range argTypes {
-			typeArg := vm.loadType(typeIndex)
-			argumentTypes = append(argumentTypes, typeArg)
+func loadTypes(vm *VM, typeIndices []uint16) []bbq.StaticType {
+	var types []bbq.StaticType
+	if len(typeIndices) > 0 {
+		types = make([]bbq.StaticType, 0, len(typeIndices))
+		for _, typeIndex := range typeIndices {
+			typ := vm.loadType(typeIndex)
+			types = append(types, typ)
 		}
 	}
-	return argumentTypes
-}
-
-func maybeDereferenceReceiver(context interpreter.ValueStaticTypeContext, value Value, isNative bool) Value {
-	switch typedValue := value.(type) {
-	case *interpreter.EphemeralReferenceValue:
-		// Do not dereference attachments, so that the receiver is a reference as expected.
-		// Exception: Native function receiver needs to be dereferenced to match interpreter.
-		if val, ok := typedValue.Value.(*interpreter.CompositeValue); ok && !isNative {
-			if val.Kind == common.CompositeKindAttachment {
-				return value
-			}
-		}
-		return typedValue.Value
-	case *interpreter.StorageReferenceValue:
-		return typedValue.MustReferencedValue(context)
-	default:
-		return value
-	}
+	return types
 }
 
 func opDrop(vm *VM) {
@@ -1235,6 +1433,24 @@ func newCompositeValue(
 
 	context := vm.context
 
+	// Check that the resource is constructed in the same location as it was declared.
+	// This guards against constructing a resource outside of its declaring location,
+	// e.g. by invoking a resource constructor that was obtained as a first-class
+	// function value from another program.
+	if compositeKind == common.CompositeKindResource {
+		callerLocation := vm.callerLocation()
+		if callerLocation != nil &&
+			callerLocation != compositeStaticType.Location {
+
+			compositeType, ok := context.SemaTypeFromStaticType(compositeStaticType).(*sema.CompositeType)
+			if ok {
+				panic(&interpreter.ResourceConstructionError{
+					CompositeType: compositeType,
+				})
+			}
+		}
+	}
+
 	compositeFields := newCompositeValueFields(context, compositeKind)
 
 	return interpreter.NewCompositeValue(
@@ -1280,7 +1496,13 @@ func getField(
 	// VM assumes the field name is always a string.
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
 
-	fieldValue := memberAccessibleValue.GetMember(vm.context, fieldName)
+	fieldValue := memberAccessibleValue.GetMember(
+		vm.context,
+		fieldName,
+		common.DeclarationKindField,
+		nil, // accessedReference is not needed for getting fields; only needed for getting methods.
+	)
+
 	if fieldValue == nil {
 		panic(&interpreter.UseBeforeInitializationError{
 			Name: fieldName,
@@ -1426,50 +1648,57 @@ func opSimpleCast(vm *VM, ins opcode.InstructionSimpleCast) {
 
 func opFailableCast(vm *VM, ins opcode.InstructionFailableCast) {
 	context := vm.context
-	value := vm.pop()
+	originalValue := vm.pop()
 
 	targetTypeIndex := ins.TargetType
 	targetType := vm.loadType(targetTypeIndex)
 
-	value, valueType := castValueAndValueType(context, targetType, value)
+	castedValue, castedValueType := castValueAndValueType(context, targetType, originalValue)
 
-	isSubType := context.IsSubType(valueType, targetType)
+	isSubType := context.IsSubType(castedValueType, targetType)
 
-	var result Value
+	var result interpreter.OptionalValue
 	if isSubType {
-		valueTypeIndex := ins.ValueType
-		staticValueType := vm.loadType(valueTypeIndex)
 
-		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-		result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
+		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box.
+		// If the value used for casting (castedValue) is the same as the original value,
+		// then we expect the value to match the static value type.
+		// Otherwise, the value used for casting already underwent a conversion,
+		// so we expect the value to match the value sema type of the conversion.
+		if castedValue == originalValue {
+			valueTypeIndex := ins.ValueType
+			staticValueType := vm.loadType(valueTypeIndex)
+			castedValue = ConvertAndBoxWithValidation(context, castedValue, staticValueType, targetType)
+		} else {
+			castedValue = ConvertAndBoxWithValidation(context, castedValue, castedValueType, targetType)
+		}
 
 		result = interpreter.NewSomeValueNonCopying(
 			context.MemoryGauge,
-			result,
+			castedValue,
 		)
 	} else {
-		result = interpreter.Nil
+		result = interpreter.NilOptionalValue
 	}
 
 	vm.push(result)
 }
 
 func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
-	value := vm.pop()
+	originalValue := vm.pop()
 
 	targetTypeIndex := ins.TargetType
 	targetType := vm.loadType(targetTypeIndex)
 
 	context := vm.context
 
-	value, valueType := castValueAndValueType(context, targetType, value)
+	castedValue, castedValueType := castValueAndValueType(context, targetType, originalValue)
 
-	isSubType := context.IsSubType(valueType, targetType)
+	isSubType := context.IsSubType(castedValueType, targetType)
 
-	var result Value
 	if !isSubType {
 		targetSemaType := context.SemaTypeFromStaticType(targetType)
-		valueSemaType := context.SemaTypeFromStaticType(valueType)
+		valueSemaType := context.SemaTypeFromStaticType(castedValueType)
 
 		panic(&interpreter.ForceCastTypeMismatchError{
 			ExpectedType: targetSemaType,
@@ -1477,15 +1706,25 @@ func opForceCast(vm *VM, ins opcode.InstructionForceCast) {
 		})
 	}
 
-	valueTypeIndex := ins.ValueType
-	staticValueType := vm.loadType(valueTypeIndex)
+	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box.
+	// If the value used for casting (castedValue) is the same as the original value,
+	// then we expect the value to match the static value type.
+	// Otherwise, the value used for casting already underwent a conversion,
+	// so we expect the value to match the value sema type of the conversion.
+	if castedValue == originalValue {
+		valueTypeIndex := ins.ValueType
+		staticValueType := vm.loadType(valueTypeIndex)
+		castedValue = ConvertAndBoxWithValidation(context, castedValue, staticValueType, targetType)
+	} else {
+		castedValue = ConvertAndBoxWithValidation(context, castedValue, castedValueType, targetType)
+	}
 
-	// The force cast may upcast to an optional type, e.g. `1 as! Int?`, so box
-	result = ConvertAndBoxWithValidation(context, value, staticValueType, targetType)
-	vm.push(result)
+	vm.push(castedValue)
 }
 
 func castValueAndValueType(context *Context, targetType bbq.StaticType, value Value) (Value, bbq.StaticType) {
+	// (for interpreter, see Interpreter.castValueAndValueType)
+
 	// if the value itself has a mapped entitlement type in its authorization
 	// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
 	// substitution must also be performed on its entitlements
@@ -1505,6 +1744,54 @@ func castValueAndValueType(context *Context, targetType bbq.StaticType, value Va
 	}
 
 	valueType := value.StaticType(context)
+
+	// If the value is specifically a storage reference,
+	// and the target type is a reference,
+	// then we report the value as a storage reference with the target type's borrow type
+	// (but keep the same authorization and target storage address/path).
+	//
+	// This allows storage references to be cast to different reference types,
+	// which is valid, as the storage reference's targeted value can also
+	// be replaced by a value of a different type.
+	//
+	// It is important we perform a type check of the storage reference's borrow type
+	// against the targeted value's type each time we use the reference (dereference it).
+
+	if storageReference, ok := value.(*interpreter.StorageReferenceValue); ok {
+		if referenceTargetType, ok := unboxedExpectedType.(*interpreter.ReferenceStaticType); ok {
+
+			borrowType := context.SemaTypeFromStaticType(referenceTargetType.ReferencedType)
+
+			if !storageReference.BorrowedType.Equal(borrowType) {
+
+				// Require the target type to not be or have an authorized reference in its type tree
+
+				hasAuthorizedReference := !unboxedExpectedType.Walk(func(ty interpreter.StaticType) bool {
+					if referenceType, ok := ty.(*interpreter.ReferenceStaticType); ok &&
+						referenceType.Authorization != interpreter.UnauthorizedAccess {
+
+						// stop iteration
+						return false
+					}
+
+					// continue iteration
+					return true
+				})
+
+				if !hasAuthorizedReference {
+
+					value = interpreter.NewStorageReferenceValue(
+						context,
+						storageReference.Authorization,
+						storageReference.TargetStorageAddress,
+						storageReference.TargetPath,
+						borrowType,
+					)
+					valueType = value.StaticType(context)
+				}
+			}
+		}
+	}
 
 	return value, valueType
 }
@@ -1564,6 +1851,14 @@ func opWrap(vm *VM) {
 	value := vm.peek()
 	optional := interpreter.NewSomeValueNonCopying(vm.context, value)
 	vm.replaceTop(optional)
+}
+
+func opBoxOptional(vm *VM, ins opcode.InstructionBoxOptional) {
+	targetType := vm.loadType(ins.TargetType)
+	targetSemaType := vm.context.SemaTypeFromStaticType(targetType)
+	value := vm.peek()
+	boxed := interpreter.BoxOptional(vm.context, value, targetSemaType)
+	vm.replaceTop(boxed)
 }
 
 func opNewArray(vm *VM, ins opcode.InstructionNewArray) {
@@ -1748,6 +2043,12 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 func opSetAttachmentBase(vm *VM) {
 	base, attachment := vm.pop2()
 
+	// If the attachment was constructed outside an attach-statement,
+	// then the base variable is nil / not set.
+	if base == nil {
+		panic(&interpreter.InvalidAttachmentConstructorError{})
+	}
+
 	attachmentComposite, ok := attachment.(*interpreter.CompositeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -1920,10 +2221,10 @@ func (vm *VM) run() {
 			opRemoveIndex(vm, ins)
 		case opcode.InstructionGetMethod:
 			opGetMethod(vm, ins)
+		case opcode.InstructionGetMethodDynamic:
+			opGetMethodDynamic(vm, ins)
 		case opcode.InstructionInvoke:
 			opInvoke(vm, ins)
-		case opcode.InstructionInvokeTyped:
-			opInvokeTyped(vm, ins)
 		case opcode.InstructionDrop:
 			opDrop(vm)
 		case opcode.InstructionDup:
@@ -1976,6 +2277,8 @@ func (vm *VM) run() {
 			opNot(vm)
 		case opcode.InstructionWrap:
 			opWrap(vm)
+		case opcode.InstructionBoxOptional:
+			opBoxOptional(vm, ins)
 		case opcode.InstructionUnwrap:
 			opUnwrap(vm)
 		case opcode.InstructionEmitEvent:
@@ -2008,6 +2311,8 @@ func (vm *VM) run() {
 			opSetAttachmentBase(vm)
 		case opcode.InstructionGetFieldLocal:
 			opGetFieldLocal(vm, ins)
+		case opcode.InstructionUnreachable:
+			panic(&interpreter.UnreachableInstructionError{})
 		default:
 			panic(errors.NewUnexpectedError("cannot execute instruction of type %T", ins))
 		}
@@ -2116,7 +2421,12 @@ func (vm *VM) invokeFunction(
 	returnType sema.Type,
 ) (Value, error) {
 	functionValue := function.(FunctionValue)
-	return vm.invokeExternally(functionValue, arguments, returnType)
+	return vm.invokeExternally(
+		functionValue,
+		arguments,
+		returnType,
+		true,
+	)
 }
 
 func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {

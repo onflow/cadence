@@ -362,6 +362,53 @@ func (v UFix128Value) Mod(context NumberValueArithmeticContext, other NumberValu
 	return NewUFix128Value(context, valueGetter)
 }
 
+func (v UFix128Value) MultiplyDivide(
+	context NumberValueArithmeticContext,
+	factor FixedPointValue,
+	divisor FixedPointValue,
+	rounding fix.RoundingMode,
+) NumberValue {
+	f, ok := factor.(UFix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    factor.StaticType(context),
+		})
+	}
+
+	d, ok := divisor.(UFix128Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    divisor.StaticType(context),
+		})
+	}
+
+	valueGetter := func() fix.UFix128 {
+		result, err := fix.UFix128(v).FMD(
+			fix.UFix128(f),
+			fix.UFix128(d),
+			rounding,
+		)
+		handleFixedpointError(err)
+		return result
+	}
+
+	return NewUFix128Value(context, valueGetter)
+}
+
+func (v UFix128Value) Pow(context NumberValueArithmeticContext, other Fix128Value) NumberValue {
+	valueGetter := func() fix.UFix128 {
+		result, err := fix.UFix128(v).Pow(fix.Fix128(other))
+		handleFixedpointError(err)
+		return result
+	}
+
+	return NewUFix128Value(context, valueGetter)
+}
+
 func (v UFix128Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UFix128Value)
 	if !ok {
@@ -493,12 +540,34 @@ func ConvertUFix128(memoryGauge common.MemoryGauge, value Value) UFix128Value {
 	return NewUFix128ValueFromBigIntWithRangeCheck(memoryGauge, scaledInt)
 }
 
-func (v UFix128Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v UFix128Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
-func (v UFix128Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.UFix128Type)
+func (v UFix128Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.UFix128Type,
+	)
 }
 
 func (UFix128Value) RemoveMember(_ ValueTransferContext, _ string) Value {
@@ -550,6 +619,7 @@ func (v UFix128Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -616,4 +686,13 @@ func ufix128SaturationArithmaticResult(
 	default:
 		panic(err)
 	}
+}
+
+func (UFix128Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UFix128Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

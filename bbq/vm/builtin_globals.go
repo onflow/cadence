@@ -228,13 +228,21 @@ func init() {
 	for _, declaration := range interpreter.ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.Convert
+		convertWithRounding := declaration.ConvertWithRounding
 
 		functionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
+
+		var nativeFn interpreter.NativeFunction
+		if convertWithRounding != nil {
+			nativeFn = interpreter.NativeConverterFunctionWithRounding(convert, convertWithRounding)
+		} else {
+			nativeFn = interpreter.NativeConverterFunction(convert)
+		}
 
 		function := NewNativeFunctionValue(
 			declaration.Name,
 			functionType,
-			interpreter.NativeConverterFunction(convert),
+			nativeFn,
 		)
 		registerBuiltinFunction(function)
 
@@ -281,10 +289,22 @@ func init() {
 		),
 	)
 
+	registerBuiltinFunction(
+		NewNativeFunctionValue(
+			sema.StringBuilderType.String(),
+			sema.StringBuilderFunctionType,
+			interpreter.NativeStringBuilderConstructor,
+		),
+	)
+
 	// Register type-bound functions that are common to many types.
 	registerBuiltinCommonTypeBoundFunctions()
 
 	registerBuiltinSaturatingArithmeticFunctions()
+
+	registerBuiltinFixedPointPowFunctions()
+
+	registerBuiltinFixedPointMultiplyDivideFunctions()
 }
 
 func registerBuiltinCommonTypeBoundFunctions() {
@@ -408,6 +428,32 @@ func registerBuiltinTypeSaturatingArithmeticFunctions(t sema.SaturatingArithmeti
 				sema.NumericTypeSaturatingDivideFunctionName,
 				functionType,
 				interpreter.NativeNumberSaturatingDivideFunction,
+			),
+		)
+	}
+}
+
+func registerBuiltinFixedPointPowFunctions() {
+	for baseType, funcType := range sema.FixedPointPowFunctionTypes { //nolint:maprange
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(baseType),
+			NewNativeFunctionValue(
+				sema.FixedPointNumericTypePowFunctionName,
+				funcType,
+				interpreter.NativeFixedPointPowFunction,
+			),
+		)
+	}
+}
+
+func registerBuiltinFixedPointMultiplyDivideFunctions() {
+	for baseType, funcType := range sema.FixedPointMultiplyDivideFunctionTypes { //nolint:maprange
+		registerBuiltinTypeBoundFunction(
+			commons.TypeQualifier(baseType),
+			NewNativeFunctionValue(
+				sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+				funcType,
+				interpreter.NativeFixedPointMultiplyDivideFunction,
 			),
 		)
 	}

@@ -32,7 +32,7 @@ type SimpleCompositeValue struct {
 	staticType           StaticType
 	Fields               map[string]Value
 	ComputeField         func(name string, context MemberAccessibleContext) Value
-	FunctionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue
+	FunctionMemberGetter FunctionMemberGetterFunc
 	fieldFormatters      map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
@@ -48,8 +48,14 @@ type SimpleCompositeValue struct {
 	// privateFields is a property bag to carry internal data
 	// that are not visible to cadence users.
 	// TODO: any better way to pass down information?
-	privateFields map[string]Value
+	privateFields map[string]any
 }
+
+type FunctionMemberGetterFunc func(
+	name string,
+	context MemberAccessibleContext,
+	accessedReference ReferenceValue,
+) FunctionValue
 
 var _ Value = &SimpleCompositeValue{}
 var _ MemberAccessibleValue = &SimpleCompositeValue{}
@@ -61,7 +67,7 @@ func NewSimpleCompositeValue(
 	fieldNames []string,
 	fields map[string]Value,
 	computeField func(name string, context MemberAccessibleContext) Value,
-	functionMemberGetter func(name string, context MemberAccessibleContext) FunctionValue,
+	functionMemberGetter FunctionMemberGetterFunc,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
 	stringer func(ValueStringContext, SeenReferences) string,
 ) *SimpleCompositeValue {
@@ -118,7 +124,7 @@ func (v *SimpleCompositeValue) StaticType(_ ValueStaticTypeContext) StaticType {
 func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool {
 	// Check type is importable
 	staticType := v.StaticType(context)
-	semaType := MustConvertStaticToSemaType(staticType, context)
+	semaType := context.SemaTypeFromStaticType(staticType)
 	if !semaType.IsImportable(map[*sema.Member]bool{}) {
 		return false
 	}
@@ -139,29 +145,68 @@ func (v *SimpleCompositeValue) IsImportable(context ValueImportableContext) bool
 	return importable
 }
 
-func (v *SimpleCompositeValue) GetMember(context MemberAccessibleContext, name string) Value {
-	value, ok := v.Fields[name]
-	if ok {
-		return value
-	}
+func (v *SimpleCompositeValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		func() Value {
+			value, ok := v.Fields[name]
+			if ok {
+				return value
+			}
 
-	computeField := v.ComputeField
-	if computeField != nil {
-		value = computeField(name, context)
-		if value != nil {
-			return value
-		}
-	}
-
-	return context.GetMethod(v, name)
+			computeField := v.ComputeField
+			if computeField != nil {
+				value = computeField(name, context)
+				if value != nil {
+					return value
+				}
+			}
+			return nil
+		},
+	)
 }
 
-func (v *SimpleCompositeValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
+func (v *SimpleCompositeValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	if v.FunctionMemberGetter == nil {
 		return nil
 	}
 
-	return v.FunctionMemberGetter(name, context)
+	method := v.FunctionMemberGetter(name, context, accessedReference)
+
+	hostFunc, isHostFunc := method.(*HostFunctionValue)
+
+	// All methods of a composite value must be bound-functions.
+	// If it is not, then wrap it with a bound function upon use.
+	// Composite methods may have been declared as static function
+	// (not as bound-function), so that they can be re-used.
+	// This is acceptable for methods who do not make use of the receiver.
+	// However, it must be wrapped upon retrieval for receiver/reference
+	// invalidation to work.
+	if isHostFunc {
+		var self Value = v
+		return NewBoundFunctionValue(
+			context,
+			hostFunc,
+			&self,
+			accessedReference,
+			nil,
+		)
+	}
+
+	return method
 }
 
 func (v *SimpleCompositeValue) RemoveMember(_ ValueTransferContext, name string) Value {
@@ -318,16 +363,16 @@ func (v *SimpleCompositeValue) DeepRemove(_ ValueRemoveContext, _ bool) {
 	// NO-OP
 }
 
-func (v *SimpleCompositeValue) WithPrivateField(key string, value Value) *SimpleCompositeValue {
+func (v *SimpleCompositeValue) WithPrivateField(key string, value any) *SimpleCompositeValue {
 	if v.privateFields == nil {
-		v.privateFields = make(map[string]Value)
+		v.privateFields = make(map[string]any)
 	}
 
 	v.privateFields[key] = value
 	return v
 }
 
-func (v *SimpleCompositeValue) PrivateField(key string) Value {
+func (v *SimpleCompositeValue) PrivateField(key string) any {
 	if v.privateFields == nil {
 		return nil
 	}

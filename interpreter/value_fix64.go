@@ -27,6 +27,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -307,6 +309,10 @@ func (v Fix64Value) Div(context NumberValueArithmeticContext, other NumberValue)
 		})
 	}
 
+	if o == 0 {
+		panic(&DivisionByZeroError{})
+	}
+
 	a := new(big.Int).SetInt64(int64(v))
 	b := new(big.Int).SetInt64(int64(o))
 
@@ -334,6 +340,10 @@ func (v Fix64Value) SaturatingDiv(context NumberValueArithmeticContext, other Nu
 			LeftType:     v.StaticType(context),
 			RightType:    other.StaticType(context),
 		})
+	}
+
+	if o == 0 {
+		panic(&DivisionByZeroError{})
 	}
 
 	a := new(big.Int).SetInt64(int64(v))
@@ -383,6 +393,42 @@ func (v Fix64Value) Mod(context NumberValueArithmeticContext, other NumberValue)
 	)
 
 	return v.Minus(context, truncatedQuotient.Mul(context, o))
+}
+
+func (v Fix64Value) MultiplyDivide(
+	context NumberValueArithmeticContext,
+	factor FixedPointValue,
+	divisor FixedPointValue,
+	rounding fix.RoundingMode,
+) NumberValue {
+	f, ok := factor.(Fix64Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    factor.StaticType(context),
+		})
+	}
+
+	d, ok := divisor.(Fix64Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    divisor.StaticType(context),
+		})
+	}
+
+	valueGetter := func() int64 {
+		a := fix.Fix64(uint64(v))
+		b := fix.Fix64(uint64(f))
+		c := fix.Fix64(uint64(d))
+		result, err := a.FMD(b, c, rounding)
+		handleFixedpointError(err)
+		return int64(result)
+	}
+
+	return NewFix64Value(context, valueGetter)
 }
 
 func (v Fix64Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
@@ -514,12 +560,68 @@ func ConvertFix64(memoryGauge common.MemoryGauge, value Value) Fix64Value {
 	}
 }
 
-func (v Fix64Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func ConvertFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingRule fix.RoundingMode) Fix64Value {
+	switch value := value.(type) {
+	case Fix128Value:
+		return NewFix64Value(
+			memoryGauge,
+			func() int64 {
+				result, err := fix.Fix128(value).ToFix64(roundingRule)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				return int64(result)
+			},
+		)
+
+	case UFix128Value:
+		return NewFix64Value(
+			memoryGauge,
+			func() int64 {
+				result, err := fix.UFix128(value).ToUFix64(roundingRule)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				if uint64(result) > Fix64MaxValue {
+					panic(&OverflowError{})
+				}
+				return int64(result)
+			},
+		)
+
+	default:
+		return ConvertFix64(memoryGauge, value)
+	}
 }
 
-func (v Fix64Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Fix64Type)
+func (v Fix64Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		nil,
+	)
+}
+
+func (v Fix64Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Fix64Type,
+	)
 }
 
 func (Fix64Value) RemoveMember(_ ValueTransferContext, _ string) Value {
@@ -572,6 +674,7 @@ func (v Fix64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -601,6 +704,15 @@ func (v Fix64Value) IntegerPart() NumberValue {
 
 func (Fix64Value) Scale() int {
 	return sema.Fix64Scale
+}
+
+func (Fix64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Fix64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func fix128BigIntToFix64(

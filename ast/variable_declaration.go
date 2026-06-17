@@ -27,17 +27,17 @@ import (
 )
 
 type VariableDeclaration struct {
-	Value             Expression
-	SecondValue       Expression
-	TypeAnnotation    *TypeAnnotation
-	Transfer          *Transfer
-	SecondTransfer    *Transfer
-	ParentIfStatement *IfStatement `json:"-"`
-	DocString         string
-	Identifier        Identifier
-	StartPos          Position `json:"-"`
-	Access            Access
-	IsConstant        bool
+	Value                  Expression
+	SecondValue            Expression
+	TypeAnnotation         *TypeAnnotation
+	Transfer               *Transfer
+	SecondTransfer         *Transfer
+	ParentControlStatement Statement `json:"-"`
+	DocString              string
+	Identifier             Identifier
+	StartPos               Position `json:"-"`
+	Access                 Access
+	IsConstant             bool
 }
 
 var _ Element = &VariableDeclaration{}
@@ -107,6 +107,9 @@ func (d *VariableDeclaration) EndPosition(memoryGauge common.MemoryGauge) Positi
 func (*VariableDeclaration) isIfStatementTest() {}
 
 func (d *VariableDeclaration) Walk(walkChild func(Element)) {
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
 	if d.TypeAnnotation != nil {
 		walkChild(d.TypeAnnotation)
 	}
@@ -220,7 +223,7 @@ func (d *VariableDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			docOrEmpty(d.Access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 

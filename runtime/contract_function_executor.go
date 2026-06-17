@@ -237,7 +237,16 @@ func (executor *contractFunctionExecutor) executeWithInterpreter(
 
 	var self interpreter.Value = contractValue
 
-	contractMember := contractValue.GetMember(inter, executor.functionName)
+	contractMember := contractValue.GetMember(
+		inter,
+		executor.functionName,
+		common.DeclarationKindFunction,
+
+		// Calling `GetMember` on the composite value, not on a reference value.
+		// Also, used internally, and the function-value is not moved around.
+		// Therefore, "accessedReference" is `nil`.
+		nil,
+	)
 
 	contractFunction, ok := contractMember.(interpreter.FunctionValue)
 	if !ok {

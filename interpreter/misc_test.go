@@ -49,6 +49,7 @@ import (
 
 type ParseCheckAndInterpretOptions = test_utils.ParseCheckAndInterpretOptions
 
+// Deprecated: Use parseCheckAndPrepareWithOptions instead.
 var parseCheckAndInterpretWithOptions = test_utils.ParseCheckAndInterpretWithOptions
 
 type testEvent = test_utils.TestEvent
@@ -957,7 +958,7 @@ func TestInterpretReturns(t *testing.T) {
 	t.Parallel()
 
 	// NOTE: not enabled for the compiler, as it does not support unreachable statements
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		`
            access(all) fun returnEarly(): Int {
                return 2
@@ -2328,7 +2329,7 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
     `)
 
 	actual := inter.GetGlobal("test").(*interpreter.CompositeValue).
-		GetMember(inter, "foo")
+		GetMember(inter, "foo", common.DeclarationKindField, nil)
 	AssertValuesEqual(
 		t,
 		inter,
@@ -7660,7 +7661,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 	require.NoError(t, err)
 
 	dictionaryStaticType := interpreter.NewDictionaryStaticType(
-		nil,
+		inter,
 		interpreter.PrimitiveStaticTypeInt,
 		interpreter.PrimitiveStaticTypeString,
 	)
@@ -7674,7 +7675,10 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("answer"),
 	)
 
-	arrayStaticType := interpreter.NewVariableSizedStaticType(nil, dictionaryStaticType)
+	arrayStaticType := interpreter.NewVariableSizedStaticType(
+		inter,
+		dictionaryStaticType,
+	)
 
 	arrayValue := interpreter.NewArrayValue(
 		valueCreationContext,
@@ -7687,7 +7691,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		valueCreationContext,
 		interpreter.UnauthorizedAccess,
 		arrayValue,
-		interpreter.MustConvertStaticToSemaType(arrayStaticType, inter),
+		inter.SemaTypeFromStaticType(arrayStaticType),
 	)
 
 	_, err = inter.Invoke("test", ref)
@@ -9007,7 +9011,7 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 	require.NoError(t, err)
 
 	i := inter.GetGlobal("C").(interpreter.MemberAccessibleValue).
-		GetMember(inter, "i")
+		GetMember(inter, "i", common.DeclarationKindField, nil)
 
 	require.IsType(t,
 		interpreter.NewUnmeteredIntValueFromInt64(2),
@@ -11077,6 +11081,279 @@ func TestInterpretArrayFilter(t *testing.T) {
 		array := value.(*interpreter.ArrayValue)
 		require.Equal(t, 0, array.Count())
 	})
+
+	t.Run("reference, container array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&[Int]] {
+              let array = [[1]]
+              let ref: &[[Int]] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: &[Int]): Bool {
+                  return true
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Check outer array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		expectedType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
+		)
+		assert.Equal(t, expectedType, arrayValue.StaticType(inter))
+
+		require.Equal(t, 1, arrayValue.Count())
+		element := arrayValue.Get(inter, 0)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, element)
+		referenceValue := element.(*interpreter.EphemeralReferenceValue)
+
+		assert.Equal(t,
+			expectedType.ElementType(),
+			referenceValue.StaticType(inter),
+		)
+
+		require.IsType(t, &interpreter.ArrayValue{}, referenceValue.Value)
+		innerArray := referenceValue.Value.(*interpreter.ArrayValue)
+
+		expectedInnerArrayType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		assert.Equal(t, expectedInnerArrayType, innerArray.StaticType(inter))
+
+		require.Equal(t, 1, innerArray.Count())
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			innerArray.Get(inter, 0),
+		)
+	})
+
+	t.Run("reference, primitive array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [Int] {
+              let array = [5]
+              let ref: &[Int] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: Int): Bool {
+                  return true
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Check outer array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		expectedType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		assert.Equal(t, expectedType, arrayValue.StaticType(inter))
+
+		require.Equal(t, 1, arrayValue.Count())
+		element := arrayValue.Get(inter, 0)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			element,
+		)
+	})
+
+	t.Run("reference, reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&Int] {
+              let array: [&Int] = [&5 as &Int]
+              let ref: &[&Int] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: &Int): Bool {
+                  return true
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Check outer array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		expectedType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.PrimitiveStaticTypeInt,
+			),
+		)
+		assert.Equal(t, expectedType, arrayValue.StaticType(inter))
+
+		require.Equal(t, 1, arrayValue.Count())
+		element := arrayValue.Get(inter, 0)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, element)
+		referenceValue := element.(*interpreter.EphemeralReferenceValue)
+
+		assert.Equal(t,
+			expectedType.ElementType(),
+			referenceValue.StaticType(inter),
+		)
+
+		require.Equal(
+			t,
+			interpreter.UnauthorizedAccess,
+			referenceValue.Authorization,
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			referenceValue.Value,
+		)
+	})
+
+	t.Run("reference, container array, covariant filter function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&[Int]] {
+              let array = [[1]]
+              let ref: &[[Int]] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: AnyStruct): Bool {
+                  var typedArg = s as! &[Int]
+                  return true
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// Check outer array
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		expectedType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
+		)
+		assert.Equal(t, expectedType, arrayValue.StaticType(inter))
+
+		require.Equal(t, 1, arrayValue.Count())
+		element := arrayValue.Get(inter, 0)
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, element)
+		referenceValue := element.(*interpreter.EphemeralReferenceValue)
+
+		assert.Equal(t,
+			expectedType.ElementType(),
+			referenceValue.StaticType(inter),
+		)
+
+		require.IsType(t, &interpreter.ArrayValue{}, referenceValue.Value)
+		innerArray := referenceValue.Value.(*interpreter.ArrayValue)
+
+		expectedInnerArrayType := interpreter.NewVariableSizedStaticType(
+			inter,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		assert.Equal(t, expectedInnerArrayType, innerArray.StaticType(inter))
+
+		require.Equal(t, 1, innerArray.Count())
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			innerArray.Get(inter, 0),
+		)
+	})
+
+	t.Run("reference, auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&Int] {
+              let array: [auth(Mutate) &Int] = [&5 as auth(Mutate) &Int]
+              let ref: &[auth(Mutate) &Int] = &array
+
+              let filter = ref.filter
+              return filter(view fun(s: &Int): Bool {
+                  var typedArg = s as! auth(Mutate) &Int
+                  return true
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
+
+	t.Run("reference, optional auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [&Int?]? {
+              let v: Int? = 5
+              let array: [auth(Mutate) &Int?]? = [&v as auth(Mutate) &Int?]
+              let ref: &[auth(Mutate) &Int?]? = &array
+
+              return ref?.filter(view fun(s: &Int?): Bool {
+                  var typedArg = s as! auth(Mutate) &Int
+                  return true
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
 }
 
 func TestInterpretArrayMap(t *testing.T) {
@@ -11568,17 +11845,230 @@ func TestInterpretArrayMap(t *testing.T) {
 			interpreter.NewArrayValue(
 				NewTestValueCreationContext(inter),
 				interpreter.NewVariableSizedStaticType(
-					nil,
+					inter,
 					interpreter.NewOptionalStaticType(
-						nil,
+						inter,
 						interpreter.PrimitiveStaticTypeString,
 					),
 				),
 				common.ZeroAddress,
 				interpreter.NewSomeValueNonCopying(
-					nil,
+					inter,
 					interpreter.NewUnmeteredStringValue("Optional.map"),
 				),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference, container array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+
+          fun test(): [Int] {
+              let array = [S()]
+              let ref: &[S] = &array
+
+              return ref.map(fun(s: &S): Int {
+                  return 42
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(42),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference, primitive array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String] {
+              let array: [Int8] = [5]
+              let ref: &[Int8] = &array
+
+              return ref.map(fun(v: Int8): String {
+                  return v.toString()
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("5"),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference, reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String] {
+              let array: [&Int8] = [&5 as &Int8]
+              let ref: &[&Int8] = &array
+
+              return ref.map(fun(v: &Int8): String {
+                  return v.toString()
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("5"),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference, container array, covariant map function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct S {}
+
+          fun test(): [Int] {
+              let array = [S()]
+              let ref: &[S] = &array
+
+              return ref.map(fun(s: AnyStruct): Int {
+                  var typedS = s as! &S
+                  return 5
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			value,
+		)
+	})
+
+	t.Run("reference, auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String] {
+              let array: [auth(Mutate) &Int8] = [&5 as auth(Mutate) &Int8]
+              let ref: &[auth(Mutate) &Int8] = &array
+
+              return ref.map(fun(v: &Int8): String {
+                  var typedArg = v as! auth(Mutate) &Int8
+                  return v.toString()
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
+
+	t.Run("reference, optional auth reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(): [String?]? {
+              let v: Int8? = 5
+              let array: [auth(Mutate) &Int8?]? = [&v as auth(Mutate) &Int8?]
+              let ref: &[auth(Mutate) &Int8?]? = &array
+
+              return ref?.map(fun(v: &Int8?): String? {
+                  var typedArg = v as! auth(Mutate) &Int8
+                  return v?.toString()
+              })
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var typeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &typeMismatchError)
+	})
+
+	t.Run("auth(E1) reference, auth(E1, E2) reference array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          entitlement E1
+          entitlement E2
+
+          fun test(): [String] {
+              let array: [auth(E1, E2) &Int8] = [&5 as auth(E1, E2) &Int8]
+              let ref: auth(E1) &[auth(E1, E2) &Int8] = &array
+
+              return ref.map(fun(v: auth(E1) &Int8): String {
+                  return v.toString()
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.NewVariableSizedStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeString,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("5"),
 			),
 			value,
 		)
@@ -11750,7 +12240,7 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 				NewTestValueCreationContext(inter),
 				&interpreter.VariableSizedStaticType{
 					Type: interpreter.NewCompositeStaticType(
-						nil,
+						inter,
 						common.Location(common.StringLocation("test")),
 						"TestStruct",
 						"S.test.TestStruct",
@@ -11960,7 +12450,7 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 					NewTestValueCreationContext(inter),
 					&interpreter.ConstantSizedStaticType{
 						Type: interpreter.NewCompositeStaticType(
-							nil,
+							inter,
 							common.Location(common.StringLocation("test")),
 							"TestStruct",
 							"S.test.TestStruct",
@@ -12119,18 +12609,15 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	variable := inter.GetGlobal("ref")
-	require.NotNil(t, variable)
+	value := inter.GetGlobal("ref")
+	require.NotNil(t, value)
 
-	require.Equal(
-		t,
-		&interpreter.EphemeralReferenceValue{
-			Value:         interpreter.NewUnmeteredIntValueFromInt64(2),
-			BorrowedType:  sema.IntType,
-			Authorization: interpreter.UnauthorizedAccess,
-		},
-		variable,
-	)
+	require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+	referenceValue := value.(*interpreter.EphemeralReferenceValue)
+
+	require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), referenceValue.Value)
+	require.Equal(t, sema.IntType, referenceValue.BorrowedType)
+	require.Equal(t, interpreter.UnauthorizedAccess, referenceValue.Authorization)
 }
 
 func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {
@@ -13082,12 +13569,20 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 		)
 		require.NotNil(t, storageMap)
 
+		fooType := inter.SemaTypeFromStaticType(
+			&interpreter.CompositeStaticType{
+				Location:            TestLocation,
+				TypeID:              TestLocation.TypeID(nil, "Foo"),
+				QualifiedIdentifier: "Foo",
+			},
+		)
+
 		ref := interpreter.NewStorageReferenceValue(
 			nil,
 			interpreter.UnauthorizedAccess,
 			address,
 			path,
-			nil,
+			fooType,
 		)
 
 		result, err := inter.Invoke("update", ref)
@@ -13115,7 +13610,7 @@ func TestInterpretSomeValueChildContainerMutation(t *testing.T) {
 			interpreter.UnauthorizedAccess,
 			address,
 			path,
-			nil,
+			fooType,
 		)
 
 		result, err = inter.Invoke("updateAgain", ref)
@@ -14662,6 +15157,227 @@ func TestInterpretContainerMutationCheckThroughReference(t *testing.T) {
 	_, err = inter.Invoke("test")
 	RequireError(t, err)
 
-	var containerReadError *interpreter.ContainerReadError
-	require.ErrorAs(t, err, &containerReadError)
+	var containerMutationErr *interpreter.ContainerMutationError
+	require.ErrorAs(t, err, &containerMutationErr)
+
+}
+
+func TestInterpretFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {
+          let val: Int
+      }
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {
+          let val: Int
+
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun testFailable(): Int? {
+          let x: {I1} = S()
+          let y = x as? {I2}
+          return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: {I1} = S()
+          let y = x as! {I2}
+          return y.val
+      }
+    `
+
+	inter := parseCheckAndPrepare(t, code)
+
+	result, err := inter.Invoke("testFailable")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
+
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
+}
+
+func TestInterpretEphemeralReferenceFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {
+          let val: Int
+      }
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {
+          let val: Int
+
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun testFailable(): Int? {
+          let x: &{I1} = &S()
+          let y = x as? &{I2}
+          return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: &{I1} = &S()
+          let y = x as! &{I2}
+          return y.val
+      }
+    `
+
+	inter := parseCheckAndPrepare(t, code)
+
+	result, err := inter.Invoke("testFailable")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
+
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
+}
+
+func TestInterpretStorageReferenceFailableCastToUnrelated(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+      // unrelated structs
+      struct interface I1 {}
+
+      struct interface I2 {
+          let val: Int
+      }
+
+      // struct conforms to unrelated struct interfaces
+      struct S: I1, I2 {
+          let val: Int
+
+          init() {
+              self.val = 2
+          }
+      }
+
+      fun save() {
+          account.storage.save(S(), to: /storage/s)
+      }
+
+      fun testFailable(): Int? {
+          let x: &{I1} = account.storage.borrow<&{I1}>(from: /storage/s)!
+          let y = x as? &{I2}
+          return y?.val
+      }
+
+      fun testForce(): Int {
+          let x: &{I1} = account.storage.borrow<&{I1}>(from: /storage/s)!
+          let y = x as! &{I2}
+          return y.val
+      }
+    `
+
+	// `account: auth(...) &Account`
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name: "account",
+		Type: sema.FullyEntitledAccountReferenceType,
+		Value: stdlib.NewAccountReferenceValue(
+			NoOpFunctionCreationContext{},
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.FullyEntitledAccountAccess,
+		),
+		Kind: common.DeclarationKindConstant,
+	}
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(valueDeclaration)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, valueDeclaration)
+
+	storage := NewUnmeteredInMemoryStorage()
+
+	inter, err := parseCheckAndPrepareWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				Storage: storage,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				AccountHandler: func(
+					context interpreter.AccountCreationContext,
+					address interpreter.AddressValue,
+				) interpreter.Value {
+					return stdlib.NewAccountValue(context, nil, address)
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("save")
+	require.NoError(t, err)
+
+	result, err := inter.Invoke("testFailable")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredSomeValueNonCopying(
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+		),
+		result,
+	)
+
+	result, err = inter.Invoke("testForce")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewUnmeteredIntValueFromInt64(2),
+		result,
+	)
 }

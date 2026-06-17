@@ -51,6 +51,23 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// UnreachableInstructionError
+
+type UnreachableInstructionError struct {
+	ast.Range
+}
+
+var _ errors.InternalError = &UnreachableInstructionError{}
+
+func (*UnreachableInstructionError) IsInternalError() {}
+
+func (e *UnreachableInstructionError) Error() string {
+	return fmt.Sprintf(
+		"%s instruction should be unreachable, but was reached during execution",
+		errors.InternalErrorMessagePrefix,
+	)
+}
+
 type HasLocationRange interface {
 	SetLocationRange(locationRange LocationRange)
 }
@@ -903,30 +920,6 @@ func (e *ContainerMutationError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
 
-// ContainerReadError
-type ContainerReadError struct {
-	ExpectedType sema.Type
-	ActualType   sema.Type
-	LocationRange
-}
-
-var _ errors.UserError = &ContainerReadError{}
-var _ HasLocationRange = &ContainerReadError{}
-
-func (*ContainerReadError) IsUserError() {}
-
-func (e *ContainerReadError) Error() string {
-	return fmt.Sprintf(
-		"invalid container read: expected a subtype of `%s`, found `%s`",
-		e.ExpectedType.QualifiedString(),
-		e.ActualType.QualifiedString(),
-	)
-}
-
-func (e *ContainerReadError) SetLocationRange(locationRange LocationRange) {
-	e.LocationRange = locationRange
-}
-
 // NonStorableValueError
 type NonStorableValueError struct {
 	Value Value
@@ -1244,6 +1237,27 @@ func (e *InvalidAttachmentOperationTargetError) Error() string {
 }
 
 func (e *InvalidAttachmentOperationTargetError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// InvalidAttachmentConstructorError
+type InvalidAttachmentConstructorError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = &InvalidAttachmentConstructorError{}
+var _ HasLocationRange = &InvalidAttachmentConstructorError{}
+
+func (*InvalidAttachmentConstructorError) IsInternalError() {}
+
+func (e *InvalidAttachmentConstructorError) Error() string {
+	return fmt.Sprintf(
+		"%s attachment constructor can only be called from an attach expression",
+		errors.InternalErrorMessagePrefix,
+	)
+}
+
+func (e *InvalidAttachmentConstructorError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }
 
@@ -1625,8 +1639,8 @@ func (e *InvalidBaseTypeError) SetLocationRange(locationRange LocationRange) {
 
 // InvalidReferenceConversionError
 type InvalidReferenceConversionError struct {
-	Expected sema.Access
-	Actual   sema.Access
+	ExpectedAuthorization sema.Access
+	ActualAuthorization   sema.Access
 	LocationRange
 }
 
@@ -1639,11 +1653,85 @@ func (e *InvalidReferenceConversionError) Error() string {
 	return fmt.Sprintf(
 		"%s invalid reference conversion error: expect entitlements `%s`, found `%s`",
 		errors.InternalErrorMessagePrefix,
-		e.Expected,
-		e.Actual,
+		e.ExpectedAuthorization,
+		e.ActualAuthorization,
 	)
 }
 
 func (e *InvalidReferenceConversionError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// StorableCopyError
+type StorableCopyError struct {
+	storableType string
+}
+
+var _ errors.InternalError = &StorableCopyError{}
+
+func NewStorableCopyError(storableType string) *StorableCopyError {
+	return &StorableCopyError{
+		storableType: storableType,
+	}
+}
+
+func (*StorableCopyError) IsInternalError() {}
+
+func (e *StorableCopyError) Error() string {
+	return fmt.Sprintf("cannot call CopyNonRefSimple for storable %q", e.storableType)
+}
+
+// InvalidArgumentTypeError
+type InvalidArgumentTypeError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = &InvalidArgumentTypeError{}
+var _ HasLocationRange = &InvalidArgumentTypeError{}
+
+func (*InvalidArgumentTypeError) IsUserError() {}
+
+func (e *InvalidArgumentTypeError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"%s invalid argument type: expected `%s`, got `%s`",
+		errors.InternalErrorMessagePrefix,
+		expected,
+		actual,
+	)
+}
+
+func (e *InvalidArgumentTypeError) SetLocationRange(locationRange LocationRange) {
+	e.LocationRange = locationRange
+}
+
+// AuthorizationMismatchError
+type AuthorizationMismatchError struct {
+	ExpectedAuthorization Authorization
+	ActualAuthorization   Authorization
+	LocationRange
+}
+
+var _ errors.InternalError = &AuthorizationMismatchError{}
+var _ HasLocationRange = &AuthorizationMismatchError{}
+
+func (*AuthorizationMismatchError) IsInternalError() {}
+
+func (e *AuthorizationMismatchError) Error() string {
+	return fmt.Sprintf(
+		"%s unexpected authorization: expect `%s`, found `%s`",
+		errors.InternalErrorMessagePrefix,
+		e.ExpectedAuthorization,
+		e.ActualAuthorization,
+	)
+}
+
+func (e *AuthorizationMismatchError) SetLocationRange(locationRange LocationRange) {
 	e.LocationRange = locationRange
 }

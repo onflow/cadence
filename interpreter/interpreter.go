@@ -34,6 +34,8 @@ import (
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
@@ -516,6 +518,14 @@ func InvokeExternallyWithValidation(
 		LocationRange{},
 	)
 
+	// Meter the entry-point function invocation.
+	// Invocations through invocation expressions are metered separately,
+	// but the entry point is invoked directly, so it must be metered here.
+	common.UseComputation(
+		context,
+		common.FunctionInvocationComputationUsage,
+	)
+
 	return functionValue.Invoke(invocation), nil
 }
 
@@ -550,9 +560,11 @@ func PrepareExternalInvocationArgumentsWithValidation(
 		}
 	}
 
-	var convertAndBox = convertAndBox
+	var convertAndBox = ConvertAndBox
 	if validateConvertAndBox {
-		convertAndBox = ConvertAndBoxWithValidation
+		convertAndBox = func(context ValueConversionContext, value Value, targetType sema.Type) Value {
+			return ConvertAndBoxWithValidation(context, value, nil, targetType)
+		}
 	}
 
 	var preparedArguments []Value
@@ -562,7 +574,7 @@ func PrepareExternalInvocationArgumentsWithValidation(
 			parameterType := parameters[i].TypeAnnotation.Type
 
 			// converts the argument into the parameter type declared by the function
-			preparedArguments[i] = convertAndBox(context, argument, nil, parameterType)
+			preparedArguments[i] = convertAndBox(context, argument, parameterType)
 		}
 	}
 
@@ -1450,16 +1462,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
-			// If there's a default implementation, then skip explicitly/separately
-			// running the conditions of that functions.
-			// Because the conditions also get executed when the default implementation is executed.
-			// This works because:
-			// 	- `code.Functions` only contains default implementations.
-			//	- There is always only one default implementation (cannot override by other interfaces).
-			if code.Functions.Contains(name) {
-				continue
-			}
-
 			fn, ok := functions.Get(name)
 			// If there is a wrapper, there MUST be a body.
 			if !ok {
@@ -1577,6 +1579,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 				var self Value = value
 				if declaration.Kind() == common.CompositeKindAttachment {
+					if !invocation.HasImplicitArgument {
+						panic(&InvalidAttachmentConstructorError{
+							LocationRange: invocation.LocationRange,
+						})
+					}
 
 					attachmentType := MustSemaTypeOfValue(value, invocationContext).(*sema.CompositeType)
 					// Self's type in the constructor is fully entitled, since
@@ -1671,8 +1678,6 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 
 	location := interpreter.Location
 
-	intType := sema.IntType
-
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]EnumCase, len(enumCases))
 
@@ -1684,7 +1689,6 @@ func (interpreter *Interpreter) declareEnumLookupFunction(
 		rawValue := convert(
 			interpreter,
 			NewIntValueFromInt64(interpreter, int64(i)),
-			intType,
 			compositeType.EnumRawType,
 		).(IntegerValue)
 
@@ -1848,11 +1852,22 @@ func (interpreter *Interpreter) defaultFunctions(
 			continue
 		}
 
+		// Create function value with body only (no conditions).
+		// Conditions are applied separately via the condition wrapper,
+		// so they are enforced regardless of whether the default function
+		// is used as-is or overridden by a conforming type.
+		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 		functions.Set(
 			name,
-			interpreter.compositeFunction(
-				functionDeclaration,
+			NewInterpretedFunctionValue(
+				interpreter,
+				functionDeclaration.ParameterList,
+				functionType,
 				lexicalScope,
+				nil, // beforeStatements — conditions handled by wrapper
+				nil, // preConditions — conditions handled by wrapper
+				functionDeclaration.FunctionBlock.Block.Statements,
+				nil, // postConditions — conditions handled by wrapper
 			),
 		)
 	}
@@ -2003,10 +2018,9 @@ func ConvertAndBoxWithValidation(
 		}
 	}
 
-	result := convertAndBox(
+	result := ConvertAndBox(
 		context,
 		transferredValue,
-		valueType,
 		targetType,
 	)
 
@@ -2052,124 +2066,223 @@ func TransferIfNotResourceAndConvert(
 	)
 }
 
-// convertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
-func convertAndBox(
+// ConvertAndBox converts a value to a target type, and boxes in optionals and any value, if necessary
+func ConvertAndBox(
 	context ValueConversionContext,
 	value Value,
-	valueType sema.Type,
 	targetType sema.Type,
 ) Value {
-	value = convert(context, value, valueType, targetType)
+	value = convert(context, value, targetType)
 	return BoxOptional(context, value, targetType)
 }
 
-// Produces the `valueStaticType` argument into a new static type that conforms
-// to the specification of the `targetSemaType`. At the moment, this means that the
-// authorization of any reference types in `valueStaticType` are changed to match the
-// authorization of any equivalently-positioned reference types in `targetSemaType`.
-func convertStaticType(
-	gauge common.MemoryGauge,
-	valueStaticType StaticType,
-	targetSemaType sema.Type,
+// applyTargetTypeAuthorization returns a static type that preserves the
+// actual type structure but uses the target type's authorization for references.
+// This prevents entitlement escalation while allowing type narrowing.
+func applyTargetTypeAuthorization(
+	typeConverter TypeConverter,
+	actualStaticType StaticType,
+	targetType sema.Type,
 ) StaticType {
-	switch valueStaticType := valueStaticType.(type) {
-	case *ReferenceStaticType:
-		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
-			return NewReferenceStaticType(
-				gauge,
-				ConvertSemaAccessToStaticAuthorization(gauge, targetReferenceType.Authorization),
-				valueStaticType.ReferencedType,
-			)
-		}
-
-	case *OptionalStaticType:
-		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
-			return NewOptionalStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetOptionalType.Type,
-				),
-			)
-		}
-
-	case *DictionaryStaticType:
-		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
-			return NewDictionaryStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.KeyType,
-					targetDictionaryType.KeyType,
-				),
-				convertStaticType(
-					gauge,
-					valueStaticType.ValueType,
-					targetDictionaryType.ValueType,
-				),
-			)
-		}
-
+	switch actual := actualStaticType.(type) {
 	case *VariableSizedStaticType:
-		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
-			return NewVariableSizedStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetArrayType.Type,
-				),
-			)
+		var targetElementType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetElementType = sema.AnyStructType
+		} else if borrowArray, ok := targetType.(*sema.VariableSizedType); ok {
+			targetElementType = borrowArray.Type
+		} else {
+			break
 		}
+
+		elementType := applyTargetTypeAuthorization(typeConverter, actual.Type, targetElementType)
+		return NewVariableSizedStaticType(typeConverter, elementType)
 
 	case *ConstantSizedStaticType:
-		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
-			return NewConstantSizedStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.Type,
-					targetArrayType.Type,
-				),
-				valueStaticType.Size,
-			)
+		var targetElementType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetElementType = sema.AnyStructType
+		} else if borrowArray, ok := targetType.(*sema.ConstantSizedType); ok {
+			targetElementType = borrowArray.Type
+		} else {
+			break
 		}
+
+		elementType := applyTargetTypeAuthorization(typeConverter, actual.Type, targetElementType)
+		return NewConstantSizedStaticType(typeConverter, elementType, actual.Size)
+
+	case *DictionaryStaticType:
+		var targetKeyType, targetValueType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetKeyType = sema.AnyStructType
+			targetValueType = sema.AnyStructType
+		} else if borrowDict, ok := targetType.(*sema.DictionaryType); ok {
+			targetKeyType = borrowDict.KeyType
+			targetValueType = borrowDict.ValueType
+		} else {
+			break
+		}
+
+		keyType := applyTargetTypeAuthorization(typeConverter, actual.KeyType, targetKeyType)
+		valueType := applyTargetTypeAuthorization(typeConverter, actual.ValueType, targetValueType)
+		return NewDictionaryStaticType(typeConverter, keyType, valueType)
+
+	case *OptionalStaticType:
+		var targetInnerType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetInnerType = sema.AnyStructType
+		} else if borrowOptional, ok := targetType.(*sema.OptionalType); ok {
+			targetInnerType = borrowOptional.Type
+		} else {
+			break
+		}
+
+		innerType := applyTargetTypeAuthorization(typeConverter, actual.Type, targetInnerType)
+		return NewOptionalStaticType(typeConverter, innerType)
+
+	case *ReferenceStaticType:
+		// Use the actual referenced type as the inner type, but with the borrow type's authorization,
+		// instead of the actual referenced type's authorization.
+
+		var targetReferencedType sema.Type
+		var targetAuth Authorization
+
+		if targetType == sema.AnyStructType {
+			// `AnyStruct` must be treated as unauthorized.
+			targetAuth = UnauthorizedAccess
+			targetReferencedType = sema.AnyStructType
+		} else if borrowRef, ok := targetType.(*sema.ReferenceType); ok {
+			targetReferencedType = borrowRef.Type
+			targetAuth = ConvertSemaAccessToStaticAuthorization(typeConverter, borrowRef.Authorization)
+		} else {
+			break
+		}
+
+		innerType := applyTargetTypeAuthorization(typeConverter, actual.ReferencedType, targetReferencedType)
+		return NewReferenceStaticType(typeConverter, targetAuth, innerType)
 
 	case *CapabilityStaticType:
-		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
-			return NewCapabilityStaticType(
-				gauge,
-				convertStaticType(
-					gauge,
-					valueStaticType.BorrowType,
-					targetCapabilityType.BorrowType,
-				),
-			)
-		}
-	}
+		var targetBorrowType sema.Type
 
-	// If the target type is optional but the value type is not,
-	// wrap the value type in an optional
-	if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
-		return NewOptionalStaticType(
-			gauge,
-			convertStaticType(gauge, valueStaticType, targetOptionalType.Type),
+		if targetType == sema.AnyStructType {
+			targetBorrowType = sema.AnyStructType
+		} else if targetCapabilityType, isCapabilityType := targetType.(*sema.CapabilityType); isCapabilityType {
+			targetBorrowType = targetCapabilityType.BorrowType
+		} else {
+			break
+		}
+
+		borrowType := applyTargetTypeAuthorization(
+			typeConverter,
+			actual.BorrowType,
+			targetBorrowType,
+		)
+
+		return NewCapabilityStaticType(
+			typeConverter,
+			borrowType,
+		)
+
+	case FunctionStaticType:
+		var targetReturnType sema.Type
+
+		if targetType == sema.AnyStructType {
+			targetReturnType = sema.AnyStructType
+		} else if targetFuncType, isFuncType := targetType.(*sema.FunctionType); isFuncType {
+			targetReturnType = targetFuncType.ReturnTypeAnnotation.Type
+		} else {
+			break
+		}
+
+		newReturnType := applyTargetTypeAuthorization(
+			typeConverter,
+			actual.ReturnType(typeConverter),
+			targetReturnType,
+		)
+
+		newSemaReturnType := typeConverter.SemaTypeFromStaticType(newReturnType)
+
+		return NewFunctionStaticType(
+			typeConverter,
+			&sema.FunctionType{
+				Purity:                   actual.Purity,
+				ReturnTypeAnnotation:     sema.NewTypeAnnotation(newSemaReturnType),
+				Arity:                    actual.Arity,
+				ArgumentExpressionsCheck: actual.ArgumentExpressionsCheck,
+				TypeArgumentsCheck:       actual.TypeArgumentsCheck,
+				Members:                  actual.Members,
+				TypeParameters:           actual.TypeParameters,
+				Parameters:               actual.Parameters,
+				IsConstructor:            actual.IsConstructor,
+				TypeFunctionType:         actual.TypeFunctionType,
+			},
 		)
 	}
 
-	return valueStaticType
+	// For all other cases, return the actual type unchanged
+	return actualStaticType
+}
+
+// semaTypeWithStrippedEntitlements returns a copy of the given sema type with all
+// reference authorizations set to UnauthorizedAccess. Used when assigning to AnyStruct
+// so that the result preserves the type structure (e.g. [&Int] not [AnyStruct]).
+func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) sema.Type {
+	switch t := typ.(type) {
+	case *sema.ReferenceType:
+		newReferencedType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewReferenceType(
+			gauge,
+			sema.UnauthorizedAccess,
+			newReferencedType,
+		)
+	case *sema.VariableSizedType:
+		newElementType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewVariableSizedType(gauge, newElementType)
+	case *sema.ConstantSizedType:
+		newElementType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewConstantSizedType(gauge, newElementType, t.Size)
+	case *sema.DictionaryType:
+		newKeyType := semaTypeWithStrippedEntitlements(gauge, t.KeyType)
+		newValueType := semaTypeWithStrippedEntitlements(gauge, t.ValueType)
+		return sema.NewDictionaryType(
+			gauge,
+			newKeyType,
+			newValueType,
+		)
+	case *sema.OptionalType:
+		newInnerType := semaTypeWithStrippedEntitlements(gauge, t.Type)
+		return sema.NewOptionalType(gauge, newInnerType)
+
+	case *sema.FunctionType:
+		newReturnType := semaTypeWithStrippedEntitlements(gauge, t.ReturnTypeAnnotation.Type)
+		return &sema.FunctionType{
+			Purity:                   t.Purity,
+			ReturnTypeAnnotation:     sema.NewTypeAnnotation(newReturnType),
+			Arity:                    t.Arity,
+			ArgumentExpressionsCheck: t.ArgumentExpressionsCheck,
+			TypeArgumentsCheck:       t.TypeArgumentsCheck,
+			Members:                  t.Members,
+			TypeParameters:           t.TypeParameters,
+			Parameters:               t.Parameters,
+			IsConstructor:            t.IsConstructor,
+			TypeFunctionType:         t.TypeFunctionType,
+		}
+
+	default:
+		return typ
+	}
 }
 
 func convert(
 	context ValueCreationContext,
 	value Value,
-	valueType,
 	targetType sema.Type,
 ) Value {
-	if valueType == nil {
-		return value
-	}
+	valueType := MustSemaTypeOfValue(value, context)
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
@@ -2184,7 +2297,6 @@ func convert(
 				innerValue := convert(
 					context,
 					value.value,
-					optionalValueType.Type,
 					unwrappedTargetType,
 				)
 				return NewSomeValueNonCopying(context, innerValue)
@@ -2308,6 +2420,178 @@ func convert(
 		if !valueType.Equal(unwrappedTargetType) {
 			return ConvertUFix64(context, value)
 		}
+
+	case sema.AnyStructType:
+
+		switch value := value.(type) {
+		case *EphemeralReferenceValue:
+			targetBorrowType := semaTypeWithStrippedEntitlements(context, value.BorrowedType)
+
+			// Assigning/casting to `AnyStruct` should strip-off all entitlements.
+			targetAuthorization := UnauthorizedAccess
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if targetBorrowType.Equal(value.BorrowedType) &&
+				targetAuthorization == value.Authorization {
+				return value
+			}
+
+			return NewEphemeralReferenceValue(
+				context,
+				targetAuthorization,
+				value.Value,
+				targetBorrowType,
+			)
+
+		case *StorageReferenceValue:
+			targetBorrowType := semaTypeWithStrippedEntitlements(context, value.BorrowedType)
+
+			// Assigning/casting to `AnyStruct` should strip-off all entitlements.
+			targetAuthorization := UnauthorizedAccess
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if targetBorrowType.Equal(value.BorrowedType) &&
+				targetAuthorization == value.Authorization {
+				return value
+			}
+
+			return NewStorageReferenceValue(
+				context,
+				targetAuthorization,
+				value.TargetStorageAddress,
+				value.TargetPath,
+				targetBorrowType,
+			)
+
+		case *ArrayValue:
+			// When assigning container values to AnyStruct, strip entitlements from nested references
+			// but preserve the type structure (e.g. [auth(E2)&Int] -> [&Int], not [AnyStruct]).
+
+			oldArraySemaType := MustSemaTypeOfValue(value, context)
+
+			// Skip conversion if the type does not contain references (nothing to strip).
+			// If the declared element type is non-reference (e.g. `[AnyStruct]`) but a runtime
+			// element is a reference, that reference must have been stored after an earlier
+			// assignment to `AnyStruct`, so entitlements were already stripped then.
+			if !oldArraySemaType.IsOrContainsReferenceType() {
+				return value
+			}
+
+			newArraySemaType := semaTypeWithStrippedEntitlements(context, oldArraySemaType).(sema.ArrayType)
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if newArraySemaType.Equal(oldArraySemaType) {
+				return value
+			}
+
+			newArrayStaticType := ConvertSemaToStaticType(context, newArraySemaType).(ArrayStaticType)
+			targetElementType := newArraySemaType.ElementType(false)
+
+			array := value.array
+			iterator, err := array.ReadOnlyIterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+			return NewArrayValueWithIterator(
+				context,
+				newArrayStaticType,
+				value.GetOwner(),
+				array.Count(),
+				func() Value {
+					element, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+
+					if element == nil {
+						return nil
+					}
+
+					elemValue := MustConvertStoredValue(context, element)
+
+					return ConvertAndBox(
+						context,
+						elemValue,
+						targetElementType,
+					)
+				},
+			)
+
+		case *DictionaryValue:
+			// When assigning container values to AnyStruct, strip entitlements from nested references
+			// but preserve the type structure (e.g. {String: auth(E2)&Int} -> {String: &Int}, not {String: AnyStruct}).
+
+			oldDictionarySemaType := MustSemaTypeOfValue(value, context)
+
+			// Skip conversion if the type does not contain references (nothing to strip).
+			// If the declared key/value types are non-reference (e.g: `{Strng: AnyStruct}`)
+			// but a runtime vaalue is a reference, that reference must have been stored after
+			// an earlier assignment to `AnyStruct`, so entitlements were already stripped then.
+			if !oldDictionarySemaType.IsOrContainsReferenceType() {
+				return value
+			}
+
+			newDictionarySemaType := semaTypeWithStrippedEntitlements(context, oldDictionarySemaType).(*sema.DictionaryType)
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if newDictionarySemaType.Equal(oldDictionarySemaType) {
+				return value
+			}
+
+			newDictionaryStaticType := ConvertSemaToStaticType(context, newDictionarySemaType).(*DictionaryStaticType)
+
+			targetKeyType := newDictionarySemaType.KeyType
+			targetValueType := newDictionarySemaType.ValueType
+
+			dictionary := value.dictionary
+			iterator, err := dictionary.ReadOnlyIterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			return newDictionaryValueWithIterator(
+				context,
+				newDictionaryStaticType,
+				dictionary.Count(),
+				dictionary.Seed(),
+				common.Address(dictionary.Address()),
+				func() (Value, Value) {
+					k, v, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+					if k == nil || v == nil {
+						return nil, nil
+					}
+
+					key := MustConvertStoredValue(context, k)
+					val := MustConvertStoredValue(context, v)
+
+					convertedKey := ConvertAndBox(context, key, targetKeyType)
+					convertedValue := ConvertAndBox(context, val, targetValueType)
+					return convertedKey, convertedValue
+				},
+			)
+
+		case FunctionValue:
+			oldFuncSemaType := MustSemaTypeOfValue(value, context)
+			newFuncSemaType := semaTypeWithStrippedEntitlements(context, oldFuncSemaType).(*sema.FunctionType)
+
+			// If there is no change in the entitlements, then no need to create a new value.
+			if newFuncSemaType.Equal(oldFuncSemaType) {
+				return value
+			}
+
+			newFuncStaticType := ConvertSemaToStaticType(context, newFuncSemaType).(FunctionStaticType)
+
+			return context.NewFunctionWithType(value, newFuncStaticType)
+
+		// No Need to handle `SomeValue` here, since this `convert` function
+		// peels the optionals/some-values at the top.
+
+		default:
+			return value
+		}
 	}
 
 	switch unwrappedTargetType := unwrappedTargetType.(type) {
@@ -2320,7 +2604,7 @@ func convert(
 		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
 
 			oldArrayStaticType := arrayValue.StaticType(context)
-			arrayStaticType := convertStaticType(context, oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
+			arrayStaticType := applyTargetTypeAuthorization(context, oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
 
 			if oldArrayStaticType.Equal(arrayStaticType) {
 				return value
@@ -2350,8 +2634,7 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
-					return convertAndBox(context, value, valueType, targetElementType)
+					return convert(context, value, targetElementType)
 				},
 			)
 		}
@@ -2360,7 +2643,7 @@ func convert(
 		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
 
 			oldDictStaticType := dictValue.StaticType(context)
-			dictStaticType := convertStaticType(context, oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
+			dictStaticType := applyTargetTypeAuthorization(context, oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
 
 			if oldDictStaticType.Equal(dictStaticType) {
 				return value
@@ -2395,11 +2678,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					keyType := context.SemaTypeFromStaticType(key.StaticType(context))
-					valueType := context.SemaTypeFromStaticType(value.StaticType(context))
-
-					convertedKey := convertAndBox(context, key, keyType, targetKeyType)
-					convertedValue := convertAndBox(context, value, valueType, targetValueType)
+					convertedKey := convert(context, key, targetKeyType)
+					convertedValue := convert(context, value, targetValueType)
 
 					return convertedKey, convertedValue
 				},
@@ -2413,7 +2693,7 @@ func convert(
 			switch capability := value.(type) {
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
-				borrowType := convertStaticType(context, valueBorrowType, targetBorrowType)
+				borrowType := applyTargetTypeAuthorization(context, valueBorrowType, targetBorrowType)
 				if capability.isInvalid() {
 					return NewInvalidCapabilityValue(context, capability.address, borrowType)
 				}
@@ -2452,6 +2732,13 @@ func convert(
 					unwrappedTargetType,
 					targetAuthorization,
 				)
+
+				// Do NOT recursively convert the inner value.
+				// Keep the reference pointing to the same underlying value.
+				// Entitlement stripping for nested elements happens lazily
+				// when they are accessed (via CreateReferenceValue/ConvertAndBoxWithValidation).
+				// The EphemeralReferenceValue.StaticType() method uses BorrowedType
+				// to prevent entitlement escalation via downcasting.
 				return NewEphemeralReferenceValue(
 					context,
 					targetAuthorization,
@@ -2482,9 +2769,37 @@ func convert(
 		default:
 			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 		}
+
+	case *sema.FunctionType:
+		if funcValue, isFunc := value.(FunctionValue); isFunc && !valueType.Equal(unwrappedTargetType) {
+			oldFuncStaticType := funcValue.StaticType(context)
+			newFuncStaticType := applyTargetTypeAuthorization(context, oldFuncStaticType, unwrappedTargetType).(FunctionStaticType)
+
+			if oldFuncStaticType.Equal(newFuncStaticType) {
+				return value
+			}
+
+			return context.NewFunctionWithType(funcValue, newFuncStaticType)
+		}
 	}
 
 	return value
+}
+
+func (interpreter *Interpreter) NewFunctionWithType(funcValue FunctionValue, funcStaticType FunctionStaticType) FunctionValue {
+	return NewWrappedFunctionValue(
+		interpreter,
+		funcValue,
+		NewStaticHostFunctionValue(
+			interpreter,
+			funcStaticType.FunctionType,
+			func(invocation Invocation) Value {
+				// No need to convert the results here.
+				// Wrapper function invocation already does that (at the invocation).
+				return funcValue.Invoke(invocation)
+			},
+		),
+	)
 }
 
 // isReferenceConversionNotRedundant checks whether the conversion is not redundant.
@@ -2522,10 +2837,10 @@ func checkTargetIsLessPermissive(
 	switch valueType := valueType.(type) {
 	case *sema.ReferenceType:
 		actualAuthorization := valueType.Authorization
-		if !sema.PermitsAccess(unwrappedTargetType.Authorization, actualAuthorization) {
+		if !sema.PermitsAccess(targetSemaAuthorization, actualAuthorization) {
 			panic(&InvalidReferenceConversionError{
-				Expected: targetSemaAuthorization,
-				Actual:   actualAuthorization,
+				ExpectedAuthorization: targetSemaAuthorization,
+				ActualAuthorization:   actualAuthorization,
 			})
 		}
 	default:
@@ -2536,14 +2851,14 @@ func checkTargetIsLessPermissive(
 		// This is needed to preserve the entitlements when being assigned to `AnyStruct`.
 		actualAuthorization := ref.GetAuthorization()
 		if !PermitsAccess(context, targetAuthorization, actualAuthorization) {
-			actualSemaAuthorization, err := ConvertStaticAuthorizationToSemaAccess(actualAuthorization, context)
+			actualSemaAuthorization, err := context.SemaAccessFromStaticAuthorization(actualAuthorization)
 			if err != nil {
 				panic(err)
 			}
 
 			panic(&InvalidReferenceConversionError{
-				Expected: targetSemaAuthorization,
-				Actual:   actualSemaAuthorization,
+				ExpectedAuthorization: targetSemaAuthorization,
+				ActualAuthorization:   actualSemaAuthorization,
 			})
 		}
 	}
@@ -2698,10 +3013,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 ) FunctionWrapper {
 
 	if declaration.FunctionBlock == nil ||
-		declaration.FunctionBlock.HasStatements() {
-		// If there's a default implementation (i.e: has statements),
-		// then skip explicitly/separately running the conditions of that functions.
-		// Because the conditions also get executed when the default implementation is executed.
+		!declaration.FunctionBlock.HasConditions() {
 		return nil
 	}
 
@@ -2731,100 +3043,104 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 		}
 
 		// Condition wrapper is a static function.
-		return NewStaticHostFunctionValue(
+		return NewWrappedFunctionValue(
 			interpreter,
-			functionType,
-			func(invocation Invocation) Value {
-				// Start a new activation record.
-				// Lexical scope: use the function declaration's activation record,
-				// not the current one (which would be dynamic scope)
-				interpreter.activations.PushNewWithParent(lexicalScope)
-				defer interpreter.activations.Pop()
+			inner,
+			NewStaticHostFunctionValue(
+				interpreter,
+				functionType,
+				func(invocation Invocation) Value {
+					// Start a new activation record.
+					// Lexical scope: use the function declaration's activation record,
+					// not the current one (which would be dynamic scope)
+					interpreter.activations.PushNewWithParent(lexicalScope)
+					defer interpreter.activations.Pop()
 
-				if declaration.ParameterList != nil {
-					interpreter.bindParameterArguments(
-						declaration.ParameterList,
-						invocation.Arguments,
-					)
-				}
-
-				if invocation.Self != nil {
-					interpreter.declareSelfVariable(*invocation.Self)
-				}
-				if invocation.Base != nil {
-					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
-				}
-
-				// NOTE: It is important to wrap the invocation in a function,
-				//  so the inner function isn't invoked here
-
-				body := func() StatementResult {
-
-					// Pre- and post-condition wrappers "re-declare" the same
-					// parameters as are used in the actual body of the function,
-					// see the use of bindParameterArguments at the start of this function wrapper.
-					//
-					// When these parameters are given resource-kinded arguments,
-					// this can trick the resource analysis into believing that these
-					// resources exist in multiple variables at once
-					// (one for each condition wrapper + the function itself).
-					//
-					// This is not the case, however, as execution of the pre- and post-conditions
-					// occurs strictly before and after execution of the body respectively.
-					//
-					// To prevent the analysis from reporting a false positive here,
-					// when we enter the body of the wrapped function,
-					// we invalidate any resources that were assigned to parameters by the precondition block,
-					// and then restore them after execution of the wrapped function,
-					// for use by the post-condition block.
-
-					type argumentVariable struct {
-						variable Variable
-						value    ResourceKindedValue
+					if declaration.ParameterList != nil {
+						interpreter.bindParameterArguments(
+							declaration.ParameterList,
+							invocation.Arguments,
+						)
 					}
 
-					var argumentVariables []argumentVariable
-					for _, argument := range invocation.Arguments {
-						resourceKindedValue := interpreter.resourceForValidation(argument)
-						if resourceKindedValue == nil {
-							continue
+					if invocation.Self != nil {
+						interpreter.declareSelfVariable(*invocation.Self)
+					}
+					if invocation.Base != nil {
+						interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
+					}
+
+					// NOTE: It is important to wrap the invocation in a function,
+					//  so the inner function isn't invoked here
+
+					body := func() StatementResult {
+
+						// Pre- and post-condition wrappers "re-declare" the same
+						// parameters as are used in the actual body of the function,
+						// see the use of bindParameterArguments at the start of this function wrapper.
+						//
+						// When these parameters are given resource-kinded arguments,
+						// this can trick the resource analysis into believing that these
+						// resources exist in multiple variables at once
+						// (one for each condition wrapper + the function itself).
+						//
+						// This is not the case, however, as execution of the pre- and post-conditions
+						// occurs strictly before and after execution of the body respectively.
+						//
+						// To prevent the analysis from reporting a false positive here,
+						// when we enter the body of the wrapped function,
+						// we invalidate any resources that were assigned to parameters by the precondition block,
+						// and then restore them after execution of the wrapped function,
+						// for use by the post-condition block.
+
+						type argumentVariable struct {
+							variable Variable
+							value    ResourceKindedValue
 						}
 
-						argumentVariables = append(
-							argumentVariables,
-							argumentVariable{
-								variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
-								value:    resourceKindedValue,
-							},
-						)
+						var argumentVariables []argumentVariable
+						for _, argument := range invocation.Arguments {
+							resourceKindedValue := interpreter.resourceForValidation(argument)
+							if resourceKindedValue == nil {
+								continue
+							}
 
-						interpreter.invalidateResource(resourceKindedValue)
+							argumentVariables = append(
+								argumentVariables,
+								argumentVariable{
+									variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
+									value:    resourceKindedValue,
+								},
+							)
+
+							interpreter.invalidateResource(resourceKindedValue)
+						}
+
+						// NOTE: It is important to actually return the value returned
+						//   from the inner function, otherwise it is lost
+
+						returnValue := inner.Invoke(invocation)
+
+						// Restore the resources which were temporarily invalidated
+						// before execution of the inner function
+
+						for _, argumentVariable := range argumentVariables {
+							value := argumentVariable.value
+							interpreter.invalidateResource(value)
+							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
+						}
+						return ReturnResult{Value: returnValue}
 					}
 
-					// NOTE: It is important to actually return the value returned
-					//   from the inner function, otherwise it is lost
-
-					returnValue := inner.Invoke(invocation)
-
-					// Restore the resources which were temporarily invalidated
-					// before execution of the inner function
-
-					for _, argumentVariable := range argumentVariables {
-						value := argumentVariable.value
-						interpreter.invalidateResource(value)
-						interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
-					}
-					return ReturnResult{Value: returnValue}
-				}
-
-				return interpreter.visitFunctionBody(
-					beforeStatements,
-					preConditions,
-					body,
-					rewrittenPostConditions,
-					functionType.ReturnTypeAnnotation.Type,
-				)
-			},
+					return interpreter.visitFunctionBody(
+						beforeStatements,
+						preConditions,
+						body,
+						rewrittenPostConditions,
+						functionType.ReturnTypeAnnotation.Type,
+					)
+				},
+			),
 		)
 	}
 }
@@ -3503,10 +3819,11 @@ var BigEndianBytesConverters = func() map[string]TypedBigEndianBytesConverter {
 }()
 
 type ValueConverterDeclaration struct {
-	Min             Value
-	Max             Value
-	Convert         func(common.MemoryGauge, Value) Value
-	nestedVariables []struct {
+	Min                 Value
+	Max                 Value
+	Convert             func(common.MemoryGauge, Value) Value
+	ConvertWithRounding func(common.MemoryGauge, Value, fix.RoundingMode) Value
+	nestedVariables     []struct {
 		Name  string
 		Value Value
 	}
@@ -3671,6 +3988,9 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		Convert: func(gauge common.MemoryGauge, value Value) Value {
 			return ConvertFix64(gauge, value)
 		},
+		ConvertWithRounding: func(gauge common.MemoryGauge, value Value, round fix.RoundingMode) Value {
+			return ConvertFix64WithRounding(gauge, value, round)
+		},
 		Min: NewUnmeteredFix64Value(math.MinInt64),
 		Max: NewUnmeteredFix64Value(math.MaxInt64),
 	},
@@ -3686,6 +4006,9 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		Name: sema.UFix64TypeName,
 		Convert: func(gauge common.MemoryGauge, value Value) Value {
 			return ConvertUFix64(gauge, value)
+		},
+		ConvertWithRounding: func(gauge common.MemoryGauge, value Value, round fix.RoundingMode) Value {
+			return ConvertUFix64WithRounding(gauge, value, round)
 		},
 		Min: NewUnmeteredUFix64Value(0),
 		Max: NewUnmeteredUFix64Value(math.MaxUint64),
@@ -4135,6 +4458,7 @@ func defineBaseFunctions(activation *VariableActivation) {
 	defineConverterFunctions(activation)
 	defineRuntimeTypeConstructorFunctions(activation)
 	defineStringFunction(activation)
+	defineStringBuilderFunction(activation)
 }
 
 type converterFunction struct {
@@ -4150,12 +4474,20 @@ var converterFunctionValues = func() []converterFunction {
 	for index, declaration := range ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.Convert
+		convertWithRounding := declaration.ConvertWithRounding
 
 		converterFunctionType := sema.BaseValueActivation.Find(declaration.Name).Type.(*sema.FunctionType)
 
+		var nativeFn NativeFunction
+		if convertWithRounding != nil {
+			nativeFn = NativeConverterFunctionWithRounding(convert, convertWithRounding)
+		} else {
+			nativeFn = NativeConverterFunction(convert)
+		}
+
 		converterFunctionValue := NewUnmeteredStaticHostFunctionValueFromNativeFunction(
 			converterFunctionType,
-			NativeConverterFunction(convert),
+			nativeFn,
 		)
 
 		addMember := func(name string, value Value) {
@@ -4426,6 +4758,25 @@ func NativeConverterFunction(convert func(memoryGauge common.MemoryGauge, value 
 	}
 }
 
+func NativeConverterFunctionWithRounding(
+	convert func(memoryGauge common.MemoryGauge, value Value) Value,
+	convertWithRounding func(memoryGauge common.MemoryGauge, value Value, round fix.RoundingMode) Value,
+) NativeFunction {
+	return func(
+		context NativeFunctionContext,
+		_ TypeArgumentsIterator,
+		_ ArgumentTypesIterator,
+		_ Value,
+		args []Value,
+	) Value {
+		if len(args) > 1 {
+			roundingRule := extractRoundingRule(args[1])
+			return convertWithRounding(context, args[0], roundingRule)
+		}
+		return convert(context, args[0])
+	}
+}
+
 func NativeFromStringFunction(parser StringValueParser) NativeFunction {
 	return func(
 		context NativeFunctionContext,
@@ -4577,6 +4928,10 @@ func defineStringFunction(activation *VariableActivation) {
 	defineBaseValue(activation, sema.StringType.String(), stringFunction)
 }
 
+func defineStringBuilderFunction(activation *VariableActivation) {
+	defineBaseValue(activation, sema.StringBuilderType.String(), stringBuilderFunction)
+}
+
 func IsSubType(typeConverter TypeConverter, subType StaticType, superType StaticType) bool {
 	if superType == PrimitiveStaticTypeAny {
 		return true
@@ -4714,6 +5069,7 @@ func NativeAccountStorageIterateFunction(
 func newStorageIterationFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	functionType *sema.FunctionType,
 	addressValue AddressValue,
 	domain common.PathDomain,
@@ -4723,6 +5079,7 @@ func newStorageIterationFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		functionType,
 		NativeAccountStorageIterateFunction(&addressValue, domain, pathType),
 	)
@@ -4930,12 +5287,14 @@ func NativeAccountStorageSaveFunction(
 func authAccountStorageSaveFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		sema.Account_StorageTypeSaveFunctionType,
 		NativeAccountStorageSaveFunction(&addressValue),
 	)
@@ -5013,12 +5372,14 @@ func NativeAccountStorageTypeFunction(
 func authAccountStorageTypeFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		sema.Account_StorageTypeTypeFunctionType,
 		NativeAccountStorageTypeFunction(&addressValue),
 	)
@@ -5057,11 +5418,13 @@ func AccountStorageType(
 func authAccountStorageLoadFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 	return authAccountLoadFunction(
 		context,
 		storageValue,
+		accessedReference,
 		addressValue,
 		sema.Account_StorageTypeLoadFunctionType,
 	)
@@ -5070,11 +5433,13 @@ func authAccountStorageLoadFunction(
 func authAccountStorageCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 	return authAccountCopyFunction(
 		context,
 		storageValue,
+		accessedReference,
 		addressValue,
 		sema.Account_StorageTypeCopyFunctionType,
 	)
@@ -5127,6 +5492,7 @@ func NativeAccountStorageLoadFunction(
 func authAccountCopyFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
 ) BoundFunctionValue {
@@ -5134,6 +5500,7 @@ func authAccountCopyFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		functionType,
 		NativeAccountStorageCopyFunction(&addressValue),
 	)
@@ -5142,6 +5509,7 @@ func authAccountCopyFunction(
 func authAccountLoadFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	functionType *sema.FunctionType,
 ) BoundFunctionValue {
@@ -5149,6 +5517,7 @@ func authAccountLoadFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		functionType,
 		NativeAccountStorageLoadFunction(&addressValue),
 	)
@@ -5276,12 +5645,14 @@ func NativeAccountStorageBorrowFunction(
 func authAccountStorageBorrowFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		sema.Account_StorageTypeBorrowFunctionType,
 		NativeAccountStorageBorrowFunction(&addressValue),
 	)
@@ -5351,12 +5722,14 @@ func NativeAccountStorageCheckFunction(
 func authAccountStorageCheckFunction(
 	context FunctionCreationContext,
 	storageValue *SimpleCompositeValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 ) BoundFunctionValue {
 
 	return NewBoundHostFunctionValue(
 		context,
 		storageValue,
+		accessedReference,
 		sema.Account_StorageTypeCheckFunctionType,
 		NativeAccountStorageCheckFunction(&addressValue),
 	)
@@ -5729,18 +6102,31 @@ func GetAccessOfMember(context ValueStaticTypeContext, self Value, identifier st
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 // May return nil if the member does not exist.
-func getMember(context MemberAccessibleContext, self Value, identifier string) Value {
+func getMember(
+	context MemberAccessibleContext,
+	self Value,
+	identifier string,
+	memberKind common.DeclarationKind,
+) Value {
 	var result Value
+
+	// At the initial call to get-member, "accessed reference" is nil/unknown.
+	// If the member is indeed accessed via a reference (i.e: `self`/`memberAccessibleValue` is a reference),
+	// then `memberAccessibleValue.GetMember` will delegate the call to the underlying referenced value.
+	// There it will pass the receiver reference as the "accessed reference" to the
+	// delegated `GetMember` of referenced-value.
+	var accessedReference ReferenceValue = nil
+
 	// When the accessed value has a type that supports the declaration of members
 	// or is a built-in type that has members (`MemberAccessibleValue`),
 	// then try to get the member for the given identifier.
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
-		result = memberAccessibleValue.GetMember(context, identifier)
+		result = memberAccessibleValue.GetMember(context, identifier, memberKind, accessedReference)
 	}
 	if result == nil {
-		result = getBuiltinFunctionMember(context, self, identifier)
+		result = getBuiltinFunctionMember(context, self, identifier, accessedReference)
 	}
 
 	// NOTE: do not panic if the member is nil. This is a valid state.
@@ -5749,12 +6135,41 @@ func getMember(context MemberAccessibleContext, self Value, identifier string) V
 	return result
 }
 
-func getBuiltinFunctionMember(context MemberAccessibleContext, self Value, identifier string) FunctionValue {
+func GetMember(
+	context MemberAccessibleContext,
+	value MemberAccessibleValue,
+	accessedReference ReferenceValue,
+	memberName string,
+	memberKind common.DeclarationKind,
+	nonFunctionMemberGetter func() Value,
+) Value {
+	switch memberKind {
+	case common.DeclarationKindFunction:
+		return context.GetMethod(value, memberName, accessedReference)
+	default:
+		// The default case is used for nonFunctionMemberGetter because,
+		// constructors have the declaration kind as struct/resource/etc.
+		// And they are captured in the value as "nested variables".
+		// nonFunctionMemberGetter is responsible for handling them appropriately
+		// (Note: it is only needed for composite values)
+		if nonFunctionMemberGetter == nil {
+			return nil
+		}
+		return nonFunctionMemberGetter()
+	}
+}
+
+func getBuiltinFunctionMember(
+	context MemberAccessibleContext,
+	self Value,
+	identifier string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 	switch identifier {
 	case sema.IsInstanceFunctionName:
-		return isInstanceFunction(context, self)
+		return isInstanceFunction(context, self, accessedReference)
 	case sema.GetTypeFunctionName:
-		return getTypeFunction(context, self)
+		return getTypeFunction(context, self, accessedReference)
 	default:
 		return nil
 	}
@@ -5776,10 +6191,11 @@ var NativeIsInstanceFunction = NativeFunction(
 	},
 )
 
-func isInstanceFunction(context FunctionCreationContext, self Value) FunctionValue {
+func isInstanceFunction(context FunctionCreationContext, self Value, accessedReference ReferenceValue) FunctionValue {
 	return NewBoundHostFunctionValue(
 		context,
 		self,
+		accessedReference,
 		sema.IsInstanceFunctionType,
 		NativeIsInstanceFunction,
 	)
@@ -5812,10 +6228,11 @@ var NativeGetTypeFunction = NativeFunction(
 	},
 )
 
-func getTypeFunction(context FunctionCreationContext, self Value) FunctionValue {
+func getTypeFunction(context FunctionCreationContext, self Value, accessedReference ReferenceValue) FunctionValue {
 	return NewBoundHostFunctionValue(
 		context,
 		self,
+		accessedReference,
 		sema.GetTypeFunctionType,
 		NativeGetTypeFunction,
 	)
@@ -5861,26 +6278,6 @@ func checkContainerMutation(
 
 	if !IsSubType(context, actualElementType, elementType) {
 		panic(&ContainerMutationError{
-			ExpectedType: context.SemaTypeFromStaticType(elementType),
-			ActualType:   MustSemaTypeOfValue(element, context),
-		})
-	}
-}
-
-func checkContainerRead(
-	context ValueStaticTypeContext,
-	elementType StaticType,
-	element Value,
-) {
-	_, ok := element.(*StorageReferenceValue)
-	if !ok {
-		return
-	}
-
-	actualElementType := element.StaticType(context)
-
-	if !IsSubType(context, actualElementType, elementType) {
-		panic(&ContainerReadError{
 			ExpectedType: context.SemaTypeFromStaticType(elementType),
 			ActualType:   MustSemaTypeOfValue(element, context),
 		})
@@ -6336,6 +6733,7 @@ var CapabilityTypeCheckFunctionType = sema.CapabilityTypeCheckFunctionType(sema.
 func capabilityBorrowFunction(
 	context FunctionCreationContext,
 	capabilityValue CapabilityValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -6344,6 +6742,7 @@ func capabilityBorrowFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
+		accessedReference,
 		CapabilityTypeBorrowFunctionType,
 		NativeCapabilityBorrowFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
@@ -6445,6 +6844,7 @@ func NativeCapabilityCheckFunction(
 func capabilityCheckFunction(
 	context FunctionCreationContext,
 	capabilityValue CapabilityValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
@@ -6453,6 +6853,7 @@ func capabilityCheckFunction(
 	return NewBoundHostFunctionValue(
 		context,
 		capabilityValue,
+		accessedReference,
 		CapabilityTypeCheckFunctionType,
 		NativeCapabilityCheckFunction(&addressValue, &capabilityID, capabilityBorrowType),
 	)
@@ -6656,8 +7057,8 @@ func (interpreter *Interpreter) StorageMutatedDuringIteration() bool {
 	return interpreter.SharedState.storageMutatedDuringIteration
 }
 
-func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string) FunctionValue {
-	return value.GetMethod(interpreter, name)
+func (interpreter *Interpreter) GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue {
+	return value.GetMethod(interpreter, name, accessedReference)
 }
 
 func (interpreter *Interpreter) GetGlobal(name string) Value {
@@ -6673,38 +7074,49 @@ func (interpreter *Interpreter) DefaultDestroyEvents(resourceValue *CompositeVal
 }
 
 func (interpreter *Interpreter) SemaTypeFromStaticType(staticType StaticType) sema.Type {
-	return MustConvertStaticToSemaType(staticType, interpreter)
+	return MustConvertStaticToSemaType(staticType, interpreter) //nolint:staticcheck
 }
 
-func (interpreter *Interpreter) MaybeUpdateStorageReferenceMemberReceiver(
-	storageReference *StorageReferenceValue,
+func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
+	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter) //nolint:staticcheck
+}
+
+func GetReferenceValueMember(
+	context MemberAccessibleContext,
+	v ReferenceValue,
 	referencedValue Value,
-	member Value,
+	name string,
+	memberKind common.DeclarationKind,
 ) Value {
-	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		boundFunction.SelfReference = StorageReference(
-			interpreter,
-			storageReference,
-			referencedValue,
+
+	var member Value
+
+	// Look up the member on the referenced value
+	if memberAccessibleValue, ok := referencedValue.(MemberAccessibleValue); ok {
+		member = memberAccessibleValue.GetMember(context, name, memberKind, v)
+	}
+
+	if member == nil {
+		// NOTE: Must call the `GetMethod` of the reference value, not of the referenced value.
+		return GetMember(
+			context,
+			v,
+			v,
+			name,
+			memberKind,
+			nil,
 		)
-		return boundFunction
 	}
 
 	return member
 }
 
-func (interpreter *Interpreter) SemaAccessFromStaticAuthorization(auth Authorization) (sema.Access, error) {
-	return ConvertStaticAuthorizationToSemaAccess(auth, interpreter)
-}
-
-func StorageReference(
+func storageReferenceWithNarrowedType(
 	context ValueStaticTypeContext,
 	storageReference *StorageReferenceValue,
-	referencedValue Value,
 ) *StorageReferenceValue {
 
-	// As also mentioned in `(StorageReference).GetMember` method,
-	// we cannot use the storage reference as-is here.
+	// It is wrong to use the storage reference as-is here.
 	// This is because since we look up the member on the referenced value,
 	// we also must use its type as the borrowed type for the `SelfReference` type,
 	// because during invocation the bound function can only be invoked
@@ -6717,7 +7129,9 @@ func StorageReference(
 	// Then, if we change the storage location to store a value of unrelated type U instead (e.g. `Int`),
 	// and invoke the bound function, the bound function is potentially invalid.
 
+	referencedValue := storageReference.MustReferencedValue(context)
 	referencedValueStaticType := referencedValue.StaticType(context)
+
 	return NewStorageReferenceValue(
 		context,
 		storageReference.Authorization,

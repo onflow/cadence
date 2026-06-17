@@ -667,13 +667,34 @@ func (v Int256Value) BitwiseRightShift(context ValueStaticTypeContext, other Int
 	return NewInt256ValueFromBigInt(context, valueGetter)
 }
 
-func (v Int256Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
-
+func (v Int256Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
-func (v Int256Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.Int256Type)
+func (v Int256Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.Int256Type,
+	)
 }
 
 func (Int256Value) RemoveMember(_ ValueTransferContext, _ string) Value {
@@ -720,6 +741,7 @@ func (v Int256Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -741,4 +763,13 @@ func (v Int256Value) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (Int256Value) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (Int256Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v Int256Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }

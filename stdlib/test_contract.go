@@ -322,7 +322,12 @@ func invokeMatcherTest(
 	matcher interpreter.MemberAccessibleValue,
 	value interpreter.Value,
 ) bool {
-	testFunc := matcher.GetMember(context, matcherTestFieldName)
+	testFunc := matcher.GetMember(
+		context,
+		matcherTestFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {
@@ -391,7 +396,7 @@ func newTestTypeReadFileFunction(
 
 			content, err := testFramework.ReadFile(pathString.Str)
 			if err != nil {
-				panic(err)
+				panic(errors.NewDefaultUserError("cannot read file %q: %s", pathString.Str, err))
 			}
 
 			return interpreter.NewUnmeteredStringValue(content)

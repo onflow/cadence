@@ -582,3 +582,56 @@ func TestInterpretSelfClosure(t *testing.T) {
 		result,
 	)
 }
+
+func TestInterpretConstructorAsFunction(t *testing.T) {
+	t.Parallel()
+
+	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                init() {}
+            }
+
+            fun test() {
+                let s = S
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("enum", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            enum E: UInt8 {}
+
+            fun test() {
+                let s = E
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            attachment A for AnyResource {
+                init() {}
+            }
+
+            fun test() {
+                let s = A
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}

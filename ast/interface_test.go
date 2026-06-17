@@ -163,7 +163,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("resource"),
 				prettier.Space,
 				prettier.Text("interface "),
@@ -207,7 +207,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 			t,
 			prettier.Concat{
 				prettier.Text("access(all)"),
-				prettier.HardLine{},
+				prettier.Line{},
 				prettier.Text("resource"),
 				prettier.Space,
 				prettier.Text("interface "),
@@ -256,8 +256,7 @@ func TestInterfaceDeclaration_String(t *testing.T) {
 
 		require.Equal(
 			t,
-			`access(all)
-resource interface AB {}`,
+			"access(all) resource interface AB {}",
 			decl.String(),
 		)
 
@@ -292,8 +291,7 @@ resource interface AB {}`,
 
 		require.Equal(
 			t,
-			`access(all)
-resource interface AB {
+			`access(all) resource interface AB {
     x: X
 }`,
 			decl.String(),
@@ -306,36 +304,96 @@ func TestInterfaceDeclaration_Walk(t *testing.T) {
 
 	t.Parallel()
 
-	field := &FieldDeclaration{
-		Identifier: Identifier{Identifier: "field"},
-		TypeAnnotation: &TypeAnnotation{
-			Type: &NominalType{
-				Identifier: Identifier{Identifier: "String"},
+	t.Run("members only", func(t *testing.T) {
+		t.Parallel()
+
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+			TypeAnnotation: &TypeAnnotation{
+				Type: &NominalType{
+					Identifier: Identifier{Identifier: "String"},
+				},
 			},
-		},
-	}
+		}
 
-	function := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "function"},
-	}
+		function := &FunctionDeclaration{
+			Identifier: Identifier{Identifier: "function"},
+		}
 
-	decl := &InterfaceDeclaration{
-		Members: NewUnmeteredMembers([]Declaration{
-			field,
-			function,
-		}),
-	}
+		decl := &InterfaceDeclaration{
+			Members: NewUnmeteredMembers([]Declaration{
+				field,
+				function,
+			}),
+		}
 
-	var visited []Element
-	decl.Walk(func(element Element) {
-		visited = append(visited, element)
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				field,
+				function,
+			},
+			visited,
+		)
 	})
 
-	assert.Equal(t,
-		[]Element{
-			field,
-			function,
-		},
-		visited,
-	)
+	t.Run("with conformances", func(t *testing.T) {
+		t.Parallel()
+
+		conformance := &NominalType{
+			Identifier: Identifier{Identifier: "Foo"},
+		}
+		field := &FieldDeclaration{
+			Identifier: Identifier{Identifier: "field"},
+		}
+
+		decl := &InterfaceDeclaration{
+			Conformances: []*NominalType{conformance},
+			Members:      NewUnmeteredMembers([]Declaration{field}),
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				conformance,
+				field,
+			},
+			visited,
+		)
+	})
+
+	t.Run("with entitlement access", func(t *testing.T) {
+		t.Parallel()
+
+		entitlement := &NominalType{
+			Identifier: Identifier{Identifier: "E"},
+		}
+
+		decl := &InterfaceDeclaration{
+			Access: NewEntitlementAccess(
+				NewConjunctiveEntitlementSet([]*NominalType{entitlement}),
+			),
+			Members: NewUnmeteredMembers([]Declaration{}),
+		}
+
+		var visited []Element
+		decl.Walk(func(element Element) {
+			visited = append(visited, element)
+		})
+
+		assert.Equal(t,
+			[]Element{
+				entitlement,
+			},
+			visited,
+		)
+	})
 }

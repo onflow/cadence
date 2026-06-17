@@ -71,7 +71,14 @@ func (*AttachmentDeclaration) ElementType() ElementType {
 }
 
 func (d *AttachmentDeclaration) Walk(walkChild func(Element)) {
-	walkDeclarations(walkChild, d.Members.declarations)
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
+	if d.BaseType != nil {
+		walkChild(d.BaseType)
+	}
+	walkElements(walkChild, d.Conformances)
+	walkElements(walkChild, d.Members.declarations)
 }
 
 func (*AttachmentDeclaration) isDeclaration() {}
@@ -120,7 +127,7 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			docOrEmpty(d.Access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 

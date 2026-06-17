@@ -174,6 +174,9 @@ func (v UFix64Value) SaturatingMul(gauge common.Gauge, other UFix64Value) (UFix6
 }
 
 func (v UFix64Value) Div(gauge common.Gauge, other UFix64Value) (UFix64Value, error) {
+	if other == 0 {
+		panic(DivisionByZeroError{})
+	}
 
 	a := new(big.Int).SetUint64(uint64(v))
 	b := new(big.Int).SetUint64(uint64(other))
@@ -290,10 +293,18 @@ func (UFix64Value) ChildStorables() []atree.Storable {
 func (v UFix64Value) Encode(e *atree.Encoder) error {
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagUFix64Value,
+		0xd8, byte(CBORTagUFix64Value),
 	})
 	if err != nil {
 		return err
 	}
 	return e.CBOR.EncodeUint64(uint64(v))
+}
+
+func (v UFix64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UFix64Value) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
 }

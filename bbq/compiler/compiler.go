@@ -1488,7 +1488,7 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			c.emit(opcode.InstructionUnwrap{})
 
 			// Declare the variable *after* unwrapping the optional,
-			// in a new scope
+			// in a *new* scope
 			c.currentFunction.locals.PushNewWithCurrent()
 			additionalThenScope = true
 			name := test.Identifier.Identifier
@@ -1522,6 +1522,64 @@ func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{
 			c.patchJumpHere(elseJump)
 		}
 	})
+	return
+}
+
+func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ struct{}) {
+
+	// No need for compilePotentiallyInheritedCode,
+	// as only if-statements are the result of desugaring of conditions.
+
+	var elseJump int
+
+	switch test := statement.Test.(type) {
+	case ast.Expression:
+		c.compileExpression(test)
+		elseJump = c.emitUndefinedJumpIfFalse()
+
+	case *ast.VariableDeclaration:
+
+		varDeclTypes := c.DesugaredElaboration.VariableDeclarationTypes(test)
+		c.compileVariableDeclaration(test, varDeclTypes, true)
+
+		tempIndex := c.currentFunction.generateLocalIndex()
+		c.emitSetTempLocal(tempIndex)
+
+		// Test: check if the optional is nil,
+		// and jump to the else branch if it is
+		c.emitGetLocal(tempIndex)
+		elseJump = c.emitUndefinedJumpIfNil()
+
+		// Not nil: unwrap the optional and declare the variable
+		c.emitGetLocal(tempIndex)
+		c.emit(opcode.InstructionUnwrap{})
+
+		// Declare the variable *after* unwrapping the optional,
+		// in *current* scope (no additional scope push)
+		name := test.Identifier.Identifier
+		c.emitDeclareLocal(name)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	// Jump past the else block (normal flow when condition succeeds)
+	endJump := c.emitUndefinedJump()
+
+	// Else block: compile and patch the elseJump to here
+	c.patchJumpHere(elseJump)
+	c.compileBlock(
+		statement.Else,
+		common.DeclarationKindUnknown,
+		nil,
+	)
+
+	// Defensive return: Ensure control flow does not continue after the else block
+	c.emit(opcode.InstructionUnreachable{})
+
+	// Patch the endJump to continue after the else block
+	c.patchJumpHere(endJump)
+
 	return
 }
 
@@ -2720,6 +2778,15 @@ func (c *Compiler[_, _]) emitMethodLoad(
 	})
 }
 
+func (c *Compiler[_, _]) emitDynamicMethodLoad(methodName string, receiverType sema.Type) {
+	funcNameConstant := c.addRawStringConst(methodName)
+	receiverTypeIndex := c.getOrAddType(receiverType)
+	c.emit(opcode.InstructionGetMethodDynamic{
+		MethodName:   funcNameConstant.index,
+		ReceiverType: receiverTypeIndex,
+	})
+}
+
 func (c *Compiler[_, _]) emitVariableStore(name string) {
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
@@ -2744,7 +2811,6 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	expression *ast.InvocationExpression,
 	implicitArgIndex *uint16,
-	implicitArgType sema.Type,
 ) (_ struct{}) {
 
 	invocationTypes := c.DesugaredElaboration.InvocationExpressionTypes(expression)
@@ -2756,8 +2822,16 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 		panic(errors.NewDefaultUserError("invalid number of arguments"))
 	}
 
+	hasImplicitArgument := implicitArgIndex != nil
+
 	invokedExpr := expression.InvokedExpression
 
+	// Ideally we should no longer have a need to special-case member-expressions.
+	// Because when invokedExpr is compiled normally via `c.compileExpression(invokedExpr)`,
+	// `compileMemberAccess` will load the function-value onto the stack.
+	// And the `emitInvocation` below will invoke the loaded value.
+	// The special-cased `compileMethodInvocation` also does pretty much the same.
+	// TODO: Remove the special handling of member-expressions.
 	if memberExpression, isMemberExpr := expression.InvokedExpression.(*ast.MemberExpression); isMemberExpr {
 		memberInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(memberExpression)
 		if !ok {
@@ -2772,10 +2846,9 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 				memberInfo,
 				memberExpression,
 				invocationTypes,
-				uint16(argumentCount),
 				implicitArgIndex,
-				implicitArgType,
 				returnTypeIndex,
+				hasImplicitArgument,
 			)
 			return
 		}
@@ -2792,10 +2865,9 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 	c.emitInvocation(
 		expression,
 		implicitArgIndex,
-		implicitArgType,
 		invocationTypes,
-		uint16(argumentCount),
 		returnTypeIndex,
+		hasImplicitArgument,
 	)
 
 	return
@@ -2804,79 +2876,37 @@ func (c *Compiler[_, _]) visitInvocationExpressionWithImplicitArgument(
 func (c *Compiler[_, _]) emitInvocation(
 	expression *ast.InvocationExpression,
 	implicitArgIndex *uint16,
-	implicitArgType sema.Type,
 	invocationTypes sema.InvocationExpressionTypes,
-	argumentCount uint16,
 	returnTypeIndex uint16,
+	hasImplicitArgument bool,
 ) {
+	// Load the `base` argument first explicitly rather than including it the arguments.
+	// This keeps the placement of base consistent with attachment methods.
+	if implicitArgIndex != nil {
+		c.emitGetLocal(*implicitArgIndex)
+	}
+
 	// Compile arguments
 	c.compileArguments(expression.Arguments, invocationTypes)
 
 	typeArgs := c.loadTypeArguments(invocationTypes)
 
-	if invocationTypes.PassArgumentTypes {
-		argTypes := c.loadArgumentTypes(invocationTypes)
-		argTypes = c.addImplicitArgumentTyped(implicitArgIndex, implicitArgType, argTypes)
-		c.emit(opcode.InstructionInvokeTyped{
-			TypeArgs:   typeArgs,
-			ArgTypes:   argTypes,
-			ReturnType: returnTypeIndex,
-		})
-	} else {
-		argumentCount = c.addImplicitArgument(implicitArgIndex, argumentCount)
-		c.emit(opcode.InstructionInvoke{
-			TypeArgs:   typeArgs,
-			ArgCount:   argumentCount,
-			ReturnType: returnTypeIndex,
-		})
-	}
-}
+	argTypes := c.loadTypes(invocationTypes.ArgumentTypes)
 
-func (c *Compiler[_, _]) addImplicitArgument(
-	implicitArgIndex *uint16,
-	argCount uint16,
-) uint16 {
-	if implicitArgIndex == nil {
-		return argCount
-	}
+	paramTypes := c.loadTypes(invocationTypes.ParameterTypes)
 
-	// Add the implicit argument to the end of the argument list, if it exists.
-	// Used in attachments, the attachment constructor/init expects an implicit argument:
-	// a reference to the base value used to set base.
-	// This hides the base argument away from the user.
-
-	// Load implicit argument from locals
-	// Base is at the back of the argument list, only for attachment initialization.
-	c.emitGetLocal(*implicitArgIndex)
-
-	return argCount + 1
-}
-
-func (c *Compiler[_, _]) addImplicitArgumentTyped(
-	implicitArgIndex *uint16,
-	implicitArgType sema.Type,
-	argTypes []uint16,
-) []uint16 {
-	if implicitArgIndex == nil {
-		return argTypes
-	}
-
-	// Add the implicit argument to the end of the argument list, if it exists.
-	// Used in attachments, the attachment constructor/init expects an implicit argument:
-	// a reference to the base value used to set base.
-	// This hides the base argument away from the user.
-
-	// Load implicit argument from locals
-	// Base is at the back of the argument list, only for attachment initialization.
-	c.emitGetLocal(*implicitArgIndex)
-
-	argTypes = append(argTypes, c.getOrAddType(implicitArgType))
-
-	return argTypes
+	c.emit(opcode.InstructionInvoke{
+		TypeArgs:               typeArgs,
+		ArgTypes:               argTypes,
+		ParamTypes:             paramTypes,
+		ReturnType:             returnTypeIndex,
+		HasImplicitArgument:    hasImplicitArgument,
+		SkipArgumentConversion: invocationTypes.PassArgumentsWithoutTransferOrConvert,
+	})
 }
 
 func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExpression) (_ struct{}) {
-	c.visitInvocationExpressionWithImplicitArgument(expression, nil, nil)
+	c.visitInvocationExpressionWithImplicitArgument(expression, nil)
 
 	return
 }
@@ -2887,7 +2917,6 @@ func (c *Compiler[_, _]) VisitInvocationExpression(expression *ast.InvocationExp
 func (c *Compiler[_, _]) maybeApplyAddressQualifierToFunctionName(
 	functionName string,
 	accessedType sema.Type,
-	typeQualifiedName string,
 ) string {
 	// check if this function is location qualified by checking globalRemoveAddressTable
 	addressQualifiedFuncName := commons.QualifiedName(
@@ -2899,7 +2928,11 @@ func (c *Compiler[_, _]) maybeApplyAddressQualifierToFunctionName(
 			return addressQualifiedFuncName
 		}
 	}
-	return typeQualifiedName
+
+	return commons.TypeQualifiedName(
+		accessedType,
+		functionName,
+	)
 }
 
 func (c *Compiler[_, _]) compileMethodInvocation(
@@ -2907,22 +2940,17 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	memberInfo sema.MemberAccessInfo,
 	invokedExpr *ast.MemberExpression,
 	invocationTypes sema.InvocationExpressionTypes,
-	argumentCount uint16,
 	implicitArgIndex *uint16,
-	implicitArgType sema.Type,
 	returnTypeIndex uint16,
+	hasImplicitArgument bool,
 ) {
-	var funcName string
+	funcName := invokedExpr.Identifier.Identifier
 
 	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 	if invocationType.IsConstructor {
 		funcName = c.maybeApplyAddressQualifierToFunctionName(
-			invokedExpr.Identifier.Identifier,
+			funcName,
 			memberInfo.AccessedType,
-			commons.TypeQualifiedName(
-				memberInfo.AccessedType,
-				invokedExpr.Identifier.Identifier,
-			),
 		)
 
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
@@ -2933,10 +2961,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.emitInvocation(
 			expression,
 			implicitArgIndex,
-			implicitArgType,
 			invocationTypes,
-			argumentCount,
 			returnTypeIndex,
+			hasImplicitArgument,
 		)
 
 		return
@@ -2952,11 +2979,17 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	// that were synthetically added at the desugar phase, must be static calls.
 	isInterfaceInheritedFuncCall := c.DesugaredElaboration.IsInterfaceMethodStaticCall(expression)
 
+	// If the function is accessed via optional-chaining,
+	// then the target type is the inner type of the optional.
+	accessedType := memberInfo.AccessedType
+	if isOptional {
+		accessedType = sema.UnwrapOptionalType(accessedType)
+	}
+
 	// Any invocation on restricted-types must be dynamic
 	if !isInterfaceInheritedFuncCall &&
-		isDynamicMethodInvocation(memberInfo.AccessedType) {
+		isDynamicMethodInvocation(accessedType) {
 
-		funcName = invokedExpr.Identifier.Identifier
 		if len(funcName) >= math.MaxUint16 {
 			panic(errors.NewDefaultUserError("invalid function name"))
 		}
@@ -2968,15 +3001,14 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				// Get the method as a bound function.
 				// withOptionalChaining evaluates the target expression and leave the value on stack.
 				// i.e: the receiver is already loaded.
-				c.compileMemberAccess(invokedExpr)
+				c.emitDynamicMethodLoad(funcName, accessedType)
 
 				c.emitInvocation(
 					expression,
 					implicitArgIndex,
-					implicitArgType,
 					invocationTypes,
-					argumentCount,
 					returnTypeIndex,
+					hasImplicitArgument,
 				)
 			},
 			true,
@@ -2985,21 +3017,10 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		return
 	}
 
-	// If the function is accessed via optional-chaining,
-	// then the target type is the inner type of the optional.
-	accessedType := memberInfo.AccessedType
-	if isOptional {
-		accessedType = sema.UnwrapOptionalType(accessedType)
-	}
-
 	// Load function value.
 	funcName = c.maybeApplyAddressQualifierToFunctionName(
-		invokedExpr.Identifier.Identifier,
+		funcName,
 		accessedType,
-		commons.TypeQualifiedName(
-			accessedType,
-			invokedExpr.Identifier.Identifier,
-		),
 	)
 
 	// An invocation can be either a method of a value (e.g: `"someString".Concat("otherString")`),
@@ -3015,10 +3036,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		c.emitInvocation(
 			expression,
 			implicitArgIndex,
-			implicitArgType,
 			invocationTypes,
-			argumentCount,
 			returnTypeIndex,
+			hasImplicitArgument,
 		)
 	} else {
 		c.withOptionalChaining(
@@ -3036,10 +3056,9 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 				c.emitInvocation(
 					expression,
 					implicitArgIndex,
-					implicitArgType,
 					invocationTypes,
-					argumentCount,
 					returnTypeIndex,
+					hasImplicitArgument,
 				)
 			},
 			true,
@@ -3139,12 +3158,13 @@ func (c *Compiler[_, _]) compileArguments(arguments ast.Arguments, invocationTyp
 			continue
 		}
 
-		parameterType := invocationTypes.ParameterTypes[index]
-		if parameterType == nil {
+		valueType := invocationTypes.ArgumentTypes[index]
+
+		// Resource-typed values are always used along with the move (<-) unary-operator.
+		// And the unary move operator already does the transfer.
+		// Therefore, do not perform a redundant transfer for resource-types.
+		if !valueType.IsResourceType() {
 			c.emitTransfer()
-		} else {
-			valueType := invocationTypes.ArgumentTypes[index]
-			c.emitTransferIfNotResourceAndConvert(valueType, parameterType)
 		}
 	}
 }
@@ -3158,35 +3178,59 @@ func (c *Compiler[_, _]) loadTypeArguments(invocationTypes sema.InvocationExpres
 
 	var typeArgs []uint16
 	if typeArgsCount > 0 {
+		typeParameters := invocationTypes.TypeParameters
+
+		// A mix of bound and unbound type arguments is not supported (yet), because the VM
+		// reconstructs the TypeParameterTypeOrderedMap by positionally pairing each
+		// emitted type argument with `funcType.TypeParameters[i]`.
+		// See `reconstructTypeArguments` in the VM.
+		//
+		// Therefore, the type parameters must either be all bound, or none.
+		if typeArgsCount != len(typeParameters) {
+			panic(errors.NewUnexpectedError(
+				"unsupported: %d out of %d type parameters are bound; "+
+					"type parameters must either be all bound, or none",
+				typeArgsCount,
+				len(typeParameters),
+			))
+		}
+
 		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(typeArgsCount))
 		typeArgs = make([]uint16, 0, typeArgsCount)
 
-		typeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
-			typeArgs = append(typeArgs, c.getOrAddType(typeParam))
-		})
+		// Type arguments are constructed in the order they were resolved,
+		// rather than the order in which type parameters are declared.
+		// Therefore, emit type arguments in TypeParameters declaration order,
+		// so that the map can be reconstructed at runtime (See `reconstructTypeArguments` in the VM).
+		for _, typeParameter := range typeParameters {
+			resolvedType, _ := typeArguments.Get(typeParameter)
+			typeArgs = append(typeArgs, c.getOrAddType(resolvedType))
+		}
 	}
 
 	return typeArgs
 }
 
-func (c *Compiler[_, _]) loadArgumentTypes(invocationTypes sema.InvocationExpressionTypes) []uint16 {
-	argumentTypes := invocationTypes.ArgumentTypes
-	count := len(argumentTypes)
+func (c *Compiler[_, _]) loadTypes(types []sema.Type) []uint16 {
+	count := len(types)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of type arguments: %d", count))
 	}
 
-	var argTypes []uint16
+	var typeIndices []uint16
 	if count > 0 {
 		common.UseMemory(c.Config.MemoryGauge, common.NewGoSliceMemoryUsages(count))
-		argTypes = make([]uint16, 0, count)
+		typeIndices = make([]uint16, 0, count)
 
-		for _, argumentType := range argumentTypes {
-			argTypes = append(argTypes, c.getOrAddType(argumentType))
+		for _, typ := range types {
+			if typ == nil {
+				continue
+			}
+			typeIndices = append(typeIndices, c.getOrAddType(typ))
 		}
 	}
 
-	return argTypes
+	return typeIndices
 }
 
 func typeFunctionType(ty sema.Type) sema.Type {
@@ -3251,9 +3295,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 // has evaluated and the value is pushed onto the stack.
 func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
-	identifier := expression.Identifier.Identifier
-
-	constant := c.addRawStringConst(identifier)
+	memberName := expression.Identifier.Identifier
 
 	memberAccessInfo, ok := c.DesugaredElaboration.MemberExpressionMemberAccessInfo(expression)
 	if !ok {
@@ -3262,20 +3304,59 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 
 	isNestedResourceMove := c.DesugaredElaboration.IsNestedResourceMoveExpression(expression)
 	if isNestedResourceMove {
+		memberNameConstant := c.addRawStringConst(memberName)
 		c.emit(opcode.InstructionRemoveField{
-			FieldName: constant.index,
+			FieldName: memberNameConstant.index,
 		})
 	} else {
 		accessedType := memberAccessInfo.AccessedType
 		if memberAccessInfo.IsOptional {
 			accessedType = sema.UnwrapOptionalType(accessedType)
 		}
-		accessedTypeIndex := c.getOrAddType(accessedType)
 
-		c.emit(opcode.InstructionGetField{
-			FieldName:    constant.index,
-			AccessedType: accessedTypeIndex,
-		})
+		memberKind := memberAccessInfo.Member.DeclarationKind
+
+		switch memberKind {
+		case common.DeclarationKindField:
+			accessedTypeIndex := c.getOrAddType(accessedType)
+			memberNameConstant := c.addRawStringConst(memberName)
+			c.emit(opcode.InstructionGetField{
+				FieldName:    memberNameConstant.index,
+				AccessedType: accessedTypeIndex,
+			})
+
+		case common.DeclarationKindFunction:
+			if isDynamicMethodInvocation(accessedType) {
+				c.emitDynamicMethodLoad(memberName, accessedType)
+			} else {
+				memberName = c.maybeApplyAddressQualifierToFunctionName(
+					memberName,
+					accessedType,
+				)
+				c.emitMethodLoad(memberName, accessedType)
+			}
+
+		default:
+			// Treat all other memberKinds (i.e: enum. struct, resource, etc.), as functions,
+			// because they are all constructors.
+
+			memberType, ok := memberAccessInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
+			if !ok || !memberType.IsConstructor {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Drop the receiver. It's not needed.
+			// Constructors are invoked as static functions.
+			// TODO: Avoid loading the receiver for constructors.
+			c.emit(opcode.InstructionDrop{})
+
+			memberName = c.maybeApplyAddressQualifierToFunctionName(
+				memberName,
+				accessedType,
+			)
+			// Load function value
+			c.emitGlobalLoad(memberName)
+		}
 	}
 
 	// Return a reference, if the member is accessed via a reference.
@@ -3335,16 +3416,26 @@ func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(
 		c.emit(opcode.InstructionGetIndex{
 			IndexedType: indexedType,
 		})
-	}
 
-	// Return a reference, if the element is accessed via a reference.
-	// This is pre-computed at the checker.
-	if indexExpressionTypes.ReturnReference {
-		index := c.getOrAddType(indexExpressionTypes.ResultType)
-		c.emit(opcode.InstructionNewRef{
-			Type:       index,
-			IsImplicit: true,
-		})
+		// Return a reference, if the element is accessed via a reference.
+		// This is pre-computed at the checker.
+		if indexExpressionTypes.ReturnReference {
+			index := c.getOrAddType(indexExpressionTypes.ResultType)
+			c.emit(opcode.InstructionNewRef{
+				Type:       index,
+				IsImplicit: true,
+			})
+		} else if _, isOptional := indexExpressionTypes.ResultType.(*sema.OptionalType); isOptional {
+			// When accessing an element, the underlying container's element type may differ
+			// from the reference's element type.
+			// For example, when the static type is `[Int?]`, but the container's run-time type is `[Int]`,
+			// then it stores `Int` elements, but the result type of the access is `Int?`.
+			// Box the value to match.
+			resultType := c.getOrAddType(indexExpressionTypes.ResultType)
+			c.emit(opcode.InstructionBoxOptional{
+				TargetType: resultType,
+			})
+		}
 	}
 
 	return
@@ -3733,21 +3824,13 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	c.targetFunction(function)
 	defer c.targetFunction(previousFunction)
 
-	// cannot declare base as parameter because it is at the end of the argument list
-	// this is only true for initialization of attachments.
-	// otherwise, base is declared as the second parameter after self.
-	c.declareParameters(parameterList, false, false)
+	isAttachmentConstructor := kind == common.CompositeKindAttachment
 
+	// Declare parameters.
+	c.declareParameters(parameterList, false, isAttachmentConstructor)
+
+	// Declare a local variable to store `self`.
 	memoryGauge := c.Config.MemoryGauge
-
-	var base *local
-	// must do this before declaring self
-	if kind == common.CompositeKindAttachment {
-		// base is provided as an argument at the end of the argument list implicitly
-		base = c.currentFunction.declareLocal(memoryGauge, sema.BaseIdentifier)
-	}
-
-	// Declare `self`
 	self := c.currentFunction.declareLocal(memoryGauge, sema.SelfIdentifier)
 
 	// Initialize an empty struct and assign to `self`.
@@ -3786,7 +3869,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			)
 		}
 	} else {
-		addressValue := interpreter.NewAddressValue(c.Config.MemoryGauge, address)
+		addressValue := interpreter.NewAddressValue(memoryGauge, address)
 		addressConstant := c.addConstant(
 			constant.Address,
 			addressValue,
@@ -3805,23 +3888,29 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	// stores the return value of the constructor
 	var returnLocalIndex uint16
+
 	// `self` in attachments is a reference.
-	if kind == common.CompositeKindAttachment {
+	if isAttachmentConstructor {
 		// Store the new composite as the return value.
 		returnLocalIndex = c.currentFunction.generateLocalIndex()
 		c.emitSetLocal(returnLocalIndex)
+
 		attachType := enclosingType.(sema.EntitlementSupportingType)
 		baseAccess := attachType.SupportedEntitlements().Access()
 		refType := &sema.ReferenceType{
 			Type:          attachType,
 			Authorization: baseAccess,
 		}
+
 		// we need to set the attachment's base value
 		// because it may be used in function calls in the initializer.
 		// see `call function in initializer` test.
+		base := c.currentFunction.findLocal(sema.BaseIdentifier)
 		c.emitGetLocal(base.index)
+
 		c.emitGetLocal(returnLocalIndex)
 		c.emit(opcode.InstructionSetAttachmentBase{})
+
 		// Set `self` to be a reference.
 		c.emitGetLocal(returnLocalIndex)
 		c.emit(opcode.InstructionNewRef{
@@ -4304,15 +4393,19 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
 		c.emitGlobalLoad(constructorName)
 
+		enumRawType := compositeType.EnumRawType
+
 		indexBigInt := big.NewInt(int64(index))
 		c.emitIntegerConstant(
 			indexBigInt,
-			compositeType.EnumRawType,
+			enumRawType,
 		)
 
+		argumentTypes := c.loadTypes([]sema.Type{enumRawType})
 		returnTypeIndex := c.getOrAddType(compositeType)
+
 		c.emit(opcode.InstructionInvoke{
-			ArgCount:   1,
+			ArgTypes:   argumentTypes,
 			ReturnType: returnTypeIndex,
 		})
 
@@ -4382,17 +4475,11 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	// get base back on stack
 	c.emitGetLocal(baseLocalIndex)
 
-	baseTyp, ok := baseType.(sema.EntitlementSupportingType)
-	if !ok {
-		// simulates defensive check in interpreter
-		panic(errors.NewUnreachableError())
-	}
-
-	baseAccess := baseTyp.SupportedEntitlements().Access()
+	// within the constructor, base is unauthorized (unlike self, which remains fully entitled)
 	refType := sema.NewReferenceType(
 		c.Config.MemoryGauge,
-		baseAccess,
-		baseTyp,
+		sema.UnauthorizedAccess,
+		baseType,
 	)
 
 	// create reference to base to pass as implicit arg
@@ -4407,7 +4494,6 @@ func (c *Compiler[_, _]) VisitAttachExpression(expression *ast.AttachExpression)
 	c.visitInvocationExpressionWithImplicitArgument(
 		expression.Attachment,
 		&refLocalIndex,
-		refType,
 	)
 	// attachment on stack
 

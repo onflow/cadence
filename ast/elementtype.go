@@ -59,6 +59,7 @@ const (
 	ElementTypeSwapStatement
 	ElementTypeExpressionStatement
 	ElementTypeRemoveStatement
+	ElementTypeGuardStatement
 
 	// Expressions
 
@@ -86,6 +87,7 @@ const (
 	ElementTypePathExpression
 	ElementTypeAttachExpression
 	ElementTypeStringTemplateExpression
+	ElementTypeArgument
 
 	// Types
 

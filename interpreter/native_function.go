@@ -225,6 +225,7 @@ func NewStaticHostFunctionValueFromNativeFunction(
 func NewBoundHostFunctionValue(
 	context FunctionCreationContext,
 	self Value,
+	accessedReference ReferenceValue,
 	funcType *sema.FunctionType,
 	function NativeFunction,
 ) BoundFunctionValue {
@@ -239,6 +240,7 @@ func NewBoundHostFunctionValue(
 		context,
 		hostFunc,
 		&self,
+		accessedReference,
 		nil,
 	)
 }
@@ -275,6 +277,10 @@ func GetAccountTypePrivateAddressValue(receiver Value) AddressValue {
 	simpleCompositeValue := AssertValueOfType[*SimpleCompositeValue](receiver)
 
 	addressMetaInfo := simpleCompositeValue.PrivateField(AccountTypePrivateAddressFieldName)
-	address := AssertValueOfType[AddressValue](addressMetaInfo)
+	address, ok := addressMetaInfo.(AddressValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	return address
 }

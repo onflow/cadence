@@ -96,3 +96,11 @@ func (v BoolValue) Encode(e *atree.Encoder) error {
 	// NOTE: when updating, also update BoolValue.ByteSize
 	return e.CBOR.EncodeBool(bool(v))
 }
+
+func (BoolValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v BoolValue) CopyNonRefSimple() (atree.Storable, error) {
+	return v, nil
+}

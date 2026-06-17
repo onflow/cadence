@@ -159,17 +159,34 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v AddressValue) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
-func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	switch name {
+func (v AddressValue) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
 
+	switch name {
 	case sema.ToStringFunctionName:
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.ToStringFunctionType,
 			NativeAddressToStringFunction,
 		)
@@ -178,6 +195,7 @@ func (v AddressValue) GetMethod(context MemberAccessibleContext, name string) Fu
 		return NewBoundHostFunctionValue(
 			context,
 			v,
+			accessedReference,
 			sema.AddressTypeToBytesFunctionType,
 			NativeAddressToBytesFunction,
 		)
@@ -245,6 +263,7 @@ func (v AddressValue) Transfer(
 	if remove {
 		RemoveReferencedSlab(transferContext, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -266,6 +285,15 @@ func (v AddressValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (AddressValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (AddressValue) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v AddressValue) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func AddressValueFromByteArray(context ContainerMutationContext, byteArray *ArrayValue) AddressValue {

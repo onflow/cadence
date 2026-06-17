@@ -37,7 +37,7 @@ var deployedContractFieldNames = []string{
 func NewDeployedContractValue(
 	context FunctionCreationContext,
 	address AddressValue,
-	name *StringValue,
+	nameValue *StringValue,
 	code *ArrayValue,
 ) *SimpleCompositeValue {
 	deployedContract := NewSimpleCompositeValue(
@@ -47,7 +47,7 @@ func NewDeployedContractValue(
 		deployedContractFieldNames,
 		map[string]Value{
 			sema.DeployedContractTypeAddressFieldName: address,
-			sema.DeployedContractTypeNameFieldName:    name,
+			sema.DeployedContractTypeNameFieldName:    nameValue,
 			sema.DeployedContractTypeCodeFieldName:    code,
 		},
 		nil,
@@ -56,13 +56,26 @@ func NewDeployedContractValue(
 		nil,
 	)
 
-	publicTypesFuncValue := newInterpreterDeployedContractPublicTypesFunctionValue(
-		context,
-		deployedContract,
-		address,
-		name,
-	)
-	deployedContract.Fields[sema.DeployedContractTypePublicTypesFunctionName] = publicTypesFuncValue
+	// `sema.DeployedContractType` has the following members as function-members.
+	// Therefore, include them as functions in the value as well.
+	deployedContract.FunctionMemberGetter = func(
+		name string,
+		_ MemberAccessibleContext,
+		accessedReference ReferenceValue,
+	) FunctionValue {
+		switch name {
+		case sema.DeployedContractTypePublicTypesFunctionName:
+			return newInterpreterDeployedContractPublicTypesFunctionValue(
+				context,
+				deployedContract,
+				accessedReference,
+				address,
+				nameValue,
+			)
+		default:
+			return nil
+		}
+	}
 
 	return deployedContract
 }
@@ -86,12 +99,16 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 			addressFieldValue := deployedContract.GetMember(
 				context,
 				sema.DeployedContractTypeAddressFieldName,
+				common.DeclarationKindField,
+				nil, // `nil` because a field is requested.
 			)
 			address = common.Address(AssertValueOfType[AddressValue](addressFieldValue))
 
 			nameFieldValue := deployedContract.GetMember(
 				context,
 				sema.DeployedContractTypeNameFieldName,
+				common.DeclarationKindField,
+				nil, // `nil` because a field is requested.
 			)
 			name = AssertValueOfType[*StringValue](nameFieldValue)
 		} else {
@@ -113,6 +130,7 @@ func NewNativeDeployedContractPublicTypesFunctionValue(
 func newInterpreterDeployedContractPublicTypesFunctionValue(
 	context FunctionCreationContext,
 	self MemberAccessibleValue,
+	accessedReference ReferenceValue,
 	addressValue AddressValue,
 	name *StringValue,
 ) FunctionValue {
@@ -120,6 +138,7 @@ func newInterpreterDeployedContractPublicTypesFunctionValue(
 	return NewBoundHostFunctionValue(
 		context,
 		self,
+		accessedReference,
 		sema.DeployedContractTypePublicTypesFunctionType,
 		NewNativeDeployedContractPublicTypesFunctionValue(&address, name),
 	)

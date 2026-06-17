@@ -295,7 +295,7 @@ func (e *Encoder) encodeTypeDefAndValue(
 	// Encode tag number cbor-tag-typedef-and-value and array head of length 2.
 	err := e.enc.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagTypeDefAndValue,
+		0xd8, byte(CBORTagTypeDefAndValue),
 		// array, 2 items follow
 		0x82,
 	})
@@ -323,7 +323,7 @@ func (e *Encoder) encodeTypeAndValue(value cadence.Value, tids ccfTypeIDByCadenc
 	// Encode tag number
 	err := e.enc.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagTypeAndValue,
+		0xd8, byte(CBORTagTypeAndValue),
 	})
 	if err != nil {
 		return err
@@ -502,7 +502,7 @@ func (e *Encoder) encodeValue(
 		// Encode tag number and array head of length 2.
 		err := e.enc.EncodeRawBytes([]byte{
 			// tag number
-			0xd8, CBORTagTypeAndValue,
+			0xd8, byte(CBORTagTypeAndValue),
 			// array, 2 items follow
 			0x82,
 		})
@@ -1509,7 +1509,7 @@ func (e *Encoder) encodeNullableTypeValue(typ cadence.Type, visited ccfTypeIDByC
 //	; cbor-tag-type-value-ref
 //	#6.184(id)
 func (e *Encoder) encodeTypeValueRef(id ccfTypeID) error {
-	rawTagNum := []byte{0xd8, CBORTagTypeValueRef}
+	rawTagNum := []byte{0xd8, byte(CBORTagTypeValueRef)}
 	return e.encodeTypeRefWithRawTag(id, rawTagNum)
 }
 
@@ -1520,7 +1520,7 @@ func (e *Encoder) encodeTypeValueRef(id ccfTypeID) error {
 //	; cbor-tag-simple-type-value
 //	#6.185(simple-type-id)
 func (e *Encoder) encodeSimpleTypeValue(id SimpleType) error {
-	rawTagNum := []byte{0xd8, CBORTagSimpleTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagSimpleTypeValue)}
 	return e.encodeSimpleTypeWithRawTag(uint64(id), rawTagNum)
 }
 
@@ -1531,7 +1531,7 @@ func (e *Encoder) encodeSimpleTypeValue(id SimpleType) error {
 //	; cbor-tag-optional-type-value
 //	#6.186(type-value)
 func (e *Encoder) encodeOptionalTypeValue(typ *cadence.OptionalType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagOptionalTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagOptionalTypeValue)}
 	return e.encodeOptionalTypeWithRawTag(
 		typ,
 		visited,
@@ -1547,7 +1547,7 @@ func (e *Encoder) encodeOptionalTypeValue(typ *cadence.OptionalType, visited ccf
 //	; cbor-tag-varsized-array-type-value
 //	#6.187(type-value)
 func (e *Encoder) encodeVarSizedArrayTypeValue(typ *cadence.VariableSizedArrayType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagVarsizedArrayTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagVarsizedArrayTypeValue)}
 	return e.encodeVarSizedArrayTypeWithRawTag(
 		typ,
 		visited,
@@ -1566,7 +1566,7 @@ func (e *Encoder) encodeVarSizedArrayTypeValue(typ *cadence.VariableSizedArrayTy
 //	    element-type: type-value
 //	])
 func (e *Encoder) encodeConstantSizedArrayTypeValue(typ *cadence.ConstantSizedArrayType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagConstsizedArrayTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagConstsizedArrayTypeValue)}
 	return e.encodeConstantSizedArrayTypeWithRawTag(
 		typ,
 		visited,
@@ -1585,7 +1585,7 @@ func (e *Encoder) encodeConstantSizedArrayTypeValue(typ *cadence.ConstantSizedAr
 //	    element-type: type-value
 //	])
 func (e *Encoder) encodeDictTypeValue(typ *cadence.DictionaryType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagDictTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagDictTypeValue)}
 	return e.encodeDictTypeWithRawTag(
 		typ,
 		visited,
@@ -1601,7 +1601,7 @@ func (e *Encoder) encodeDictTypeValue(typ *cadence.DictionaryType, visited ccfTy
 //	; cbor-tag-inclusiverange-type-value
 //	#6.194(type-value)
 func (e *Encoder) encodeInclusiveRangeTypeValue(typ *cadence.InclusiveRangeType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagInclusiveRangeTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagInclusiveRangeTypeValue)}
 	return e.encodeInclusiveRangeTypeWithRawTag(
 		typ,
 		visited,
@@ -1620,7 +1620,7 @@ func (e *Encoder) encodeInclusiveRangeTypeValue(typ *cadence.InclusiveRangeType,
 //	  type: type-value,
 //	])
 func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagReferenceTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagReferenceTypeValue)}
 	return e.encodeReferenceTypeWithRawTag(
 		typ,
 		visited,
@@ -1639,7 +1639,7 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 //	  types: [+ type-value]
 //	])
 func (e *Encoder) encodeIntersectionTypeValue(typ *cadence.IntersectionType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagIntersectionTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagIntersectionTypeValue)}
 	return e.encodeIntersectionTypeWithRawTag(
 		typ,
 		visited,
@@ -1660,7 +1660,7 @@ func (e *Encoder) encodeIntersectionTypeValue(typ *cadence.IntersectionType, vis
 //	  type-value / nil
 //	])
 func (e *Encoder) encodeCapabilityTypeValue(typ *cadence.CapabilityType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagCapabilityTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagCapabilityTypeValue)}
 	return e.encodeCapabilityTypeWithRawTag(
 		typ,
 		visited,
@@ -1676,7 +1676,7 @@ func (e *Encoder) encodeCapabilityTypeValue(typ *cadence.CapabilityType, visited
 //	; cbor-tag-struct-type-value
 //	#6.208(composite-type-value)
 func (e *Encoder) encodeStructTypeValue(typ *cadence.StructType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagStructTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagStructTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
@@ -1694,7 +1694,7 @@ func (e *Encoder) encodeStructTypeValue(typ *cadence.StructType, visited ccfType
 //	; cbor-tag-resource-type-value
 //	#6.209(composite-type-value)
 func (e *Encoder) encodeResourceTypeValue(typ *cadence.ResourceType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagResourceTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagResourceTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
@@ -1712,7 +1712,7 @@ func (e *Encoder) encodeResourceTypeValue(typ *cadence.ResourceType, visited ccf
 //	; cbor-tag-event-type-value
 //	#6.210(composite-type-value)
 func (e *Encoder) encodeEventTypeValue(typ *cadence.EventType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagEventTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagEventTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
@@ -1730,7 +1730,7 @@ func (e *Encoder) encodeEventTypeValue(typ *cadence.EventType, visited ccfTypeID
 //	; cbor-tag-contract-type-value
 //	#6.211(composite-type-value)
 func (e *Encoder) encodeContractTypeValue(typ *cadence.ContractType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagContractTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagContractTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
@@ -1748,7 +1748,7 @@ func (e *Encoder) encodeContractTypeValue(typ *cadence.ContractType, visited ccf
 //	; cbor-tag-enum-type-value
 //	#6.212(composite-type-value)
 func (e *Encoder) encodeEnumTypeValue(typ *cadence.EnumType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagEnumTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagEnumTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		typ.RawType,
@@ -1766,7 +1766,7 @@ func (e *Encoder) encodeEnumTypeValue(typ *cadence.EnumType, visited ccfTypeIDBy
 //	; cbor-tag-attachment-type-value
 //	#6.213(composite-type-value)
 func (e *Encoder) encodeAttachmentTypeValue(typ *cadence.AttachmentType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagAttachmentTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagAttachmentTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		typ.BaseType,
@@ -1784,7 +1784,7 @@ func (e *Encoder) encodeAttachmentTypeValue(typ *cadence.AttachmentType, visited
 //	; cbor-tag-struct-interface-type-value
 //	#6.224(composite-type-value)
 func (e *Encoder) encodeStructInterfaceTypeValue(typ *cadence.StructInterfaceType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagStructInterfaceTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagStructInterfaceTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
@@ -1802,7 +1802,7 @@ func (e *Encoder) encodeStructInterfaceTypeValue(typ *cadence.StructInterfaceTyp
 //	; cbor-tag-resource-interface-type-value
 //	#6.225(composite-type-value)
 func (e *Encoder) encodeResourceInterfaceTypeValue(typ *cadence.ResourceInterfaceType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagResourceInterfaceTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagResourceInterfaceTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
@@ -1820,7 +1820,7 @@ func (e *Encoder) encodeResourceInterfaceTypeValue(typ *cadence.ResourceInterfac
 //	; cbor-tag-contract-interface-type-value
 //	#6.226(composite-type-value)
 func (e *Encoder) encodeContractInterfaceTypeValue(typ *cadence.ContractInterfaceType, visited ccfTypeIDByCadenceType) error {
-	rawTagNum := []byte{0xd8, CBORTagContractInterfaceTypeValue}
+	rawTagNum := []byte{0xd8, byte(CBORTagContractInterfaceTypeValue)}
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
@@ -2165,7 +2165,7 @@ func (e *Encoder) encodeFunctionTypeValue(typ *cadence.FunctionType, visited ccf
 	// Encode tag number and array head of length 3.
 	err := e.enc.EncodeRawBytes([]byte{
 		// tag number
-		0xd8, CBORTagFunctionTypeValue,
+		0xd8, byte(CBORTagFunctionTypeValue),
 	})
 	if err != nil {
 		return err

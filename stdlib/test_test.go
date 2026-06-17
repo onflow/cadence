@@ -988,7 +988,6 @@ func TestAssertEqual(t *testing.T) {
 
 		var assertionErr *AssertionError
 		assert.ErrorAs(t, err, &assertionErr)
-
 		assert.ErrorContains(
 			t,
 			err,
@@ -1132,7 +1131,8 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 
                 let transactionResult = Test.TransactionResult(
                     status: Test.ResultStatus.succeeded,
-                    error: nil
+                    error: nil,
+                    computationUsed: 0
                 )
 
                 return successful.test(transactionResult)
@@ -1144,7 +1144,8 @@ func TestTestBeSucceededMatcher(t *testing.T) {
 
                 let transactionResult = Test.TransactionResult(
                     status: Test.ResultStatus.failed,
-                    error: Test.Error("Exceeded Limit")
+                    error: Test.Error("Exceeded Limit"),
+                    computationUsed: 0
                 )
 
                 return successful.test(transactionResult)
@@ -1246,7 +1247,8 @@ func TestTestBeFailedMatcher(t *testing.T) {
 
                 let transactionResult = Test.TransactionResult(
                     status: Test.ResultStatus.failed,
-                    error: Test.Error("Exceeding limit")
+                    error: Test.Error("Exceeding limit"),
+                    computationUsed: 0
                 )
 
                 return failed.test(transactionResult)
@@ -1258,7 +1260,8 @@ func TestTestBeFailedMatcher(t *testing.T) {
 
                 let transactionResult = Test.TransactionResult(
                     status: Test.ResultStatus.succeeded,
-                    error: nil
+                    error: nil,
+                    computationUsed: 0
                 )
 
                 return failed.test(transactionResult)
@@ -1368,7 +1371,8 @@ func TestTestAssertErrorMatcher(t *testing.T) {
             fun testMatch() {
                 let result = Test.TransactionResult(
                     status: Test.ResultStatus.failed,
-                    error: Test.Error("computation exceeding limit")
+                    error: Test.Error("computation exceeding limit"),
+                    computationUsed: 0
                 )
 
                 Test.assertError(result, errorMessage: "exceeding limit")
@@ -1378,7 +1382,8 @@ func TestTestAssertErrorMatcher(t *testing.T) {
             fun testNoMatch() {
                 let result = Test.TransactionResult(
                     status: Test.ResultStatus.failed,
-                    error: Test.Error("computation exceeding memory")
+                    error: Test.Error("computation exceeding memory"),
+                    computationUsed: 0
                 )
 
                 Test.assertError(result, errorMessage: "exceeding limit")
@@ -1388,7 +1393,8 @@ func TestTestAssertErrorMatcher(t *testing.T) {
             fun testNoError() {
                 let result = Test.TransactionResult(
                     status: Test.ResultStatus.succeeded,
-                    error: nil
+                    error: nil,
+                    computationUsed: 0
                 )
 
                 Test.assertError(result, errorMessage: "exceeding limit")
@@ -2897,6 +2903,68 @@ func TestBlockchainAccount(t *testing.T) {
 	})
 }
 
+func TestReadFile(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test(): String {
+                return Test.readFile("some/file.cdc")
+            }
+        `
+
+		testFramework := &mockedTestFramework{
+			emulatorBackend: func() Blockchain {
+				return &mockedBlockchain{}
+			},
+			readFile: func(path string) (string, error) {
+				return "file contents", nil
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("file contents"), result)
+	})
+
+	t.Run("file not found", func(t *testing.T) {
+		t.Parallel()
+
+		const script = `
+            import Test
+
+            access(all)
+            fun test() {
+                Test.readFile("does/not/exist.cdc")
+            }
+        `
+
+		testFramework := &mockedTestFramework{
+			emulatorBackend: func() Blockchain {
+				return &mockedBlockchain{}
+			},
+			readFile: func(path string) (string, error) {
+				return "", fmt.Errorf("open %s: no such file or directory", path)
+			},
+		}
+
+		inter, err := newTestContractInterpreterWithTestFramework(t, script, testFramework)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, `cannot read file "does/not/exist.cdc"`)
+	})
+}
+
 type mockedTestFramework struct {
 	emulatorBackend func() Blockchain
 	readFile        func(s string) (string, error)
@@ -2934,6 +3002,8 @@ type mockedBlockchain struct {
 	events             func(context TestFrameworkEventsContext, eventType interpreter.StaticType) interpreter.Value
 	reset              func(uint64)
 	moveTime           func(int64)
+	freezeTime         func()
+	unfreezeTime       func()
 	createSnapshot     func(string) error
 	loadSnapshot       func(string) error
 }
@@ -3052,6 +3122,22 @@ func (m mockedBlockchain) MoveTime(timeDelta int64) {
 	}
 
 	m.moveTime(timeDelta)
+}
+
+func (m mockedBlockchain) FreezeTime() {
+	if m.freezeTime == nil {
+		panic("'FreezeTime' is not implemented")
+	}
+
+	m.freezeTime()
+}
+
+func (m mockedBlockchain) UnfreezeTime() {
+	if m.unfreezeTime == nil {
+		panic("'UnfreezeTime' is not implemented")
+	}
+
+	m.unfreezeTime()
 }
 
 func (m mockedBlockchain) CreateSnapshot(name string) error {

@@ -21,6 +21,8 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -56,6 +58,41 @@ func TestInterpretAttachmentStruct(t *testing.T) {
 		require.NoError(t, err)
 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("basic with arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+        struct S {}
+
+        attachment A for S {
+            let i: Int
+
+            init(_ i: Int) {
+                self.i = i
+            }
+
+            fun foo(): Int { return self.i }
+        }
+
+        fun test(): Int {
+            var s = S()
+            s = attach A(3) to s
+            return s[A]?.foo()!
+        }
+    `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value,
+		)
 	})
 
 	t.Run("duplicate attach", func(t *testing.T) {
@@ -1893,7 +1930,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		// this defensive check requires changing opGetTypeIndex to take on the work that
 		// previous instructions in VisitAttachExpression do which is not ideal
 		// same goes for all below attach defensive checks
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndInterpretWithOptions(t, ` //nolint:staticcheck
         struct S {}
         attachment A for S {}
         fun test() {
@@ -1935,7 +1972,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndInterpretWithOptions(t, ` //nolint:staticcheck
         struct S {}
         attachment A for S {}
         fun test() {
@@ -1975,7 +2012,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndInterpretWithOptions(t, ` //nolint:staticcheck
         struct S {}
         attachment A for S {}
         enum E: UInt8 {
@@ -2039,6 +2076,56 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		_, err := inter.Invoke("test")
 		var attachmentError *interpreter.InvalidAttachmentOperationTargetError
 		require.ErrorAs(t, err, &attachmentError)
+	})
+}
+
+func TestInterpretAttachmentConstructorGuard(t *testing.T) {
+	t.Parallel()
+
+	t.Run("direct call panics", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndPrepareWithOptions(t, `
+            struct S {}
+            attachment A for S {}
+            fun test() {
+                let f = A
+                let a <- f()
+                destroy a
+            }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(_ error) {},
+		})
+
+		_, err := inter.Invoke("test")
+		var constructorError *interpreter.InvalidAttachmentConstructorError
+		require.ErrorAs(t, err, &constructorError)
+	})
+
+	t.Run("attach expression succeeds", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {}
+            attachment A for S {
+                access(all) fun foo(): Int { return 42 }
+            }
+            fun test(): Int {
+                let s = attach A() to S()
+                return s[A]!.foo()
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewIntValueFromInt64(nil, 42),
+			result,
+		)
 	})
 }
 
@@ -2602,7 +2689,7 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 
 	// This test is adapted and available in vm_test.go
 	// TestAttachments/build-in type
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		`
           attachment A for AnyStruct {
               fun foo(): Int {
@@ -2710,4 +2797,85 @@ func TestInterpretAttachmentToTypeConfusedValue(t *testing.T) {
 
 	var invalidBaseTypeError *interpreter.InvalidBaseTypeError
 	require.ErrorAs(t, err, &invalidBaseTypeError)
+}
+
+func TestInterpretAttachmentBaseUnauthorizedInInit(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           resource R {
+              let x: Int
+
+              init(x: Int) {
+                  self.x = x
+              }
+           }
+
+           attachment A for R {
+              let x: Int
+
+              init() {
+                  self.x = base.x
+              }
+
+              fun getX(): Int {
+                  return self.x
+              }
+           }
+
+           fun test(): Int {
+               let r <- create R(x: 42)
+               let r2 <- attach A() to <-r
+               let i = r2[A]?.getX()!
+               destroy r2
+               return i
+           }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+			result,
+		)
+	})
+
+	t.Run("invalid downcast", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           entitlement E
+
+           resource R {
+              access(E) let x: Int
+
+              init(x: Int) {
+                  self.x = x
+              }
+           }
+
+           attachment A for R {
+              init() {
+				  base as! auth(E) &R
+              }
+           }
+
+           fun test() {
+               let r <- create R(x: 42)
+               let r2 <- attach A() to <-r
+               destroy r2
+           }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+	})
 }

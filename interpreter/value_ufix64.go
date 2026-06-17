@@ -26,6 +26,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -164,6 +166,42 @@ func ConvertUFix64(memoryGauge common.MemoryGauge, value Value) UFix64Value {
 
 	default:
 		panic(fmt.Sprintf("can't convert to UFix64: %s", value))
+	}
+}
+
+func ConvertUFix64WithRounding(memoryGauge common.MemoryGauge, value Value, roundingRule fix.RoundingMode) UFix64Value {
+	switch value := value.(type) {
+	case UFix128Value:
+		return NewUFix64Value(
+			memoryGauge,
+			func() uint64 {
+				result, err := fix.UFix128(value).ToUFix64(roundingRule)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				return uint64(result)
+			},
+		)
+
+	case Fix128Value:
+		return NewUFix64Value(
+			memoryGauge,
+			func() uint64 {
+				fix128 := fix.Fix128(value)
+				if fix128.IsNeg() {
+					panic(&UnderflowError{})
+				}
+				// A non-negative Fix128 has the same bit representation as UFix128
+				result, err := fix.UFix128(fix128).ToUFix64(roundingRule)
+				if err != nil {
+					handleFixedPointConversionError(err)
+				}
+				return uint64(result)
+			},
+		)
+
+	default:
+		return ConvertUFix64(memoryGauge, value)
 	}
 }
 
@@ -355,6 +393,54 @@ func (v UFix64Value) Mod(context NumberValueArithmeticContext, other NumberValue
 	return UFix64Value{UFix64Value: result}
 }
 
+func (v UFix64Value) MultiplyDivide(
+	context NumberValueArithmeticContext,
+	factor FixedPointValue,
+	divisor FixedPointValue,
+	rounding fix.RoundingMode,
+) NumberValue {
+	f, ok := factor.(UFix64Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    factor.StaticType(context),
+		})
+	}
+
+	d, ok := divisor.(UFix64Value)
+	if !ok {
+		panic(&InvalidOperandsError{
+			FunctionName: sema.FixedPointNumericTypeMultiplyDivideFunctionName,
+			LeftType:     v.StaticType(context),
+			RightType:    divisor.StaticType(context),
+		})
+	}
+
+	valueGetter := func() uint64 {
+		a := fix.UFix64(uint64(v.UFix64Value))
+		b := fix.UFix64(uint64(f.UFix64Value))
+		c := fix.UFix64(uint64(d.UFix64Value))
+		result, err := a.FMD(b, c, rounding)
+		handleFixedpointError(err)
+		return uint64(result)
+	}
+
+	return NewUFix64Value(context, valueGetter)
+}
+
+func (v UFix64Value) Pow(context NumberValueArithmeticContext, other Fix64Value) NumberValue {
+	valueGetter := func() uint64 {
+		a := fix.UFix64(uint64(v.UFix64Value))
+		b := fix.Fix64(uint64(other))
+		result, err := a.Pow(b)
+		handleFixedpointError(err)
+		return uint64(result)
+	}
+
+	return NewUFix64Value(context, valueGetter)
+}
+
 func (v UFix64Value) Less(context ValueComparisonContext, other ComparableValue) BoolValue {
 	o, ok := other.(UFix64Value)
 	if !ok {
@@ -425,12 +511,34 @@ func (v UFix64Value) HashInput(_ common.Gauge, scratch []byte) []byte {
 	return scratch[:9]
 }
 
-func (v UFix64Value) GetMember(context MemberAccessibleContext, name string) Value {
-	return context.GetMethod(v, name)
+func (v UFix64Value) GetMember(
+	context MemberAccessibleContext,
+	name string,
+	memberKind common.DeclarationKind,
+	accessedReference ReferenceValue,
+) Value {
+	return GetMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		memberKind,
+		nil,
+	)
 }
 
-func (v UFix64Value) GetMethod(context MemberAccessibleContext, name string) FunctionValue {
-	return getNumberValueFunctionMember(context, v, name, sema.UFix64Type)
+func (v UFix64Value) GetMethod(
+	context MemberAccessibleContext,
+	name string,
+	accessedReference ReferenceValue,
+) FunctionValue {
+	return getNumberValueFunctionMember(
+		context,
+		v,
+		accessedReference,
+		name,
+		sema.UFix64Type,
+	)
 }
 
 func (UFix64Value) RemoveMember(_ ValueTransferContext, _ string) Value {
@@ -469,6 +577,7 @@ func (v UFix64Value) Transfer(
 	if remove {
 		RemoveReferencedSlab(context, storable)
 	}
+	// If this function is modified, please also modify CopyNonRefSimple() to match the returned v.
 	return v
 }
 
@@ -482,6 +591,15 @@ func (UFix64Value) DeepRemove(_ ValueRemoveContext, _ bool) {
 
 func (v UFix64Value) IntegerPart() NumberValue {
 	return UInt64Value(v.UFix64Value.IntegerPart())
+}
+
+func (UFix64Value) CanCopyNonRefSimple() bool {
+	return true
+}
+
+func (v UFix64Value) CopyNonRefSimple() (atree.Storable, error) {
+	// The returned value should match the returned value of Transfer().
+	return v, nil
 }
 
 func fix128BigIntToUFix64(

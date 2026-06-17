@@ -146,9 +146,9 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 	value := interpreter.visitVariableDeclaration(declaration, true)
 
-	if someValue, ok := value.(*SomeValue); ok {
-
-		innerValue := someValue.InnerValue()
+	switch value := value.(type) {
+	case *SomeValue:
+		innerValue := value.InnerValue()
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
@@ -159,11 +159,84 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		)
 
 		return interpreter.visitBlock(thenBlock)
-	} else if elseBlock != nil {
-		return interpreter.visitBlock(elseBlock)
+
+	case NilValue:
+		if elseBlock != nil {
+			return interpreter.visitBlock(elseBlock)
+		}
+		return nil
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (interpreter *Interpreter) VisitGuardStatement(statement *ast.GuardStatement) StatementResult {
+	switch test := statement.Test.(type) {
+	case ast.Expression:
+		return interpreter.visitGuardStatementWithTestExpression(test, statement.Else)
+	case *ast.VariableDeclaration:
+		return interpreter.visitGuardStatementWithVariableDeclaration(test, statement.Else)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (interpreter *Interpreter) visitGuardStatementWithTestExpression(
+	test ast.Expression,
+	elseBlock *ast.Block,
+) StatementResult {
+
+	value, ok := interpreter.evalExpression(test).(BoolValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	if !value {
+		return interpreter.visitGuardElseBlock(elseBlock)
 	}
 
 	return nil
+}
+
+func (interpreter *Interpreter) visitGuardStatementWithVariableDeclaration(
+	declaration *ast.VariableDeclaration,
+	elseBlock *ast.Block,
+) StatementResult {
+
+	value := interpreter.visitVariableDeclaration(declaration, true)
+
+	switch value := value.(type) {
+	case *SomeValue:
+		innerValue := value.InnerValue()
+
+		// Guard declares variable in current scope (no activation push/pop)
+		interpreter.declareVariable(
+			declaration.Identifier.Identifier,
+			innerValue,
+		)
+
+		return nil
+
+	case NilValue:
+		return interpreter.visitGuardElseBlock(elseBlock)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+// visitGuardElseBlock evaluates a guard statement's else block.
+// The else block must exit (return, break, or continue),  so the checker rejects fall-through.
+// As a defensive measure against a checker bug, panic if the block falls through at run-time.
+func (interpreter *Interpreter) visitGuardElseBlock(elseBlock *ast.Block) StatementResult {
+	result := interpreter.visitBlock(elseBlock)
+	if _, ok := result.(controlResult); !ok {
+		panic(&UnreachableInstructionError{
+			Range: elseBlock.Range,
+		})
+	}
+	return result
 }
 
 func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) StatementResult {
@@ -282,6 +355,14 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 	}
 
 	executeBody := func(value Value) (resume bool) {
+		// When iterating, the underlying container's element type may differ
+		// from the loop variable's type.
+		// For example, when the declared type is `[Int?]`, but the container's
+		// run-time type is `[Int]`, then it stores `Int` elements, but the loop
+		// variable type is `Int?`. Convert and box to match the declared type.
+		// This mirrors the VM's `mustEmitTransferAndConvert(loopVarType, loopVarType)`.
+		value = ConvertAndBox(interpreter, value, forStmtTypes.ValueVariableType)
+
 		statementResult, done := interpreter.visitForStatementBody(statement, index, value)
 		if done {
 			result = statementResult

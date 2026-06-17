@@ -77,6 +77,10 @@ type Blockchain interface {
 
 	MoveTime(int64)
 
+	FreezeTime()
+
+	UnfreezeTime()
+
 	CreateSnapshot(string) error
 
 	LoadSnapshot(string) error
@@ -88,7 +92,8 @@ type ScriptResult struct {
 }
 
 type TransactionResult struct {
-	Error error
+	Error           error
+	ComputationUsed uint64
 }
 
 type Account struct {

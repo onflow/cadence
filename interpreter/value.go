@@ -23,6 +23,8 @@ import (
 
 	"github.com/onflow/atree"
 
+	fix "github.com/onflow/fixed-point"
+
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
 )
@@ -71,6 +73,14 @@ func (s NonStorable) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 
 func (NonStorable) ChildStorables() []atree.Storable {
 	return nil
+}
+
+func (NonStorable) CanCopyNonRefSimple() bool {
+	return false
+}
+
+func (NonStorable) CopyNonRefSimple() (atree.Storable, error) {
+	return nil, NewStorableCopyError("NonStorable")
 }
 
 // Value is the Cadence value hierarchy which is heavily tied to the interpreter and persistent storage,
@@ -154,13 +164,24 @@ type TypeIndexableValue interface {
 
 type MemberAccessibleValue interface {
 	Value
-	GetMember(context MemberAccessibleContext, name string) Value
+	// GetMember return member of any kind (fields, methods, etc.), of this value.
+	// If the member was accessed via a reference, then it must be passed in as the `accessedReference`.
+	// Otherwise (member was accessed via the concrete value), then `accessedReference` must be `nil`.
+	// The `accessedReference` is used as the receiver if the member is a function
+	// (i.e: bound-function implicit capture of the receiver).
+	// It is not used for retrieving fields (even if the field is a function-typed).
+	GetMember(
+		context MemberAccessibleContext,
+		name string,
+		memberKind common.DeclarationKind,
+		accessedReference ReferenceValue,
+	) Value
 	RemoveMember(context ValueTransferContext, name string) Value
 	// SetMember returns whether a value previously existed with this name.
 	SetMember(context ValueTransferContext, name string, value Value) bool
 	// GetMethod returns member functions of this value.
 	// IMPORTANT: This method is for internal use only. Always use `GetMember` to retrieve a member of any kind.
-	GetMethod(context MemberAccessibleContext, name string) FunctionValue
+	GetMethod(context MemberAccessibleContext, name string, accessedReference ReferenceValue) FunctionValue
 }
 
 type ValueComparisonContext interface {
@@ -314,6 +335,12 @@ type FixedPointValue interface {
 	NumberValue
 	IntegerPart() NumberValue
 	Scale() int
+	MultiplyDivide(
+		context NumberValueArithmeticContext,
+		factor FixedPointValue,
+		divisor FixedPointValue,
+		rounding fix.RoundingMode,
+	) NumberValue
 }
 
 type AuthorizedValue interface {

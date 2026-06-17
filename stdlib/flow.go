@@ -90,12 +90,12 @@ func init() {
 	common.RegisterTypeIDDecoder(
 		FlowLocationPrefix,
 		func(_ common.MemoryGauge, typeID string) (location common.Location, qualifiedIdentifier string, err error) {
-			return decodeFlowLocationTypeID(typeID)
+			return DecodeFlowLocationTypeID(typeID)
 		},
 	)
 }
 
-func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
+func DecodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 
 	const errorMessagePrefix = "invalid Flow location type ID"
 

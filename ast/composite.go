@@ -92,7 +92,11 @@ func (*CompositeDeclaration) ElementType() ElementType {
 }
 
 func (d *CompositeDeclaration) Walk(walkChild func(Element)) {
-	walkDeclarations(walkChild, d.Members.declarations)
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
+	walkElements(walkChild, d.Conformances)
+	walkElements(walkChild, d.Members.declarations)
 }
 
 func (*CompositeDeclaration) isDeclaration() {}
@@ -157,7 +161,7 @@ func (d *CompositeDeclaration) EventDoc() prettier.Doc {
 		doc = append(
 			doc,
 			docOrEmpty(d.Access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 
@@ -205,7 +209,7 @@ func CompositeDocument(
 		doc = append(
 			doc,
 			docOrEmpty(access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 
@@ -354,6 +358,9 @@ func (*FieldDeclaration) ElementType() ElementType {
 }
 
 func (d *FieldDeclaration) Walk(walkChild func(Element)) {
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
 	if d.TypeAnnotation != nil {
 		walkChild(d.TypeAnnotation)
 	}
@@ -470,7 +477,7 @@ func (d *FieldDeclaration) Doc() prettier.Doc {
 	if d.Access != AccessNotSpecified {
 		doc = prettier.Concat{
 			docOrEmpty(d.Access),
-			prettier.HardLine{},
+			prettier.Line{},
 			doc,
 		}
 	}
@@ -525,8 +532,10 @@ func (*EnumCaseDeclaration) ElementType() ElementType {
 	return ElementTypeEnumCaseDeclaration
 }
 
-func (*EnumCaseDeclaration) Walk(_ func(Element)) {
-	// NO-OP
+func (d *EnumCaseDeclaration) Walk(walkChild func(Element)) {
+	if d.Access != nil {
+		d.Access.Walk(walkChild)
+	}
 }
 
 func (*EnumCaseDeclaration) isDeclaration() {}
@@ -581,7 +590,7 @@ func (d *EnumCaseDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			docOrEmpty(d.Access),
-			prettier.HardLine{},
+			prettier.Line{},
 		)
 	}
 

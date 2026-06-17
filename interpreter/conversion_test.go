@@ -105,6 +105,15 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 				NewUnmeteredUInt8Value(4),
 				NewUnmeteredIntValueFromInt64(5),
 			): {4, 5},
+			NewArrayValue(
+				inter,
+				&VariableSizedStaticType{
+					Type: PrimitiveStaticTypeUInt8,
+				},
+				common.ZeroAddress,
+				NewUnmeteredUInt8Value(6),
+				NewUnmeteredUInt8Value(7),
+			): {6, 7},
 		}
 
 		for value, expected := range valid {

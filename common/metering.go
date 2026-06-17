@@ -148,6 +148,7 @@ var (
 	SwitchStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindSwitchStatement)
 	WhileStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindWhileStatement)
 	RemoveStatementMemoryUsage     = NewConstantMemoryUsage(MemoryKindRemoveStatement)
+	GuardStatementMemoryUsage      = NewConstantMemoryUsage(MemoryKindGuardStatement)
 
 	// AST Expressions
 
@@ -206,6 +207,7 @@ var (
 	BoundFunctionValueMemoryUsage               = NewConstantMemoryUsage(MemoryKindBoundFunctionValue)
 	HostFunctionValueMemoryUsage                = NewConstantMemoryUsage(MemoryKindHostFunctionValue)
 	InterpretedFunctionValueMemoryUsage         = NewConstantMemoryUsage(MemoryKindInterpretedFunctionValue)
+	WrappedFunctionValueMemoryUsage             = NewConstantMemoryUsage(MemoryKindWrappedFunctionValue)
 	CapabilityValueMemoryUsage                  = NewConstantMemoryUsage(MemoryKindCapabilityValue)
 	EphemeralReferenceValueMemoryUsage          = NewConstantMemoryUsage(MemoryKindEphemeralReferenceValue)
 	StorageReferenceValueMemoryUsage            = NewConstantMemoryUsage(MemoryKindStorageReferenceValue)
@@ -215,6 +217,7 @@ var (
 	PublishedValueMemoryUsage                   = NewConstantMemoryUsage(MemoryKindPublishedValue)
 	StorageCapabilityControllerValueMemoryUsage = NewConstantMemoryUsage(MemoryKindStorageCapabilityControllerValue)
 	AccountCapabilityControllerValueMemoryUsage = NewConstantMemoryUsage(MemoryKindAccountCapabilityControllerValue)
+	StringBuilderMemoryUsage                    = NewConstantMemoryUsage(MemoryKindStringBuilder)
 
 	// Static Types
 

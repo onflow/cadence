@@ -413,7 +413,7 @@ func TestNewStruct(t *testing.T) {
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(12),
-		structValue.GetMember(vmContext, "id"),
+		structValue.GetMember(vmContext, "id", common.DeclarationKindField, nil),
 	)
 }
 
@@ -1564,7 +1564,7 @@ func TestInitializeContract(t *testing.T) {
 		vmConfig,
 	)
 
-	fieldValue := contractValue.GetMember(vmInstance.Context(), "status")
+	fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField, nil)
 	assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 }
 
@@ -1608,7 +1608,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 			vmConfig,
 		)
 
-		fieldValue := contractValue.GetMember(vmInstance.Context(), "status")
+		fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField, nil)
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 
@@ -1648,7 +1648,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 			vmConfig,
 		)
 
-		fieldValue := contractValue.GetMember(vmInstance.Context(), "status")
+		fieldValue := contractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField, nil)
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("PENDING"), fieldValue)
 	})
 }
@@ -1989,7 +1989,7 @@ func TestContractField(t *testing.T) {
 
 		require.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), result)
 
-		fieldValue := importedContractValue.GetMember(vmInstance.Context(), "status")
+		fieldValue := importedContractValue.GetMember(vmInstance.Context(), "status", common.DeclarationKindField, nil)
 		assert.Equal(t, interpreter.NewUnmeteredStringValue("UPDATED"), fieldValue)
 	})
 }
@@ -2179,7 +2179,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, transaction.GetMember(vmContext, "a"))
+		assert.Nil(t, transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil))
 
 		// Invoke 'prepare'
 		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
@@ -2190,7 +2190,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			transaction.GetMember(vmContext, "a"),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil),
 		)
 
 		// Invoke 'execute'
@@ -2202,7 +2202,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			transaction.GetMember(vmContext, "a"),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil),
 		)
 	})
 
@@ -2256,7 +2256,7 @@ func TestTransaction(t *testing.T) {
 		require.Equal(t, 0, vmInstance.StackSize())
 
 		// At the beginning, 'a' is uninitialized
-		assert.Nil(t, transaction.GetMember(vmContext, "a"))
+		assert.Nil(t, transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil))
 
 		// Invoke 'prepare'
 		err = vmInstance.InvokeTransactionPrepare(transaction, nil)
@@ -2267,7 +2267,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello!"),
-			transaction.GetMember(vmContext, "a"),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil),
 		)
 
 		// Invoke 'execute'
@@ -2279,7 +2279,7 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(
 			t,
 			interpreter.NewUnmeteredStringValue("Hello again!"),
-			transaction.GetMember(vmContext, "a"),
+			transaction.GetMember(vmContext, "a", common.DeclarationKindField, nil),
 		)
 	})
 
@@ -3368,7 +3368,9 @@ func TestResource(t *testing.T) {
 
 		vmConfig := PrepareVMConfig(t, nil, programs)
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		// Run the VM at the same location the program was compiled at (TestLocation),
+		// so that the resource `Foo` is constructed within its declaring location.
+		vmInstance := vm.NewVM(TestLocation, program, vmConfig)
 
 		vmContext := vmInstance.Context()
 
@@ -3384,7 +3386,7 @@ func TestResource(t *testing.T) {
 		require.Equal(
 			t,
 			interpreter.NewUnmeteredIntValueFromInt64(5),
-			structValue.GetMember(vmContext, "id"),
+			structValue.GetMember(vmContext, "id", common.DeclarationKindField, nil),
 		)
 	})
 
@@ -4791,6 +4793,231 @@ func TestIfLetScope(t *testing.T) {
 	})
 }
 
+func TestGuard(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := CompileAndInvoke(t,
+			`
+              fun test(x: Bool): Int {
+                  var y = 0
+                  guard x else {
+                     y = 2
+                     return y
+                  }
+                  y = 1
+                  return y
+              }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("true", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t, interpreter.TrueValue)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
+	})
+
+	t.Run("false", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t, interpreter.FalseValue)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
+	})
+}
+
+func TestGuardLet(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := CompileAndInvoke(t,
+			`
+              fun main(x: Int?): Int {
+                  guard let y = x else {
+                     return 2
+                  }
+                  return y
+              }
+            `,
+			"main",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("some", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			),
+		)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t, interpreter.NilValue{})
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
+	})
+}
+
+func TestGuardLetScope(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, argument vm.Value) vm.Value {
+		result, err := CompileAndInvoke(t,
+			`
+              fun test(y: Int?): Int {
+                  var z = 0
+                  guard let x = y else {
+                      z = 1
+                      return z
+                  }
+                  z = x
+                  return z
+              }
+            `,
+			"test",
+			argument,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("some", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(10),
+			),
+		)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), actual)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t, interpreter.NilValue{})
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
+	})
+}
+
+func TestGuardChained(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, arg1, arg2, arg3 vm.Value) vm.Value {
+		result, err := CompileAndInvoke(t,
+			`
+              fun test(a: Int?, b: Int?, c: Int?): Int {
+                  guard let x = a else {
+                      return 1
+                  }
+                  guard let y = b else {
+                      return 2
+                  }
+                  guard let z = c else {
+                      return 3
+                  }
+                  return x + y + z
+              }
+            `,
+			"test",
+			arg1,
+			arg2,
+			arg3,
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	t.Run("first nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
+			interpreter.NilValue{},
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(6),
+			),
+		)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), actual)
+	})
+
+	t.Run("second nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(4),
+			),
+			interpreter.NilValue{},
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(6),
+			),
+		)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(2), actual)
+	})
+
+	t.Run("third nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(4),
+			),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			interpreter.NilValue{},
+		)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), actual)
+	})
+
+	t.Run("all some", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := test(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(4),
+			),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(6),
+			),
+		)
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(15), actual)
+	})
+
+}
+
 func TestSwitch(t *testing.T) {
 
 	t.Parallel()
@@ -5434,9 +5661,11 @@ func TestIntegers(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, "5", result.String())
+
+			staticType := result.StaticType(nil)
 			assert.Equal(t,
 				integerType,
-				interpreter.MustConvertStaticToSemaType(result.StaticType(nil), nil),
+				interpreter.MustConvertStaticToSemaType(staticType, nil), //nolint:staticcheck
 			)
 		})
 	}
@@ -5501,9 +5730,11 @@ func TestFixedPoint(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, expected, result.String())
+
+			staticType := result.StaticType(nil)
 			assert.Equal(t,
 				fixedPointType,
-				interpreter.MustConvertStaticToSemaType(result.StaticType(nil), nil),
+				interpreter.MustConvertStaticToSemaType(staticType, nil), //nolint:staticcheck
 			)
 		})
 	}
@@ -8073,6 +8304,30 @@ func TestMethodsAsFunctionPointers(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, interpreter.BoolValue(false), result)
 	})
+
+	t.Run("array value, builtin function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := CompileAndInvoke(
+			t,
+			`
+				let innerValueMinusOne =
+				    fun (_ x: Int8): Int8 {
+					    return x - 1
+				    }
+
+                fun test(): [Int8] {
+                    let a: [Int8] = [5]
+                    let ref = &a as &[Int8]
+                    var map = ref.map
+                    return map(innerValueMinusOne)
+                }
+            `,
+			"test",
+		)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestArrayFunctions(t *testing.T) {
@@ -9283,6 +9538,43 @@ func TestGetAuthAccount(t *testing.T) {
 	})
 }
 
+func TestBoolToString(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): String {
+                    let x: Bool = true
+                    return x.toString()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("true"), result)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): String {
+                    let x: Bool = false
+                    return x.toString()
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("false"), result)
+	})
+}
+
 func TestStringTemplate(t *testing.T) {
 
 	t.Parallel()
@@ -9320,6 +9612,23 @@ func TestStringTemplate(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t, interpreter.NewUnmeteredStringValue("A + B = 4"), result)
+	})
+
+	t.Run("bool", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := CompileAndInvoke(t,
+			`
+                fun test(): String {
+                    let x = true
+                    let y = false
+                    return "\(x) and \(y)"
+                }
+            `,
+			"test",
+		)
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("true and false"), result)
 	})
 }
 
@@ -11826,4 +12135,109 @@ func TestInitializerFunctionType(t *testing.T) {
 	}
 	metaType = result.(interpreter.TypeValue)
 	assert.Equal(t, common.TypeID("view fun():S.test.T"), metaType.Type.ID())
+}
+
+func TestFunctionParameterContravariance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional parameter via function variable", func(t *testing.T) {
+		t.Parallel()
+
+		vmInstance, err := CompileAndPrepareToInvoke(t,
+			`
+              fun test(): UInt8? {
+                  let f: fun(Int): UInt8? = funcWithOptionalParam
+                  return f(4)
+              }
+
+              fun funcWithOptionalParam(_ a: Int?): UInt8? {
+                  return a.map(fun (_ n: Int): UInt8 {
+                      return UInt8(n)
+                  })
+              }
+            `,
+			CompilerAndVMOptions{},
+		)
+		require.NoError(t, err)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		require.IsType(t, &interpreter.SomeValue{}, result)
+		innerValue := result.(*interpreter.SomeValue).InnerValue()
+		assert.Equal(t, interpreter.UInt8Value(4), innerValue)
+	})
+
+	t.Run("multiple parameters", func(t *testing.T) {
+		t.Parallel()
+
+		vmInstance, err := CompileAndPrepareToInvoke(t,
+			`
+              fun test(): Bool {
+                  let f: fun(Int, String): Bool = actualFunc
+                  return f(1, "hello")
+              }
+
+              fun actualFunc(_ a: Int?, _ b: String?): Bool {
+                  return a != nil && b != nil
+              }
+            `,
+			CompilerAndVMOptions{},
+		)
+		require.NoError(t, err)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		assert.Equal(t, interpreter.TrueValue, result)
+	})
+
+	t.Run("nested optional", func(t *testing.T) {
+		t.Parallel()
+
+		vmInstance, err := CompileAndPrepareToInvoke(t,
+			`
+              fun test(): Bool {
+                  let f: fun(Int): Bool = actualFunc
+                  return f(4)
+              }
+
+              fun actualFunc(_ a: Int??): Bool {
+                  return a != nil
+              }
+            `,
+			CompilerAndVMOptions{},
+		)
+		require.NoError(t, err)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		assert.Equal(t, interpreter.TrueValue, result)
+	})
+
+	t.Run("same types, no boxing needed", func(t *testing.T) {
+		t.Parallel()
+
+		vmInstance, err := CompileAndPrepareToInvoke(t,
+			`
+              fun test(): Int {
+                  let f: fun(Int): Int = identity
+                  return f(42)
+              }
+
+              fun identity(_ a: Int): Int {
+                  return a
+              }
+            `,
+			CompilerAndVMOptions{},
+		)
+		require.NoError(t, err)
+
+		result, err := vmInstance.InvokeExternally("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
 }

@@ -182,6 +182,39 @@ func TestCheckInvalidForValueResource(t *testing.T) {
 	assert.IsType(t, &sema.UnsupportedResourceForLoopError{}, errs[0])
 }
 
+func TestCheckForValueDictionaryResource(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          let xs <- {"a": <-create R()}
+          for x in xs { }
+          destroy xs
+      }
+    `)
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidForValueDictionaryResource(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          for x in {"a": <-create R()} { }
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+}
+
 func TestCheckInvalidForBlock(t *testing.T) {
 
 	t.Parallel()
@@ -394,6 +427,123 @@ func TestCheckReferencesInForLoop(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("array with unauthorized reference ", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let array: [&[Int]] = [
+                    &[1] as &[Int],
+                    &[2] as &[Int]
+                ]
+
+                let arrayRef = &array as &[&[Int]]
+
+                for element in arrayRef {
+                    let e: &[Int] = element
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("array with authorized reference ", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let array: [auth(Mutate) &[Int]] = [
+                    &[1] as auth(Mutate) &[Int],
+                    &[2] as auth(Mutate) &[Int]
+                ]
+
+                let arrayRef = &array as &[auth(Mutate) &[Int]]
+
+                for element in arrayRef {
+                    // OK
+                    let e1: &[Int] = element
+
+                    // Error: element type should be unauthorized
+                    let e2: auth(Mutate) &[Int] = element
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 15, typeMismatchError.StartPos.Line)
+	})
+
+	t.Run("authorized reference to array with authorized reference ", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let array: [auth(Mutate) &[Int]] = [
+                    &[1] as auth(Mutate) &[Int],
+                    &[2] as auth(Mutate) &[Int]
+                ]
+
+                let arrayRef = &array as auth(Mutate) &[auth(Mutate) &[Int]]
+
+                for element in arrayRef {
+                    // OK
+                    let e1: &[Int] = element
+
+                    // OK
+                    let e2: auth(Mutate) &[Int] = element
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("authorized reference to array with authorized reference, intrersection ", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E1
+            entitlement E2
+            entitlement E3
+
+            fun main() {
+                let array: [auth(E1, E2) &[Int]] = [
+                    &[1] as auth(E1, E2) &[Int],
+                    &[2] as auth(E1, E2) &[Int]
+                ]
+
+                let arrayRef = &array as auth(E2, E3) &[auth(E1, E2) &[Int]]
+
+                for element in arrayRef {
+                    // OK
+                    let e1: &[Int] = element
+
+                    // OK
+                    let e2: auth(E2) &[Int] = element
+
+                    // Error: element type should only have the intersection (E2)
+                    let e3: auth(E1, E2) &[Int] = element
+
+                    // Error: element type should only have the intersection (E2)
+                    let e4: auth(E2, E3) &[Int] = element
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t, 22, typeMismatchError.StartPos.Line)
+
+		require.ErrorAs(t, errs[1], &typeMismatchError)
+		assert.Equal(t, 25, typeMismatchError.StartPos.Line)
+	})
+
 	t.Run("Dictionary", func(t *testing.T) {
 		t.Parallel()
 
@@ -404,14 +554,13 @@ func TestCheckReferencesInForLoop(t *testing.T) {
                 var foo = {"foo": Foo()}
                 var fooRef = &foo as &{String: Foo}
 
-                for element in fooRef {
-                    let e: &Foo = element
+                for key in fooRef {
+                    let e: String = key
                 }
             }
         `)
 
-		errors := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errors[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("Non iterable", func(t *testing.T) {
@@ -524,6 +673,114 @@ func TestCheckReferencesInForLoop(t *testing.T) {
 
                 for element in arrayRef {
                     let e: Status = element
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckForDictionary(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic dictionary iteration", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: Int} = {"a": 1, "b": 2, "c": 3}
+                for key in dict {
+                    let k: String = key
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("empty dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let empty: {Int: String} = {}
+                for key in empty {
+                    let k: Int = key
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: Int} = {"a": 1, "b": 2}
+                let dictRef = &dict as &{String: Int}
+                for key in dictRef {
+                    let k: String = key
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary with resource values", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let dict <- {"a": <-create R()}
+                for key in dict {
+                    let k: String = key
+                }
+                destroy dict
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("dictionary with index binding - error", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {String: Int} = {"a": 1, "b": 2}
+                for index, key in dict {
+                    let i: Int = index
+                    let k: String = key
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidDictionaryIndexBindingError{}, errs[0])
+	})
+
+	t.Run("integer key dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                let dict: {Int: String} = {1: "a", 2: "b", 3: "c"}
+                for key in dict {
+                    let k: Int = key
                 }
             }
         `)

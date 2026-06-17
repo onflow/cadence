@@ -261,14 +261,24 @@ func accountFromValue(
 ) *Account {
 
 	// Get address
-	addressValue := accountValue.GetMember(context, accountAddressFieldName)
+	addressValue := accountValue.GetMember(
+		context,
+		accountAddressFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	)
 	address, ok := addressValue.(interpreter.AddressValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	// Get public key
-	publicKeyVal, ok := accountValue.GetMember(context, sema.AccountKeyPublicKeyFieldName).(interpreter.MemberAccessibleValue)
+	publicKeyVal, ok := accountValue.GetMember(
+		context,
+		sema.AccountKeyPublicKeyFieldName,
+		common.DeclarationKindField,
+		nil, // `nil` because a field is requested.
+	).(interpreter.MemberAccessibleValue)
 
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -310,6 +320,7 @@ func newTransactionResult(context interpreter.InvocationContext, result *Transac
 		[]interpreter.Value{
 			status,
 			errValue,
+			interpreter.NewUnmeteredUInt64Value(result.ComputationUsed),
 		},
 	)
 
@@ -428,7 +439,7 @@ func newMatcherWithGenericTestFunction(
 				argumentStaticType := argument.StaticType(invocationContext)
 
 				if !interpreter.IsSubTypeOfSemaType(invocationContext, argumentStaticType, parameterType) {
-					argumentSemaType := interpreter.MustConvertStaticToSemaType(argumentStaticType, invocationContext)
+					argumentSemaType := invocationContext.SemaTypeFromStaticType(argumentStaticType)
 
 					panic(&interpreter.TypeMismatchError{
 						ExpectedType: parameterType,

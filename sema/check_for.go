@@ -42,6 +42,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	}
 
 	valueType := checker.VisitExpression(valueExpression, statement, expectedType)
+	checker.checkUnusedExpressionResourceLoss(valueType, valueExpression)
 
 	// Only get the element type if the array is not a resource array.
 	// Otherwise, in addition to the `UnsupportedResourceForLoopError`,
@@ -69,6 +70,15 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	var indexType Type
 
 	if statement.Index != nil {
+		// Check if the value type is a dictionary
+		if _, isDictionary := valueType.(*DictionaryType); isDictionary {
+			checker.report(
+				&InvalidDictionaryIndexBindingError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.Index),
+				},
+			)
+		}
+
 		index := statement.Index.Identifier
 		indexType = IntType
 		indexVariable, err := checker.valueActivations.declare(variableDeclaration{
@@ -97,7 +107,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) (_ struct
 	// That means that resource invalidations and
 	// returns are not definite, but only potential.
 
-	_ = checker.checkPotentiallyUnevaluated(func() Type {
+	_, _ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.Current().WithLoop(func() {
 			checker.checkBlock(statement.Block)
 		})
@@ -114,14 +124,18 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 		return InvalidType
 	}
 
-	// Resources cannot be looped.
+	// Resources cannot be looped, except for dictionaries with resource values.
+	// Dictionary iteration only iterates over keys, which cannot be resources.
 	if valueType.IsResourceType() {
-		checker.report(
-			&UnsupportedResourceForLoopError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
-			},
-		)
-		return InvalidType
+		_, isDictionary := valueType.(*DictionaryType)
+		if !isDictionary {
+			checker.report(
+				&UnsupportedResourceForLoopError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+				},
+			)
+			return InvalidType
+		}
 	}
 
 	// If it's a reference, check whether the referenced type is iterable.
@@ -142,7 +156,24 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 		// Case (a): Element type is a container type.
 		// Then the loop-var must also be a reference type.
 		if referencedIterableElementType.ContainFieldsOrElements() {
-			return checker.getDescendantReferenceType(referencedIterableElementType, UnauthorizedAccess)
+			return GetDescendantReferenceType(
+				checker.memoryGauge,
+				referencedIterableElementType,
+				UnauthorizedAccess,
+				referenceType.Authorization,
+			)
+		}
+
+		// Case (a'): Element type is a reference type.
+		// Intersect the outer (container) reference's authorization
+		// with the inner (element) reference's authorization.
+		if _, isRef := referencedIterableElementType.(*ReferenceType); isRef {
+			return GetDescendantReferenceType(
+				checker.memoryGauge,
+				referencedIterableElementType,
+				UnauthorizedAccess,
+				referenceType.Authorization,
+			)
 		}
 
 		// Case (b): Element type is a primitive type.
@@ -160,6 +191,8 @@ func (checker *Checker) iterableElementType(valueType Type, hasPosition ast.HasP
 		return valueType.ElementType(false)
 	case *InclusiveRangeType:
 		return valueType.MemberType
+	case *DictionaryType:
+		return valueType.KeyType
 	}
 
 	if valueType == StringType {
@@ -168,7 +201,7 @@ func (checker *Checker) iterableElementType(valueType Type, hasPosition ast.HasP
 
 	checker.report(
 		&TypeMismatchWithDescriptionError{
-			ExpectedTypeDescription: "array",
+			ExpectedTypeDescription: "array, dictionary, string, or inclusive range",
 			ActualType:              valueType,
 			Range:                   ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
 		},
