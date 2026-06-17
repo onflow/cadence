@@ -351,89 +351,141 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	importedChecker, err := ParseAndCheckWithOptions(t,
-		`
-          resource R {}
-        `,
-		ParseAndCheckOptions{
-			Location: common.AddressLocation{
-				Address: address,
-			},
-		},
-	)
-	require.NoError(t, err)
+	rLocation := common.AddressLocation{
+		Address: address,
+		Name:    "R",
+	}
 
-	importingChecker, err := ParseAndCheckWithOptions(t,
-		`
+	const importedCode = `
+          resource R {}
+        `
+
+	const code = `
           import R from 0x1
 
           fun test(createR: fun(): @R) {
               let r <- createR()
               destroy r
           }
-        `,
-		ParseAndCheckOptions{
-			CheckerConfig: &sema.Config{
-				ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
-					require.IsType(t, common.AddressLocation{}, importedLocation)
-					addressLocation := importedLocation.(common.AddressLocation)
+        `
+
+	var invocationError error
+
+	if *compile {
+		// Run with compiler
+
+		programs := CompiledPrograms{}
+
+		importedProgram := ParseCheckAndCompileCodeWithOptions(t,
+			importedCode,
+			rLocation,
+			ParseCheckAndCompileOptions{},
+			programs,
+		)
+
+		mainLocation := common.ScriptLocation{0x1}
+		mainProgram := ParseCheckAndCompileCodeWithOptions(t,
+			code,
+			mainLocation,
+			ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: &sema.Config{
+						LocationHandler: SingleIdentifierLocationResolver(t),
+					},
+				},
+			},
+			programs,
+		)
+
+		vmConfig := test.PrepareVMConfig(t, nil, programs)
+
+		// Obtain the resource constructor from the imported program,
+		// so it can be passed as a first-class function value to the main program.
+		importVM := vm.NewVM(rLocation, importedProgram, vmConfig)
+		rConstructor := importVM.Global("R")
+
+		mainVM := vm.NewVM(mainLocation, mainProgram, vmConfig)
+
+		// Use the unchecked invocation to bypass the argument type-checking,
+		// which would otherwise reject the resource constructor argument
+		// (due to a purity mismatch) before the resource-construction guard is reached.
+		_, invocationError = mainVM.InvokeExternallyUncheckedForTestingOnly("test", rConstructor) //nolint:staticcheck
+
+	} else {
+		// Run with interpreter
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			importedCode,
+			ParseAndCheckOptions{
+				Location: rLocation,
+			},
+		)
+		require.NoError(t, err)
+
+		importingChecker, err := ParseAndCheckWithOptions(t,
+			code,
+			ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					LocationHandler: SingleIdentifierLocationResolver(t),
+					ImportHandler: func(checker *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+						require.IsType(t, common.AddressLocation{}, importedLocation)
+						addressLocation := importedLocation.(common.AddressLocation)
+
+						assert.Equal(t, address, addressLocation.Address)
+
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		var subInterpreter *interpreter.Interpreter
+
+		inter, err := interpreter.NewInterpreter(
+			interpreter.ProgramFromChecker(importingChecker),
+			importingChecker.Location,
+			&interpreter.Config{
+				ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+					require.IsType(t, common.AddressLocation{}, location)
+					addressLocation := location.(common.AddressLocation)
 
 					assert.Equal(t, address, addressLocation.Address)
 
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
+					program := interpreter.ProgramFromChecker(importedChecker)
+					var err error
+					subInterpreter, err = inter.NewSubInterpreter(program, location)
+					if err != nil {
+						panic(err)
+					}
+
+					return interpreter.InterpreterImport{
+						Interpreter: subInterpreter,
+					}
+				},
+				UUIDHandler: func() (uint64, error) {
+					return 0, nil
 				},
 			},
-		},
-	)
-	require.NoError(t, err)
+		)
+		require.NoError(t, err)
 
-	var subInterpreter *interpreter.Interpreter
+		err = inter.Interpret()
+		require.NoError(t, err)
 
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(importingChecker),
-		importingChecker.Location,
-		&interpreter.Config{
-			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				require.IsType(t, common.AddressLocation{}, location)
-				addressLocation := location.(common.AddressLocation)
+		rConstructor := subInterpreter.Globals.Get("R").GetValue(inter)
+		_, invocationError = inter.InvokeUncheckedForTestingOnly("test", rConstructor)
+	}
 
-				assert.Equal(t, address, addressLocation.Address)
-
-				program := interpreter.ProgramFromChecker(importedChecker)
-				var err error
-				subInterpreter, err = inter.NewSubInterpreter(program, location)
-				if err != nil {
-					panic(err)
-				}
-
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
-				}
-			},
-			UUIDHandler: func() (uint64, error) {
-				return 0, nil
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	err = inter.Interpret()
-	require.NoError(t, err)
-
-	rConstructor := subInterpreter.Globals.Get("R").GetValue(inter)
-
-	_, err = inter.InvokeUncheckedForTestingOnly("test", rConstructor)
-	RequireError(t, err)
+	RequireError(t, invocationError)
 
 	var resourceConstructionError *interpreter.ResourceConstructionError
-	require.ErrorAs(t, err, &resourceConstructionError)
+	require.ErrorAs(t, invocationError, &resourceConstructionError)
 
-	assert.Equal(t,
-		RequireGlobalType(t, subInterpreter, "R"),
-		resourceConstructionError.CompositeType,
-	)
+	compositeType := resourceConstructionError.CompositeType
+	assert.Equal(t, rLocation, compositeType.Location)
+	assert.Equal(t, "R", compositeType.QualifiedIdentifier())
 }
 
 // TestInterpretImportWithAlias shows importing two funs of the same name from different addresses
