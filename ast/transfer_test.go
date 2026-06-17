@@ -66,7 +66,7 @@ func TestTransfer_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(""),
-			transfer.Doc(),
+			transfer.Doc(NopContext{}),
 		)
 	})
 
@@ -79,7 +79,7 @@ func TestTransfer_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text("="),
-			transfer.Doc(),
+			transfer.Doc(NopContext{}),
 		)
 	})
 
@@ -92,7 +92,7 @@ func TestTransfer_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text("<-"),
-			transfer.Doc(),
+			transfer.Doc(NopContext{}),
 		)
 	})
 
@@ -105,7 +105,7 @@ func TestTransfer_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text("<-!"),
-			transfer.Doc(),
+			transfer.Doc(NopContext{}),
 		)
 	})
 }

@@ -6312,6 +6312,10 @@ func (interpreter *Interpreter) MaybeValidateAtreeStorage() {
 }
 
 func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
+	ValidateAtreeValue(interpreter, value)
+}
+
+func ValidateAtreeValue(context AtreeValueValidationContext, value atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
 		case *ConstantSizedStaticType:
@@ -6329,7 +6333,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		panic(errors.NewUnreachableError())
 	}
 
-	defaultHIP := newHashInputProvider(interpreter)
+	defaultHIP := newHashInputProvider(context)
 
 	hip := func(value atree.Value, buffer []byte) ([]byte, error) {
 		switch value := value.(type) {
@@ -6342,8 +6346,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 	}
 
-	config := interpreter.SharedState.Config
-	storage := config.Storage
+	storage := context.Storage()
 
 	compare := func(storable, otherStorable atree.Storable) bool {
 		value, err := storable.StoredValue(storage)
@@ -6377,13 +6380,25 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			return equal
 
 		case EquatableValue:
-			otherValue := StoredValue(interpreter, otherStorable, storage)
-			return value.Equal(interpreter, otherValue)
+			otherValue := StoredValue(context, otherStorable, storage)
+			return value.Equal(context, otherValue)
 
 		default:
 			// Not all values are comparable, assume valid for now
 			return true
 		}
+	}
+
+	decodeStorable := func(
+		decoder *cbor.StreamDecoder,
+		slabID atree.SlabID,
+		inlinedExtraData []atree.ExtraData,
+	) (atree.Storable, error) {
+		return DecodeStorable(decoder, slabID, inlinedExtraData, context)
+	}
+
+	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
+		return DecodeTypeInfo(decoder, context)
 	}
 
 	atreeInliningEnabled := true
@@ -6399,8 +6414,8 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			value,
 			CBORDecMode,
 			CBOREncMode,
-			interpreter.DecodeStorable,
-			interpreter.DecodeTypeInfo,
+			decodeStorable,
+			decodeTypeInfo,
 			compare,
 		)
 		if err != nil {
@@ -6425,8 +6440,8 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			value,
 			CBORDecMode,
 			CBOREncMode,
-			interpreter.DecodeStorable,
-			interpreter.DecodeTypeInfo,
+			decodeStorable,
+			decodeTypeInfo,
 			compare,
 		)
 		if err != nil {
@@ -6640,21 +6655,6 @@ func (interpreter *Interpreter) MeterComputation(usage common.ComputationUsage) 
 		common.UseComputation(config.ComputationGauge, usage)
 	}
 	return nil
-}
-
-func (interpreter *Interpreter) DecodeStorable(
-	decoder *cbor.StreamDecoder,
-	slabID atree.SlabID,
-	inlinedExtraData []atree.ExtraData,
-) (
-	atree.Storable,
-	error,
-) {
-	return DecodeStorable(decoder, slabID, inlinedExtraData, interpreter)
-}
-
-func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
-	return DecodeTypeInfo(decoder, interpreter)
 }
 
 func (interpreter *Interpreter) Storage() Storage {

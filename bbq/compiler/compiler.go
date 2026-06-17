@@ -3061,6 +3061,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					hasImplicitArgument,
 				)
 			},
+
 			true,
 		)
 	}
@@ -3122,10 +3123,24 @@ func (c *Compiler[_, _]) patchOptionalChainingNilJump(
 		return
 	}
 
-	if isMethodInvocation {
-		// Wrap the result back with an optional, if `memberAccessInfo.IsOptional`
-		c.emit(opcode.InstructionWrap{})
-	}
+	// For an optional-chaining invocation, the result is ALWAYS wrapped.
+	// Unlike member access, invocation does not flatten nested optionals:
+	// the checker types `a?.foo()` as `(returnType)?` via `wrapWithOptionalIfNotNil`,
+	// which adds an optional layer regardless of whether `returnType` is already optional
+	// (e.g. `a?.foo()` with `foo(): T?` is typed `T??`).
+	// This matches the interpreter. See `Interpreter.visitInvocationExpressionWithImplicitArgument`.
+	//
+	// For optional-chaining member access (e.g: `s?.x`), the result is
+	// wrapped back into an optional, ONLY if it is NOT already an optional.
+	// i.e: the result must not be double-wrapped if it is already an optional.
+	//
+	// Whether the value is already an optional cannot always be decided statically.
+	// e.g: a member of a dynamic type (e.g: `AnyStruct`) may hold an optional value at runtime,
+	// even though its static type is not an optional.
+	// Therefore, defer the decision to runtime via `SkipIfOptional`.
+	c.emit(opcode.InstructionWrap{
+		SkipIfOptional: !isMethodInvocation,
+	})
 
 	// Jump to the end to skip the nil returning instructions.
 	jumpToEnd := c.emitUndefinedJump()
@@ -3669,6 +3684,9 @@ func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression)
 
 func (c *Compiler[_, _]) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) (_ struct{}) {
 	exprArrSize := len(expression.Expressions)
+	if exprArrSize >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid string template expression"))
+	}
 
 	for _, value := range expression.Values {
 		c.emitStringConst(value)
@@ -4714,6 +4732,20 @@ func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
 	// Get the index of the instruction to be emitted.
 	// This is the offset before emitting the current instruction.
 	instructionIndex := c.codeGen.Offset()
+
+	// The VM's instruction pointer and all jump targets are `uint16`,
+	// so every instruction must be addressable within the `uint16` range.
+	// If a function's code grows beyond this limit, the instruction pointer
+	// would wrap around at runtime, causing the function to never terminate.
+	// Constant-pool size, local count, and jump targets are already guarded
+	// elsewhere against `math.MaxUint16`; guard the instruction index here too.
+	if instructionIndex >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError(
+			"function %s is too large: instruction count exceeds the maximum of %d",
+			c.currentFunction.qualifiedName,
+			math.MaxUint16-1,
+		))
+	}
 
 	c.codeGen.Emit(instruction)
 

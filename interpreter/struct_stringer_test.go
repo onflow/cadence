@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -99,6 +100,84 @@ func TestStringerCast(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("1"),
 		result,
 	)
+}
+
+func TestStringerFixedPointAndAddress(t *testing.T) {
+
+	t.Parallel()
+
+	runTest := func(t *testing.T, code, expected string) {
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue(expected),
+			result,
+		)
+	}
+
+	// Static cast to `{StructStringer}`, then call `toString`.
+	t.Run("static cast", func(t *testing.T) {
+		t.Parallel()
+
+		for _, test := range []struct {
+			value    string
+			expected string
+		}{
+			{"1.0 as Fix64", "1.00000000"},
+			{"1.0 as UFix64", "1.00000000"},
+			{"1.0 as Fix128", "1.000000000000000000000000"},
+			{"1.0 as UFix128", "1.000000000000000000000000"},
+			{"0x1 as Address", "0x0000000000000001"},
+		} {
+			value, expected := test.value, test.expected
+			t.Run(value, func(t *testing.T) {
+				t.Parallel()
+
+				runTest(t, fmt.Sprintf(`
+					access(all)
+					fun test(): String {
+						let v = %s as {StructStringer}
+						return v.toString()
+					}
+				`, value), expected)
+			})
+		}
+	})
+
+	// Runtime cast (`as?`) to `{StructStringer}`, then call `toString`.
+	t.Run("runtime cast", func(t *testing.T) {
+		t.Parallel()
+
+		for _, test := range []struct {
+			value    string
+			expected string
+		}{
+			{"1.0 as Fix64", "1.00000000"},
+			{"1.0 as UFix64", "1.00000000"},
+			{"1.0 as Fix128", "1.000000000000000000000000"},
+			{"1.0 as UFix128", "1.000000000000000000000000"},
+			{"0x1 as Address", "0x0000000000000001"},
+		} {
+			value, expected := test.value, test.expected
+			t.Run(value, func(t *testing.T) {
+				t.Parallel()
+
+				runTest(t, fmt.Sprintf(`
+					access(all)
+					fun test(): String {
+						let v = %s
+						let s = (v as AnyStruct) as? {StructStringer}
+						return s!.toString()
+					}
+				`, value), expected)
+			})
+		}
+	})
 }
 
 func TestStringerAsValue(t *testing.T) {

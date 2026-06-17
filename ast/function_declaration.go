@@ -189,8 +189,9 @@ func (d *FunctionDeclaration) DeclarationDocString() string {
 	return d.DocString
 }
 
-func (d *FunctionDeclaration) Doc() prettier.Doc {
-	return FunctionDocument(
+func (d *FunctionDeclaration) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(d, FunctionDocument(
+		ctx,
 		d.Access,
 		d.Purity,
 		d.IsStatic(),
@@ -201,7 +202,7 @@ func (d *FunctionDeclaration) Doc() prettier.Doc {
 		d.ParameterList,
 		d.ReturnTypeAnnotation,
 		d.FunctionBlock,
-	)
+	))
 }
 
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
@@ -299,19 +300,27 @@ func (d *SpecialFunctionDeclaration) DeclarationDocString() string {
 	return d.FunctionDeclaration.DeclarationDocString()
 }
 
-func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
-	return FunctionDocument(
+func (d *SpecialFunctionDeclaration) Doc(ctx PrettyContext) prettier.Doc {
+	// Use the kind keyword (init/destroy/prepare/execute) when defined.
+	// For unknown-kind specials,
+	// fall back to the parsed identifier so the original name is preserved.
+	identifier := d.Kind.Keywords()
+	if identifier == "" {
+		identifier = d.FunctionDeclaration.Identifier.Identifier
+	}
+	return ctx.Wrap(d, FunctionDocument(
+		ctx,
 		d.FunctionDeclaration.Access,
 		d.FunctionDeclaration.Purity,
 		d.FunctionDeclaration.IsStatic(),
 		d.FunctionDeclaration.IsNative(),
 		false,
-		d.Kind.Keywords(),
+		identifier,
 		d.FunctionDeclaration.TypeParameterList,
 		d.FunctionDeclaration.ParameterList,
 		d.FunctionDeclaration.ReturnTypeAnnotation,
 		d.FunctionDeclaration.FunctionBlock,
-	)
+	))
 }
 
 func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {

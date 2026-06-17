@@ -1548,4 +1548,193 @@ func TestInterpretOptionalChaining(t *testing.T) {
 		forceNilError := &interpreter.ForceNilError{}
 		require.ErrorAs(t, err, &forceNilError)
 	})
+
+	t.Run("non-optional field is wrapped", func(t *testing.T) {
+
+		t.Parallel()
+
+		// `s?.x` has type `Int?`. When boxed into `[AnyStruct]` and read back,
+		// its dynamic type must remain `Int?`, not `Int`.
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                let x: Int
+                init() {
+                    self.x = 7
+                }
+            }
+            fun test(): AnyStruct {
+                let s: S? = S()
+                return s?.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(7),
+			),
+			value,
+		)
+	})
+
+	t.Run("optional member is not double-wrapped", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Optional chaining flattens nested optionals: `s?.x` where `x: Int?`
+		// has type `Int?`, NOT `Int??`.
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                let x: Int
+                init() {
+                    self.x = 7
+                }
+            }
+
+            fun test(): AnyStruct {
+                let s: S? = S()
+                return s?.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(7),
+			),
+			value,
+		)
+	})
+
+	t.Run("optional member as AnyStruct is not double-wrapped", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                let x: AnyStruct
+                init() {
+                    let temp: Int? = 7
+                    self.x = temp
+                }
+            }
+
+            fun test(): AnyStruct {
+                let s: S? = S()
+                return s?.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		// `x` is statically `AnyStruct` but holds an `Int?` (`Some(7)`) at runtime.
+		// Optional chaining must flatten: `s?.x` is `Some(7)`, NOT `Some(Some(7))`.
+		// The wrap decision can only be made at runtime (the static member type
+		// `AnyStruct` is not an optional), which is why the VM defers it to
+		// `BoxOptional`.
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(7),
+			),
+			value,
+		)
+	})
+
+	t.Run("enum rawValue is wrapped", func(t *testing.T) {
+
+		t.Parallel()
+
+		// `a?.rawValue` has type `UInt8?`.
+		inter := parseCheckAndPrepare(t, `
+            enum Color: UInt8 {
+                case red
+                case green
+                case blue
+            }
+
+            fun test(): AnyStruct {
+                let a = Color(rawValue: 2)
+                return a?.rawValue
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredUInt8Value(2),
+			),
+			value,
+		)
+	})
+
+	t.Run("method call non optional is wrapped", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                fun getX(): Int {
+                   return 7
+                }
+            }
+
+            fun test(): AnyStruct {
+                var s: S? = S()
+                return s?.getX()
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(7),
+			),
+			value,
+		)
+	})
+
+	t.Run("method call optional is double wrapped", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            struct S {
+                fun getX(): Int? {
+                   return 7
+                }
+            }
+
+            fun test(): AnyStruct {
+                var s: S? = S()
+                return s?.getX()
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredIntValueFromInt64(7),
+				),
+			),
+			value,
+		)
+	})
 }

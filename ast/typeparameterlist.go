@@ -75,7 +75,7 @@ func (l *TypeParameterList) Walk(walkChild func(Element)) {
 	}
 }
 
-func (l *TypeParameterList) Doc() prettier.Doc {
+func (l *TypeParameterList) Doc(ctx PrettyContext) prettier.Doc {
 
 	if len(l.TypeParameters) == 0 {
 		return prettier.Text("")
@@ -86,7 +86,7 @@ func (l *TypeParameterList) Doc() prettier.Doc {
 	for _, typeParameter := range l.TypeParameters {
 		typeParameterDocs = append(
 			typeParameterDocs,
-			docOrEmpty(typeParameter),
+			docOrEmpty(typeParameter, ctx),
 		)
 	}
 
