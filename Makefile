@@ -117,11 +117,11 @@ smoke-test:
 
 .PHONY: test-with-compiler
 test-with-compiler:
-	go test ./interpreter/... ./runtime/... -compile=true
+	go test ./interpreter/... ./runtime/... ./stdlib -compile=true
 
 .PHONY: test-with-compiler-and-tracing
 test-with-compiler-and-tracing:
-	go test -tags cadence_tracing ./interpreter/... ./runtime/... -compile=true
+	go test -tags cadence_tracing ./interpreter/... ./runtime/... ./stdlib -compile=true
 
 # Benchmarking
 

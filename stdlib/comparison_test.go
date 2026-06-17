@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package stdlib
+package stdlib_test
 
 import (
 	"fmt"
@@ -25,13 +25,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
-	"github.com/onflow/cadence/parser"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
+	"github.com/onflow/cadence/test_utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
-	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
@@ -48,8 +49,8 @@ func TestMinFunction(t *testing.T) {
 						importedLocation common.Location,
 						_ ast.Range,
 					) (sema.Import, error) {
-						if importedLocation == ComparisonContractLocation {
-							return ComparisonContractSemaImport, nil
+						if importedLocation == stdlib.ComparisonContractLocation {
+							return stdlib.ComparisonContractSemaImport, nil
 						}
 						return nil, fmt.Errorf("unexpected import: %s", importedLocation)
 					},
@@ -148,8 +149,8 @@ func TestMaxFunction(t *testing.T) {
 						importedLocation common.Location,
 						_ ast.Range,
 					) (sema.Import, error) {
-						if importedLocation == ComparisonContractLocation {
-							return ComparisonContractSemaImport, nil
+						if importedLocation == stdlib.ComparisonContractLocation {
+							return stdlib.ComparisonContractSemaImport, nil
 						}
 						return nil, fmt.Errorf("unexpected import: %s", importedLocation)
 					},
@@ -233,59 +234,56 @@ func TestMaxFunction(t *testing.T) {
 	})
 }
 
-// TODO: test with compiler/VM
-func newInterpreterWithComparison(t *testing.T, code string) *interpreter.Interpreter {
-	program, err := parser.ParseProgram(
-		nil,
-		[]byte(code),
-		parser.Config{},
-	)
-	require.NoError(t, err)
+// newComparisonInvokable parses, checks, and prepares the given code with the
+// `min`, `max`, and `clamp` comparison functions available as built-ins.
+//
+// The functions are registered in the base activations (instead of being imported)
+// so that the same code can be executed with both the interpreter and the compiler/VM,
+// reusing the shared `ParseCheckAndPrepareWithOptions` test infrastructure.
+func newComparisonInvokable(t *testing.T, code string) Invokable {
+	semaBaseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	interpreterBaseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 
-	checker, err := sema.NewChecker(
-		program,
-		TestLocation,
-		nil,
-		&sema.Config{
-			ImportHandler: func(
-				_ *sema.Checker,
-				importedLocation common.Location,
-				_ ast.Range,
-			) (sema.Import, error) {
-				if importedLocation == ComparisonContractLocation {
-					return ComparisonContractSemaImport, nil
-				}
-				return nil, fmt.Errorf("unexpected import: %s", importedLocation)
+	for _, global := range stdlib.ComparisonContractInterpreterImport.Globals {
+		element, ok := stdlib.ComparisonContractSemaImport.ValueElements.Get(global.Name)
+		require.True(t, ok)
+
+		value := stdlib.StandardLibraryValue{
+			Name:      global.Name,
+			Type:      element.Type,
+			DocString: element.DocString,
+			Kind:      element.DeclarationKind,
+			Value:     global.Value,
+		}
+
+		semaBaseValueActivation.DeclareValue(value)
+		interpreter.Declare(interpreterBaseActivation, value)
+	}
+
+	invokable, err := test_utils.ParseCheckAndPrepareWithOptions(
+		t,
+		code,
+		test_utils.ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return semaBaseValueActivation
+					},
+					AccessCheckMode: sema.AccessCheckModeStrict,
+				},
 			},
-			AccessCheckMode: sema.AccessCheckModeStrict,
-		},
-	)
-	require.NoError(t, err)
-
-	err = checker.Check()
-	require.NoError(t, err)
-
-	storage := NewUnmeteredInMemoryStorage()
-
-	inter, err := interpreter.NewInterpreter(
-		interpreter.ProgramFromChecker(checker),
-		checker.Location,
-		&interpreter.Config{
-			Storage: storage,
-			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				if location == ComparisonContractLocation {
-					return ComparisonContractInterpreterImport
-				}
-				return nil
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return interpreterBaseActivation
+				},
 			},
 		},
+		*compile,
+		true,
 	)
 	require.NoError(t, err)
 
-	err = inter.Interpret()
-	require.NoError(t, err)
-
-	return inter
+	return invokable
 }
 
 func TestMinFunctionRuntime(t *testing.T) {
@@ -294,39 +292,33 @@ func TestMinFunctionRuntime(t *testing.T) {
 	t.Run("Int", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = min(5, 10)
-       `)
+        `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
 	})
 
 	t.Run("Int, reversed", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = min(10, 5)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(5), result)
 	})
 
 	t.Run("UFix64, explicit type argument", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = min<UFix64>(5.5, 10.5)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		expected := interpreter.NewUnmeteredUFix64Value(550_000_000)
 		assert.Equal(t, expected, result)
 	})
@@ -338,39 +330,33 @@ func TestMaxFunctionRuntime(t *testing.T) {
 	t.Run("Int", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = max(5, 10)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
 
 	t.Run("Int, reversed", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = max(10, 5)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
 
 	t.Run("UFix64, explicit type argument", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = max<UFix64>(5.5, 10.5)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		expected := interpreter.NewUnmeteredUFix64Value(1_050_000_000)
 		assert.Equal(t, expected, result)
 	})
@@ -389,8 +375,8 @@ func TestClampFunction(t *testing.T) {
 						importedLocation common.Location,
 						_ ast.Range,
 					) (sema.Import, error) {
-						if importedLocation == ComparisonContractLocation {
-							return ComparisonContractSemaImport, nil
+						if importedLocation == stdlib.ComparisonContractLocation {
+							return stdlib.ComparisonContractSemaImport, nil
 						}
 						return nil, fmt.Errorf("unexpected import: %s", importedLocation)
 					},
@@ -480,78 +466,66 @@ func TestClampFunctionRuntime(t *testing.T) {
 	t.Run("Int, within range", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = clamp(7, min: 1, max: 10)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(7), result)
 	})
 
 	t.Run("Int, below min", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = clamp(0, min: 1, max: 10)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
 
 	t.Run("Int, above max", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = clamp(20, min: 1, max: 10)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
 
 	t.Run("Int, equal to min", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = clamp(1, min: 1, max: 10)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(1), result)
 	})
 
 	t.Run("Int, equal to max", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = clamp(10, min: 1, max: 10)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(10), result)
 	})
 
 	t.Run("UFix64, explicit type argument", func(t *testing.T) {
 		t.Parallel()
 
-		inter := newInterpreterWithComparison(t, `
-            import Comparison
-
+		invokable := newComparisonInvokable(t, `
             access(all) let result = clamp<UFix64>(7.5, min: 1.0, max: 10.0)
         `)
 
-		result := inter.Globals.Get("result").GetValue(inter)
+		result := invokable.GetGlobal("result")
 		expected := interpreter.NewUnmeteredUFix64Value(750_000_000)
 		assert.Equal(t, expected, result)
 	})

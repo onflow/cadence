@@ -199,10 +199,9 @@ func fill(slice []Value, n int) []Value {
 
 func (vm *VM) pushCallFrame(
 	functionValue *CompiledFunctionValue,
-	receiver Value,
+	receiver, base Value,
 	arguments []Value,
 	returnType bbq.StaticType,
-	hasImplicitArgument bool,
 ) {
 	if uint64(len(vm.callstack)) == vm.context.StackDepthLimit {
 		panic(&interpreter.CallStackLimitExceededError{
@@ -215,6 +214,10 @@ func (vm *VM) pushCallFrame(
 	passedInLocalsCount := len(arguments)
 	if receiver != nil {
 		vm.locals = append(vm.locals, receiver)
+		passedInLocalsCount++
+	}
+	if base != nil {
+		vm.locals = append(vm.locals, base)
 		passedInLocalsCount++
 	}
 
@@ -237,12 +240,11 @@ func (vm *VM) pushCallFrame(
 	}
 
 	callFrame := callFrame{
-		localsCount:         localsCount,
-		localsOffset:        offset,
-		function:            functionValue,
-		tracingInfo:         tracingInfo,
-		returnType:          returnType,
-		hasImplicitArgument: hasImplicitArgument,
+		localsCount:  localsCount,
+		localsOffset: offset,
+		function:     functionValue,
+		tracingInfo:  tracingInfo,
+		returnType:   returnType,
 	}
 
 	vm.ipStack = append(vm.ipStack, 0)
@@ -289,6 +291,17 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 	}
 
 	return poppedCallFrame
+}
+
+// callerLocation returns the location of the function that invoked the
+// currently executing function, or nil if there is no caller.
+// (i.e. the current function is the top-level invocation)
+func (vm *VM) callerLocation() common.Location {
+	callstackLen := len(vm.callstack)
+	if callstackLen < 2 {
+		return nil
+	}
+	return vm.callstack[callstackLen-2].function.Executable.Location
 }
 
 func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
@@ -443,12 +456,12 @@ func (vm *VM) invokeExternally(
 	invokeFunction(
 		vm,
 		functionValue,
+		nil,
 		arguments,
 		nil,
 		nil,
 		nil,
 		staticReturnType,
-		false,
 		skipArgumentConversion,
 		withValidation,
 	)
@@ -995,33 +1008,27 @@ func opInvoke(vm *VM, ins opcode.InstructionInvoke) {
 	// Load arguments
 	arguments := vm.popN(len(ins.ArgTypes))
 
+	// Load base: Only applicable for attachment constructors.
+	var base Value
+	if ins.HasImplicitArgument {
+		base = vm.pop()
+	}
+
 	// Load the invoked value
 	functionValue := vm.pop()
 
 	// Return value type
 	returnType := vm.loadType(ins.ReturnType)
 
-	// Add base to front of arguments if the function is bound and base is defined.
-	if boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue); isBoundFunction {
-		base := boundFunction.Base
-		if base != nil {
-			arguments = append([]Value{base}, arguments...)
-			argumentTypes = append(
-				[]bbq.StaticType{base.StaticType(vm.context)},
-				argumentTypes...,
-			)
-		}
-	}
-
 	invokeFunction(
 		vm,
 		functionValue,
+		base,
 		arguments,
 		typeArguments,
 		argumentTypes,
 		parameterTypes,
 		returnType,
-		ins.HasImplicitArgument,
 		ins.SkipArgumentConversion,
 		true,
 	)
@@ -1101,17 +1108,15 @@ func opGetMethodDynamic(vm *VM, ins opcode.InstructionGetMethodDynamic) {
 	vm.push(method)
 }
 
-var emptyTypeParametersMap = &sema.TypeParameterTypeOrderedMap{}
-
 func invokeFunction(
 	vm *VM,
 	functionValue Value,
+	base Value,
 	arguments []Value,
 	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
 	parameterTypes []bbq.StaticType,
 	returnType bbq.StaticType,
-	hasImplicitArgument bool,
 	skipArgumentConversion bool,
 	withValidation bool,
 ) {
@@ -1125,17 +1130,24 @@ func invokeFunction(
 	boundFunction, isBoundFunction := functionValue.(*BoundFunctionValue)
 	if isBoundFunction {
 		functionValue = boundFunction.Method
+
+		// Only override the base if the bound function actually carries one
+		// (i.e. for attachment methods). `BoundFunctionValue.Base` is a concrete
+		// pointer type, so assigning a nil pointer directly to the `base Value`
+		// interface would produce a non-nil (typed-nil) interface value.
+		if boundFunction.Base != nil {
+			base = boundFunction.Base
+		}
 	}
 
 	if !skipArgumentConversion {
 		arguments = convertAndBoxArguments(
 			context,
 			originalFunctionValue,
-			boundFunction,
 			arguments,
+			typeArguments,
 			argumentTypes,
 			parameterTypes,
-			hasImplicitArgument,
 			withValidation,
 		)
 	}
@@ -1155,9 +1167,9 @@ func invokeFunction(
 		vm.pushCallFrame(
 			functionValue,
 			receiver,
+			base,
 			arguments,
 			returnType,
-			hasImplicitArgument,
 		)
 
 	case *NativeFunctionValue:
@@ -1205,11 +1217,10 @@ func invokeFunction(
 func convertAndBoxArguments(
 	context *Context,
 	originalFunctionValue FunctionValue,
-	boundFunctionValue *BoundFunctionValue,
 	arguments []Value,
+	typeArguments []bbq.StaticType,
 	argumentTypes []bbq.StaticType,
 	parameterTypes []bbq.StaticType,
-	hasImplicitArgument bool,
 	withValidation bool,
 ) []Value {
 	// Convert arguments to match the actual function's parameter types.
@@ -1222,7 +1233,6 @@ func convertAndBoxArguments(
 	actualParams := actualFuncType.Parameters
 
 	paramIndex := 0
-	lastArgIndex := len(arguments) - 1
 
 	// Catch and re-panic transfer/conversion errors for arguments as user-errors.
 	defer func() {
@@ -1239,21 +1249,16 @@ func convertAndBoxArguments(
 		panic(r)
 	}()
 
-	for currentArgIndex, arg := range arguments {
-		// Attachment-base is an implicit argument. Skip it form conversions.
-		if isImplicitArgument(
-			currentArgIndex,
-			lastArgIndex,
-			boundFunctionValue,
-			hasImplicitArgument,
-		) {
-			continue
-		}
+	var typeArgumentsMap *sema.TypeParameterTypeOrderedMap
 
+	for currentArgIndex, arg := range arguments {
 		var paramType bbq.StaticType
 		if paramIndex < len(actualParams) {
-			// TODO: Properly resolve the type parameters.
-			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(emptyTypeParametersMap)
+			if typeArgumentsMap == nil {
+				typeArgumentsMap = reconstructTypeArguments(context, actualFuncType, typeArguments)
+			}
+
+			paramSemaType := actualParams[paramIndex].TypeAnnotation.Type.Resolve(typeArgumentsMap)
 			if paramSemaType != nil {
 				paramType = interpreter.ConvertSemaToStaticType(context, paramSemaType)
 			}
@@ -1296,22 +1301,43 @@ func convertAndBoxArguments(
 	return arguments
 }
 
-func isImplicitArgument(
-	currentArgIndex int,
-	lastArgIndex int,
-	boundFunction *BoundFunctionValue,
-	hasImplicitArgument bool,
-) bool {
-	// TODO: See if we can simplify the passing of `base` to be more explicit.
+// reconstructTypeArguments builds a TypeParameterTypeOrderedMap by pairing
+// the function's declared TypeParameters with the concrete type arguments
+// resolved at compile time and passed through the invoke instruction.
+//
+// The pairing is positional: the i-th type argument corresponds to the i-th
+// declared type parameter. The type parameters must either be all bound, or none:
+// `typeArguments` is therefore either empty, or has exactly one entry per declared
+// type parameter (see `loadTypeArguments` in the compiler, which enforces this).
+func reconstructTypeArguments(
+	context *Context,
+	funcType *sema.FunctionType,
+	typeArguments []bbq.StaticType,
+) *sema.TypeParameterTypeOrderedMap {
+	typeParameterMap := &sema.TypeParameterTypeOrderedMap{}
 
-	// When invoking a bound function of an attachment, base is the very first argument.
-	if currentArgIndex == 0 && boundFunction != nil &&
-		boundFunction.Base != nil {
-		return true
+	typeParameters := funcType.TypeParameters
+
+	typeArgumentsLength := len(typeArguments)
+	typeParametersLength := len(typeParameters)
+
+	// The type parameters are either all bound, or none.
+	if typeArgumentsLength != 0 && typeArgumentsLength != typeParametersLength {
+		panic(errors.NewUnexpectedError(
+			"invalid number of type arguments: got %d, expected 0 or %d",
+			typeArgumentsLength,
+			typeParametersLength,
+		))
 	}
 
-	// During `attach A() to T`, the base is passed in as the last argument.
-	return hasImplicitArgument && currentArgIndex == lastArgIndex
+	for i, typeArgument := range typeArguments {
+		semaType := context.SemaTypeFromStaticType(typeArgument)
+		if semaType != nil {
+			typeParameterMap.Set(typeParameters[i], semaType)
+		}
+	}
+
+	return typeParameterMap
 }
 
 func loadTypeArguments(vm *VM, typeArgs []uint16) []bbq.StaticType {
@@ -1406,6 +1432,24 @@ func newCompositeValue(
 	compositeStaticType := staticType.(*interpreter.CompositeStaticType)
 
 	context := vm.context
+
+	// Check that the resource is constructed in the same location as it was declared.
+	// This guards against constructing a resource outside of its declaring location,
+	// e.g. by invoking a resource constructor that was obtained as a first-class
+	// function value from another program.
+	if compositeKind == common.CompositeKindResource {
+		callerLocation := vm.callerLocation()
+		if callerLocation != nil &&
+			callerLocation != compositeStaticType.Location {
+
+			compositeType, ok := context.SemaTypeFromStaticType(compositeStaticType).(*sema.CompositeType)
+			if ok {
+				panic(&interpreter.ResourceConstructionError{
+					CompositeType: compositeType,
+				})
+			}
+		}
+	}
 
 	compositeFields := newCompositeValueFields(context, compositeKind)
 
@@ -1997,11 +2041,13 @@ func opSetTypeIndex(vm *VM, ins opcode.InstructionSetTypeIndex) {
 }
 
 func opSetAttachmentBase(vm *VM) {
-	if !vm.callFrame.hasImplicitArgument {
+	base, attachment := vm.pop2()
+
+	// If the attachment was constructed outside an attach-statement,
+	// then the base variable is nil / not set.
+	if base == nil {
 		panic(&interpreter.InvalidAttachmentConstructorError{})
 	}
-
-	base, attachment := vm.pop2()
 
 	attachmentComposite, ok := attachment.(*interpreter.CompositeValue)
 	if !ok {
@@ -2347,6 +2393,11 @@ func opLoop(vm *VM) {
 
 func opStatement(vm *VM) {
 	common.UseComputation(vm.context, common.StatementComputationUsage)
+
+	onStatement := vm.context.OnStatement
+	if onStatement != nil {
+		onStatement(vm)
+	}
 }
 
 func (vm *VM) initializeValueTypedConstant(index uint16) Value {

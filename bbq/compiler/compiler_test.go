@@ -12236,6 +12236,10 @@ func TestCompileAttachments(t *testing.T) {
 				},
 				// get A constructor
 				opcode.PrettyInstructionGetGlobal{Global: aConstructorGlobalIndex},
+				// get s reference (base is loaded before the explicit arguments).
+				// base is passed as an implicit argument (see HasImplicitArgument),
+				// so its type is not part of ArgTypes.
+				opcode.PrettyInstructionGetLocal{Local: sRefLocalIndex},
 				// get 3
 				opcode.PrettyInstructionGetConstant{
 					Constant: constant.DecodedConstant{
@@ -12244,13 +12248,10 @@ func TestCompileAttachments(t *testing.T) {
 					},
 				},
 				opcode.PrettyInstructionTransfer{},
-				// get s reference
-				opcode.PrettyInstructionGetLocal{Local: sRefLocalIndex},
 				// invoke A constructor with &s as arg, puts A on stack
 				opcode.PrettyInstructionInvoke{
 					ArgTypes: []interpreter.StaticType{
 						interpreter.PrimitiveStaticTypeInt,
-						sRefType,
 					},
 					ParamTypes: []interpreter.StaticType{
 						interpreter.PrimitiveStaticTypeInt,
@@ -12311,9 +12312,10 @@ func TestCompileAttachments(t *testing.T) {
 		)
 
 		// local variables
+		// base is prepended before the explicit parameters
 		const (
-			xLocalIndex = iota
-			baseLocalIndex
+			baseLocalIndex = iota
+			xLocalIndex
 			selfLocalIndex
 			returnLocalIndex
 		)

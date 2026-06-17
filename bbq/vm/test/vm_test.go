@@ -3368,7 +3368,9 @@ func TestResource(t *testing.T) {
 
 		vmConfig := PrepareVMConfig(t, nil, programs)
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		// Run the VM at the same location the program was compiled at (TestLocation),
+		// so that the resource `Foo` is constructed within its declaring location.
+		vmInstance := vm.NewVM(TestLocation, program, vmConfig)
 
 		vmContext := vmInstance.Context()
 

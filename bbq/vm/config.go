@@ -60,6 +60,9 @@ type Config struct {
 	ValidateAccountCapabilitiesPublishHandler interpreter.ValidateAccountCapabilitiesPublishHandlerFunc
 	// OnEventEmitted is triggered when an event is emitted by the program
 	OnEventEmitted interpreter.OnEventEmittedFunc
+	// OnStatement is triggered when a statement is about to be executed.
+	// It is used e.g. for coverage reporting.
+	OnStatement OnStatementFunc
 	// AccountHandlerFunc is used to handle accounts
 	AccountHandlerFunc interpreter.AccountHandlerFunc
 	// InjectedCompositeFieldsHandler is used to initialize new composite values' fields
@@ -300,6 +303,9 @@ type ContractValueHandler func(
 ) *interpreter.CompositeValue
 
 type ElaborationResolver func(location common.Location) (*sema.Elaboration, error)
+
+// OnStatementFunc is invoked by the VM before executing each statement.
+type OnStatementFunc func(locationRangeProvider interpreter.LocationRangeProvider)
 
 type EntitlementTypeHandlerFunc func(location common.Location, typeID interpreter.TypeID) *sema.EntitlementType
 

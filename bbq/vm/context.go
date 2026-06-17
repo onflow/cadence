@@ -187,13 +187,18 @@ func (c *Context) IsSubType(subType interpreter.StaticType, superType interprete
 }
 
 func (c *Context) MaybeValidateAtreeValue(v atree.Value) {
-	//TODO
-	// NO-OP: no validation happens for now
+	if c.AtreeValueValidationEnabled {
+		interpreter.ValidateAtreeValue(c, v)
+	}
 }
 
 func (c *Context) MaybeValidateAtreeStorage() {
-	//TODO
-	// NO-OP: no validation happens for now
+	if c.AtreeStorageValidationEnabled {
+		err := c.storage.CheckHealth()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
 }
 
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {
@@ -437,23 +442,14 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 	// Safe to assume the receiver is not a reference.
 	var accessedReference interpreter.ReferenceValue = nil
 
-	method := c.GetMethod(resourceValue, commons.ResourceDestroyedEventsFunctionName, accessedReference)
+	method := c.GetMethod(
+		resourceValue,
+		commons.ResourceDestroyedEventsFunctionName,
+		accessedReference,
+	)
 
 	if method == nil {
 		return nil
-	}
-
-	var arguments []Value
-
-	if resourceValue.Kind == common.CompositeKindAttachment {
-		base, _ := interpreter.AttachmentBaseAndSelfValues(
-			c,
-			sema.UnauthorizedAccess,
-			resourceValue,
-		)
-		arguments = []Value{
-			base,
-		}
 	}
 
 	eventValues := make([]*interpreter.CompositeValue, 0)
@@ -476,7 +472,12 @@ func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue
 		},
 	)
 
-	arguments = append(arguments, collectFunction)
+	// The `base` (for attachments) is not included in the arguments list.
+	// It is carried by the bound-method value (see `GetMethod` /
+	// `attachmentBaseForMethod`), and is supplied to the call frame implicitly,
+	// just like for any other attachment method invocation.
+
+	arguments := []Value{collectFunction}
 
 	// The generated function takes no arguments unless it's an attachment, and returns nothing.
 	returnType := sema.VoidType

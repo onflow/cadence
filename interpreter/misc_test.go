@@ -49,6 +49,7 @@ import (
 
 type ParseCheckAndInterpretOptions = test_utils.ParseCheckAndInterpretOptions
 
+// Deprecated: Use parseCheckAndPrepareWithOptions instead.
 var parseCheckAndInterpretWithOptions = test_utils.ParseCheckAndInterpretWithOptions
 
 type testEvent = test_utils.TestEvent
@@ -957,7 +958,7 @@ func TestInterpretReturns(t *testing.T) {
 	t.Parallel()
 
 	// NOTE: not enabled for the compiler, as it does not support unreachable statements
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		`
            access(all) fun returnEarly(): Int {
                return 2
