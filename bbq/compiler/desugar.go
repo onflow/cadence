@@ -48,7 +48,7 @@ type Desugar struct {
 	inheritedFuncsWithConditions   map[string][]*inheritedFunction
 	inheritedEvents                map[sema.Type][]*inheritedEvent
 	postConditionIndices           map[*ast.FunctionBlock]int
-	inheritedConditionParamBinding map[ast.Statement]map[string]string
+	inheritedConditionParamBinding map[ast.Statement]map[string]int
 	isInheritedFunction            bool
 
 	importedLocationsSet map[common.Location]struct{}
@@ -87,14 +87,14 @@ func NewDesugar(
 		importedLocationsSet:           map[common.Location]struct{}{},
 		inheritedFuncsWithConditions:   map[string][]*inheritedFunction{},
 		postConditionIndices:           map[*ast.FunctionBlock]int{},
-		inheritedConditionParamBinding: map[ast.Statement]map[string]string{},
+		inheritedConditionParamBinding: map[ast.Statement]map[string]int{},
 	}
 }
 
 type DesugaredProgram struct {
 	program                        *ast.Program
 	postConditionIndices           map[*ast.FunctionBlock]int
-	inheritedConditionParamBinding map[ast.Statement]map[string]string
+	inheritedConditionParamBinding map[ast.Statement]map[string]int
 }
 
 // Run desugars and rewrites the top-level declarations.
@@ -583,25 +583,34 @@ func (d *Desugar) desugarInheritedCondition(
 }
 
 // inheritedConditionParamBindings builds a mapping from the inherited function's
-// parameter names to the implementation's parameter names (matched by position).
+// parameter names to the parameter *index* (matched by position).
 // This is used to rewrite identifiers in inherited code (conditions and the
 // `before`-statements they desugar to), so they refer to the implementation's
 // parameters even when the implementation uses different (internal) parameter names.
+//
+// IMPORTANT: The binding maps to a parameter index, not to the implementation's
+// parameter name. This is because inherited statements (e.g. the synthetic
+// `before`-statements, or shared emit statements) may be the same AST nodes
+// reused across multiple implementations. Those implementations may use different
+// internal parameter names, so a name-based binding (keyed by the shared node)
+// would be overwritten and resolve incorrectly. An index is stable across all
+// implementations, since conformance requires the same parameters in the same
+// positions. The compiler resolves the index to the actual parameter name of the
+// implementation currently being compiled. See `Compiler.emitVariableLoad`.
 func (d *Desugar) inheritedConditionParamBindings(
 	functionParams *ast.ParameterList,
 	inheritedFunc *inheritedFunction,
-) map[string]string {
+) map[string]int {
 	if functionParams == nil || len(functionParams.Parameters) == 0 {
 		return nil
 	}
 
-	paramBinding := make(map[string]string)
+	paramBinding := make(map[string]int)
 
 	inheritedFunctionParams := inheritedFunc.functionDecl.ParameterList
 	for i, parameter := range inheritedFunctionParams.Parameters {
-		currentFunctionParamName := functionParams.Parameters[i].Identifier.Identifier
 		inheritedFunctionParamName := parameter.Identifier.Identifier
-		paramBinding[inheritedFunctionParamName] = currentFunctionParamName
+		paramBinding[inheritedFunctionParamName] = i
 	}
 
 	return paramBinding

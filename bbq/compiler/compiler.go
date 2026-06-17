@@ -60,18 +60,23 @@ type Compiler[E, T any] struct {
 	types         []sema.Type
 	compiledTypes []T
 
-	// postConditionsIndices keeps track of where the post conditions start (i.e: index of the statement in the block),
-	// for each function.
+	// postConditionsIndices keeps track of where the post conditions start
+	// (i.e: index of the statement in the block), for each function.
 	// This mapping is populated by/during the desugar/rewrite: When the post conditions gets added
 	// to the end of the function block, it keeps track of the index where it was added to.
 	// Then the compiler uses these indices to patch the jumps for return statements.
 	postConditionsIndices map[*ast.FunctionBlock]int
 
 	// inheritedConditionParamBindings keeps a mapping between the parameter names
-	// of an interface-function and the parameter names of its-implementation,
+	// of an interface-function and the parameter *index* in its implementation,
 	// for each inherited condition.
-	inheritedConditionParamBindings       map[ast.Statement]map[string]string
-	currentInheritedConditionParamBinding map[string]string
+	//
+	// The binding is resolved positionally (by index) rather than by the
+	// implementation's parameter name, so that the same (shared) inherited
+	// statement can be reused across multiple implementations that use different
+	// internal parameter names. See `Compiler.emitVariableLoad`.
+	inheritedConditionParamBindings       map[ast.Statement]map[string]int
+	currentInheritedConditionParamBinding map[string]int
 
 	// postConditionsIndex is the statement-index of the post-conditions for the current function.
 	postConditionsIndex int
@@ -2728,11 +2733,17 @@ func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExp
 func (c *Compiler[_, _]) emitVariableLoad(name string) {
 
 	if c.currentInheritedConditionParamBinding != nil {
-		// If the current compiling code is an inherited code, then bind
-		// the inherited parameter names to the implementation's parameter names.
-		mappedName, ok := c.currentInheritedConditionParamBinding[name]
+		// If the current compiling code is inherited code, then bind the
+		// inherited parameter name to the implementation's parameter.
+		//
+		// The binding is resolved positionally: the inherited parameter name maps
+		// to a parameter index, which is resolved to the implementation's actual
+		// parameter name in the current function. This is required because the same
+		// (shared) inherited statement may be reused across multiple implementations
+		// that use different internal parameter names.
+		paramIndex, ok := c.currentInheritedConditionParamBinding[name]
 		if ok {
-			name = mappedName
+			name = c.currentFunction.parameterNames[paramIndex]
 		}
 	}
 
@@ -4688,6 +4699,10 @@ func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declare
 		for _, parameter := range paramList.Parameters {
 			parameterName := parameter.Identifier.Identifier
 			c.currentFunction.declareLocal(memoryGauge, parameterName)
+			c.currentFunction.parameterNames = append(
+				c.currentFunction.parameterNames,
+				parameterName,
+			)
 		}
 	}
 }

@@ -1796,11 +1796,11 @@ func TestInterpretFunctionBeforePostConditionAndInheritedBeforePostCondition(t *
 	}
 }
 
-func TestInterpretInheritedBeforeConditionWithRenamedParameter(t *testing.T) {
+func TestInterpretInheritedConditionWithRenamedParameter(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("different names, one has matching label", func(t *testing.T) {
+	t.Run("before stmt, different names, one has matching label", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -1836,7 +1836,7 @@ func TestInterpretInheritedBeforeConditionWithRenamedParameter(t *testing.T) {
 		)
 	})
 
-	t.Run("different names, no labels", func(t *testing.T) {
+	t.Run("before stmt, different names, no labels", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndPrepare(t, `
@@ -1868,6 +1868,180 @@ func TestInterpretInheritedBeforeConditionWithRenamedParameter(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(6),
+			value,
+		)
+	})
+
+	t.Run("before stmt, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int): Int {
+                  post {
+                      result == before(a)
+                  }
+              }
+          }
+
+          struct S1: I {
+              fun foo(a x: Int): Int {
+                  return x
+              }
+          }
+
+          struct S2: I {
+              fun foo(a y: Int): Int {
+                  return y
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 10) + S2().foo(a: 20)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+			value,
+		)
+	})
+
+	t.Run(" emit condition, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
+          event Logged(v: Int)
+
+          struct interface I {
+              fun foo(a: Int): Int {
+                  post {
+                      emit Logged(v: before(a))
+                  }
+              }
+          }
+
+          struct S1: I {
+              fun foo(a x: Int): Int {
+                  return x
+              }
+          }
+
+          struct S2: I {
+              fun foo(a y: Int): Int {
+                  return y
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 10) + S2().foo(a: 20)
+          }
+        `)
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+			value,
+		)
+
+		events := getEvents()
+		require.Len(t, events, 2)
+		assert.Equal(t,
+			[]interpreter.Value{interpreter.NewUnmeteredIntValueFromInt64(10)},
+			events[0].EventFields,
+		)
+		assert.Equal(t,
+			[]interpreter.Value{interpreter.NewUnmeteredIntValueFromInt64(20)},
+			events[1].EventFields,
+		)
+	})
+
+	t.Run(" pre-condition, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int): Int {
+                  pre {
+                      a > 0
+                  }
+              }
+          }
+
+          struct S1: I {
+              fun foo(a x: Int): Int {
+                  return x
+              }
+          }
+
+          struct S2: I {
+              fun foo(a y: Int): Int {
+                  return y
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 10) + S2().foo(a: 20)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+			value,
+		)
+	})
+
+	t.Run("post-condition, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int): Int {
+                  post {
+                      result == a
+                  }
+              }
+          }
+
+          struct S1: I {
+              fun foo(a x: Int): Int {
+                  return x
+              }
+          }
+
+          struct S2: I {
+              fun foo(a y: Int): Int {
+                  return y
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 10) + S2().foo(a: 20)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(30),
 			value,
 		)
 	})
