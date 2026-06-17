@@ -89,7 +89,7 @@ const (
 
 func init() {
 	// ensure all tokens have its string format
-	for t := TokenType(0); t < TokenMax; t++ {
+	for t := range TokenMax {
 		_ = t.String()
 	}
 }

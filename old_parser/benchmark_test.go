@@ -34,14 +34,14 @@ func BenchmarkParseDeploy(b *testing.B) {
 	b.Run("byte array", func(b *testing.B) {
 
 		var builder strings.Builder
-		for i := 0; i < 15000; i++ {
+		for i := range 15000 {
 			if i > 0 {
 				builder.WriteString(", ")
 			}
 			builder.WriteString(strconv.Itoa(rand.Intn(math.MaxUint8)))
 		}
 
-		transaction := []byte(fmt.Sprintf(`
+		transaction := fmt.Appendf(nil, `
               transaction {
                 execute {
                   AuthAccount(publicKeys: [], code: [%s])
@@ -49,7 +49,7 @@ func BenchmarkParseDeploy(b *testing.B) {
               }
             `,
 			builder.String(),
-		))
+		)
 
 		b.ResetTimer()
 
@@ -64,11 +64,11 @@ func BenchmarkParseDeploy(b *testing.B) {
 	b.Run("decode hex", func(b *testing.B) {
 
 		var builder strings.Builder
-		for i := 0; i < 15000; i++ {
+		for i := range 15000 {
 			builder.WriteString(fmt.Sprintf("%02x", i))
 		}
 
-		transaction := []byte(fmt.Sprintf(`
+		transaction := fmt.Appendf(nil, `
               transaction {
                 execute {
                   AuthAccount(publicKeys: [], code: "%s".decodeHex())
@@ -76,7 +76,7 @@ func BenchmarkParseDeploy(b *testing.B) {
               }
             `,
 			builder.String(),
-		))
+		)
 
 		b.ResetTimer()
 

@@ -31,7 +31,7 @@ func PadLeft(value string, separator rune, minLength uint) string {
 
 	var builder strings.Builder
 	builder.Grow(n)
-	for i := 0; i < n; i++ {
+	for range n {
 		builder.WriteRune(separator)
 	}
 	builder.WriteString(value)

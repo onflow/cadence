@@ -680,7 +680,7 @@ func TestInterpretSmokeRandomDictionaryOperations(t *testing.T) {
 
 		numberOfValues := r.randomInt(r.containerMaxSize)
 
-		for i := 0; i < numberOfValues; i++ {
+		for range numberOfValues {
 
 			// Generate a unique key
 			var key cadence.Value
@@ -1815,7 +1815,7 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 
 		newValueCount := r.randomInt(r.containerMaxSize)
 
-		for i := 0; i < newValueCount; i++ {
+		for range newValueCount {
 
 			value := r.randomStorableValue(inter, 0)
 			importedValue := importValue(t, inter, value)
@@ -1919,7 +1919,7 @@ func TestInterpretSmokeRandomArrayOperations(t *testing.T) {
 
 		// Random remove
 		numberOfValues := len(expectedValue.Values)
-		for i := 0; i < numberOfValues; i++ {
+		for range numberOfValues {
 
 			index := r.rand.Intn(len(expectedValue.Values))
 
@@ -2318,7 +2318,7 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 
 		elementCount := actualNestedArray.Count()
 
-		for i := 0; i < opCount; i++ {
+		for i := range opCount {
 			var index int
 			elementCountAfterInserts := elementCount + i
 			if elementCountAfterInserts > 0 {
@@ -2453,7 +2453,7 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 
 		var updates []update
 
-		for i := 0; i < opCount; i++ {
+		for range opCount {
 			updates = append(
 				updates,
 				update{
@@ -2566,7 +2566,7 @@ func TestInterpretSmokeRandomNestedArrayOperations(t *testing.T) {
 
 		var removes []int
 
-		for i := 0; i < opCount; i++ {
+		for i := range opCount {
 			index := r.rand.Intn(elementCount - i)
 			removes = append(removes, index)
 		}
@@ -2854,7 +2854,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 		var inserts []insert
 		insertSet := map[any]struct{}{}
 
-		for i := 0; i < opCount; i++ {
+		for range opCount {
 			// Generate a unique key
 			var key cadence.Value
 			for {
@@ -3014,7 +3014,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 
 		var updates []update
 
-		for i := 0; i < opCount; i++ {
+		for range opCount {
 			index := r.rand.Intn(elementCount)
 
 			updates = append(
@@ -3146,7 +3146,7 @@ func TestInterpretSmokeRandomNestedDictionaryOperations(t *testing.T) {
 		var removes []cadence.Value
 		removeSet := map[any]struct{}{}
 
-		for i := 0; i < opCount; i++ {
+		for range opCount {
 			// Find a unique key
 			var key interpreter.Value
 			for {
@@ -3444,7 +3444,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		var inserts []insert
 		insertSet := map[string]struct{}{}
 
-		for i := 0; i < opCount; i++ {
+		for range opCount {
 			// Generate a unique name
 			var name string
 			for {
@@ -3596,7 +3596,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 			},
 		)
 
-		for i := 0; i < opCount; i++ {
+		for range opCount {
 			index := r.rand.Intn(fieldCount)
 
 			updates = append(
@@ -3724,7 +3724,7 @@ func TestInterpretSmokeRandomNestedCompositeOperations(t *testing.T) {
 		var removes []string
 		removeSet := map[string]struct{}{}
 
-		for i := 0; i < opCount; i++ {
+		for range opCount {
 			// Find a unique name
 			var name string
 			for {
@@ -4203,7 +4203,7 @@ func (r randomValueGenerator) randomDictionaryValue(inter *interpreter.Interpret
 
 	existingKeys := map[string]struct{}{}
 
-	for i := 0; i < entryCount; i++ {
+	for i := range entryCount {
 
 		// generate a unique key
 		var key cadence.Value
@@ -4242,7 +4242,7 @@ func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, c
 	elementsCount := r.randomInt(r.containerMaxSize)
 	elements := make([]cadence.Value, elementsCount)
 
-	for i := 0; i < elementsCount; i++ {
+	for i := range elementsCount {
 		elements[i] = r.randomStorableValue(inter, currentDepth+1)
 	}
 
@@ -4258,7 +4258,7 @@ func (r randomValueGenerator) randomStructValue(inter *interpreter.Interpreter, 
 
 	existingFieldNames := make(map[string]any, fieldsCount)
 
-	for i := 0; i < fieldsCount; i++ {
+	for i := range fieldsCount {
 		// generate a unique field name
 		var fieldName string
 		for {
@@ -4296,7 +4296,7 @@ func (r randomValueGenerator) randomStructValue(inter *interpreter.Interpreter, 
 
 	fieldNames := make([]string, fieldsCount)
 
-	for i := 0; i < fieldsCount; i++ {
+	for i := range fieldsCount {
 		fieldName := fields[i].Identifier
 		compositeType.Members.Set(
 			fieldName,
@@ -4670,7 +4670,7 @@ func TestRandomValueGeneration(t *testing.T) {
 	limits := defaultRandomValueLimits
 
 	// Generate random values
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		r1 := newRandomValueGenerator(int64(i), limits)
 		v1 := r1.randomStorableValue(inter, 0)
 
@@ -4993,7 +4993,7 @@ func TestInterpretCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	firstElementIndex := 7 // index of first physical element in the first data slab
 	lastElementIndex := 8  // index of last physical element in the last data slab
 	keyValues := make([]interpreter.Value, numberOfValues*2)
-	for i := 0; i < numberOfValues; i++ {
+	for i := range numberOfValues {
 		key := interpreter.NewUnmeteredUInt64Value(uint64(i))
 
 		var value interpreter.Value
@@ -5121,10 +5121,10 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		const expectedRootCount = 10
 		const expectedInnerCount = 100
 
-		for i := 0; i < expectedRootCount; i++ {
+		for i := range expectedRootCount {
 			var cadenceInnerPairs []cadence.KeyValuePair
 
-			for j := 0; j < expectedInnerCount; j++ {
+			for j := range expectedInnerCount {
 				cadenceInnerPairs = append(
 					cadenceInnerPairs,
 					cadence.KeyValuePair{
@@ -5224,10 +5224,10 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		const expectedRootCount = 10
 		const expectedInnerCount = 100
 
-		for i := 0; i < expectedRootCount; i++ {
+		for range expectedRootCount {
 			var cadenceInnerElements []cadence.Value
 
-			for j := 0; j < expectedInnerCount; j++ {
+			for range expectedInnerCount {
 				cadenceInnerElements = append(
 					cadenceInnerElements,
 					cadence.String(strings.Repeat("cadence", 1000)),
@@ -5328,7 +5328,7 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 			}
 
 			fieldNames := make([]string, 0, fieldCount)
-			for i := 0; i < fieldCount; i++ {
+			for i := range fieldCount {
 				fieldName := fmt.Sprintf("field%d", i)
 				fieldNames = append(fieldNames, fieldName)
 			}
@@ -5388,10 +5388,10 @@ func TestInterpretIterateReadOnlyLoadedWithSomeValueChildren(t *testing.T) {
 		rootStructType := newCadenceType(expectedRootCount)
 		innerStructType := newCadenceType(expectedInnerCount)
 
-		for i := 0; i < expectedRootCount; i++ {
+		for range expectedRootCount {
 			var cadenceInnerValues []cadence.Value
 
-			for j := 0; j < expectedInnerCount; j++ {
+			for range expectedInnerCount {
 				cadenceInnerValues = append(
 					cadenceInnerValues,
 					cadence.String(strings.Repeat("cadence", 1000)),
@@ -5600,7 +5600,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		verify := func(count int) {
 			require.Equal(t, count, childDictionary.Count())
 
-			for i := 0; i < count; i++ {
+			for i := range count {
 				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 				value, exists := childDictionary.Get(inter, key)
 				require.True(t, exists)
@@ -5643,7 +5643,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Remove all elements
 
-		for i := 0; i < uninlinedCount; i++ {
+		for i := range uninlinedCount {
 			existingValue := childDictionary.Remove(
 				inter,
 				interpreter.NewUnmeteredStringValue(strconv.Itoa(i)),
@@ -5690,7 +5690,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		var cadenceChildPairs []cadence.KeyValuePair
 
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			cadenceChildPairs = append(
 				cadenceChildPairs,
 				cadence.KeyValuePair{
@@ -5739,7 +5739,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		verify := func(count int) {
 			require.Equal(t, count, childDictionary.Count())
 
-			for i := 0; i < count; i++ {
+			for i := range count {
 				key := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 				value, exists := childDictionary.Get(inter, key)
 				require.True(t, exists)
@@ -5872,7 +5872,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		verify := func(count int) {
 			require.Equal(t, count, childArray.Count())
 
-			for i := 0; i < count; i++ {
+			for i := range count {
 				value := childArray.Get(inter, i)
 				expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
@@ -5951,7 +5951,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		var cadenceChildElements []cadence.Value
 
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			cadenceChildElements = append(
 				cadenceChildElements,
 				cadence.String(strconv.Itoa(i)),
@@ -5997,7 +5997,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		verify := func(count int) {
 			require.Equal(t, count, childArray.Count())
 
-			for i := 0; i < count; i++ {
+			for i := range count {
 				value := childArray.Get(inter, i)
 				expectedValue := interpreter.NewUnmeteredStringValue(strconv.Itoa(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
@@ -6141,7 +6141,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		verify := func(count int) {
 			require.Equal(t, count, childComposite.FieldCount())
 
-			for i := 0; i < count; i++ {
+			for i := range count {
 				value := childComposite.GetMember(inter, strconv.Itoa(i), common.DeclarationKindField, nil)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)
@@ -6174,7 +6174,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		// Remove all elements
 
-		for i := 0; i < uninlinedCount; i++ {
+		for i := range uninlinedCount {
 			childComposite.RemoveMember(inter, strconv.Itoa(i))
 		}
 
@@ -6224,7 +6224,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		const fieldCount = 1000
 
 		fields := make([]cadence.Field, fieldCount)
-		for i := 0; i < fieldCount; i++ {
+		for i := range fieldCount {
 			fields[i] = cadence.Field{
 				Identifier: strconv.Itoa(i),
 				Type:       cadence.IntType,
@@ -6252,7 +6252,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		)
 		fieldNames := make([]string, fieldCount)
 
-		for i := 0; i < fieldCount; i++ {
+		for i := range fieldCount {
 			fieldName := fields[0].Identifier
 			semaStructType.Members.Set(
 				fieldName,
@@ -6269,7 +6269,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 
 		var cadenceChildElements []cadence.Value
 
-		for i := 0; i < fieldCount; i++ {
+		for i := range fieldCount {
 			cadenceChildElements = append(
 				cadenceChildElements,
 				cadence.NewInt(i),
@@ -6317,7 +6317,7 @@ func TestInterpretNestedAtreeContainerInSomeValueStorableTracking(t *testing.T) 
 		verify := func(count int) {
 			require.Equal(t, count, childComposite.FieldCount())
 
-			for i := 0; i < count; i++ {
+			for i := range count {
 				value := childComposite.GetMember(inter, strconv.Itoa(i), common.DeclarationKindField, nil)
 				expectedValue := interpreter.NewUnmeteredIntValueFromInt64(int64(i))
 				AssertValuesEqual(t, inter, expectedValue, value)

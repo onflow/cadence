@@ -998,7 +998,6 @@ func TestInterpretDivisionByZero(t *testing.T) {
 	)
 
 	for _, typ := range numericTypes {
-		typ := typ
 		typeName := typ.String()
 
 		t.Run(typeName, func(t *testing.T) {

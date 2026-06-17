@@ -76,7 +76,7 @@ func TestHashInputTypeValues(t *testing.T) {
 	// If a placeholder `_` is replaced with a new named value,
 	// its String() representation will no longer be a numeric fallback.
 	// NOTE: This requires the stringer-generated file to be up to date (CI runs go generate).
-	for i := byte(0); i < byte(HashInputType_Count); i++ {
+	for i := range byte(HashInputType_Count) {
 
 		typ := HashInputType(i)
 		if _, ok := expectedValues[typ]; ok {

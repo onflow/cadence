@@ -2512,29 +2512,29 @@ func TestDecodeFields(t *testing.T) {
 	}
 
 	type eventStruct struct {
-		Int                            Int                     `cadence:"intField"`
-		String                         String                  `cadence:"stringField"`
-		NilOptionalInt                 *Int                    `cadence:"nilOptionalIntField"`
-		OptionalInt                    *Int                    `cadence:"optionalIntField"`
-		DictAnyStruct                  map[String]interface{}  `cadence:"dictAnyStructField"`
-		DictOptionalAnyStruct          map[String]*interface{} `cadence:"dictOptionalAnyStructField"`
-		Dict                           map[String]Int          `cadence:"dictField"`
-		DictOptional                   map[String]*Int         `cadence:"dictOptionalField"`
-		OptionalAnyStruct              *interface{}            `cadence:"optionalAnyStructField"`
-		AnyStructString                interface{}             `cadence:"anyStructField"`
-		ArrayInt                       []Int                   `cadence:"variableArrayIntField"`
-		VariableArrayOptional          []*Int                  `cadence:"variableArrayOptionalIntField"`
-		FixedArrayInt                  [2]Int                  `cadence:"fixedArrayIntField"`
-		VariableArrayAnyStruct         []interface{}           `cadence:"variableArrayAnyStructField"`
-		VariableArrayOptionalAnyStruct []*interface{}          `cadence:"variableArrayOptionalAnyStructField"`
-		GoUint8                        uint8                   `cadence:"goUint8"`
-		GoUint8PtrNil                  *uint8                  `cadence:"goUint8PtrNil"`
-		GoUint8PtrSome                 *uint8                  `cadence:"goUint8PtrSome"`
-		GoUint8Slice                   []uint8                 `cadence:"goUint8Slice"`
-		GoUint8Map                     map[uint8]uint8         `cadence:"goUint8Map"`
-		GoUint8Struct                  nestedStruct            `cadence:"goUint8Struct"`
-		CadenceAddress                 Address                 `cadence:"cadenceAddress"`
-		BigInt                         *big.Int                `cadence:"bigInt"`
+		Int                            Int             `cadence:"intField"`
+		String                         String          `cadence:"stringField"`
+		NilOptionalInt                 *Int            `cadence:"nilOptionalIntField"`
+		OptionalInt                    *Int            `cadence:"optionalIntField"`
+		DictAnyStruct                  map[String]any  `cadence:"dictAnyStructField"`
+		DictOptionalAnyStruct          map[String]*any `cadence:"dictOptionalAnyStructField"`
+		Dict                           map[String]Int  `cadence:"dictField"`
+		DictOptional                   map[String]*Int `cadence:"dictOptionalField"`
+		OptionalAnyStruct              *any            `cadence:"optionalAnyStructField"`
+		AnyStructString                any             `cadence:"anyStructField"`
+		ArrayInt                       []Int           `cadence:"variableArrayIntField"`
+		VariableArrayOptional          []*Int          `cadence:"variableArrayOptionalIntField"`
+		FixedArrayInt                  [2]Int          `cadence:"fixedArrayIntField"`
+		VariableArrayAnyStruct         []any           `cadence:"variableArrayAnyStructField"`
+		VariableArrayOptionalAnyStruct []*any          `cadence:"variableArrayOptionalAnyStructField"`
+		GoUint8                        uint8           `cadence:"goUint8"`
+		GoUint8PtrNil                  *uint8          `cadence:"goUint8PtrNil"`
+		GoUint8PtrSome                 *uint8          `cadence:"goUint8PtrSome"`
+		GoUint8Slice                   []uint8         `cadence:"goUint8Slice"`
+		GoUint8Map                     map[uint8]uint8 `cadence:"goUint8Map"`
+		GoUint8Struct                  nestedStruct    `cadence:"goUint8Struct"`
+		CadenceAddress                 Address         `cadence:"cadenceAddress"`
+		BigInt                         *big.Int        `cadence:"bigInt"`
 		NonCadenceField                Int
 	}
 
@@ -2558,7 +2558,7 @@ func TestDecodeFields(t *testing.T) {
 
 	assert.EqualValues(t, map[String]*Int{"k": &int4, "nilK": nil}, evt.DictOptional)
 
-	assert.EqualValues(t, map[String]interface{}{
+	assert.EqualValues(t, map[String]any{
 		"k":  int3,
 		"k2": String("foo"),
 	}, evt.DictAnyStruct)
@@ -2575,7 +2575,7 @@ func TestDecodeFields(t *testing.T) {
 
 	assert.Equal(t, [2]Int{int1, int2}, evt.FixedArrayInt)
 
-	assert.Equal(t, []interface{}{int3, String("foo")}, evt.VariableArrayAnyStruct)
+	assert.Equal(t, []any{int3, String("foo")}, evt.VariableArrayAnyStruct)
 
 	require.NotNil(t, evt.VariableArrayOptionalAnyStruct[0])
 	assert.Equal(t, int1, *evt.VariableArrayOptionalAnyStruct[0])
@@ -2598,12 +2598,12 @@ func TestDecodeFields(t *testing.T) {
 	assert.Equal(t, big.NewInt(1234567890), evt.BigInt)
 
 	type ErrCases struct {
-		Value       interface{}
+		Value       any
 		ExpectedErr string
 		Description string
 	}
 
-	var v interface{}
+	var v any
 	var i int
 	var ints []int
 

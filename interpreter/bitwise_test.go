@@ -204,9 +204,6 @@ func TestInterpretBitwiseLeftShift(t *testing.T) {
 
 	for ty, valueFunc := range bitwiseTestValueFunctions {
 
-		ty := ty
-		valueFunc := valueFunc
-
 		t.Run(ty, func(t *testing.T) {
 			t.Parallel()
 
