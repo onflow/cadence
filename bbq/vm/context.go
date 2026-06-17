@@ -187,13 +187,18 @@ func (c *Context) IsSubType(subType interpreter.StaticType, superType interprete
 }
 
 func (c *Context) MaybeValidateAtreeValue(v atree.Value) {
-	//TODO
-	// NO-OP: no validation happens for now
+	if c.AtreeValueValidationEnabled {
+		interpreter.ValidateAtreeValue(c, v)
+	}
 }
 
 func (c *Context) MaybeValidateAtreeStorage() {
-	//TODO
-	// NO-OP: no validation happens for now
+	if c.AtreeStorageValidationEnabled {
+		err := c.storage.CheckHealth()
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
 }
 
 func (c *Context) IsTypeInfoRecovered(location common.Location) bool {

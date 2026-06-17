@@ -544,6 +544,12 @@ type VariableResolver interface {
 
 var _ VariableResolver = &Interpreter{}
 
+// AtreeValueValidationContext is the context required to validate atree values.
+type AtreeValueValidationContext interface {
+	ValueComparisonContext
+	Storage() Storage
+}
+
 // NoOpStringContext is the ValueStringContext implementation used in Value.RecursiveString method.
 // Since Value.RecursiveString is a non-mutating operation, it should only need the no-op memory metering
 // and a WithMutationPrevention implementation.
