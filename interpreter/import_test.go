@@ -476,8 +476,8 @@ func TestInterpretImportWithAlias(t *testing.T) {
 	}
 
 	var (
-		err    error
-		result interpreter.Value
+		invocationErr error
+		result        interpreter.Value
 	)
 
 	if *compile {
@@ -497,7 +497,7 @@ func TestInterpretImportWithAlias(t *testing.T) {
 			programs,
 		)
 
-		result, err = test.CompileAndInvokeWithOptionsAndPrograms(t,
+		result, invocationErr = test.CompileAndInvokeWithOptionsAndPrograms(t,
 			code,
 			"test",
 			test.CompilerAndVMOptions{
@@ -608,10 +608,10 @@ func TestInterpretImportWithAlias(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		result, err = inter.Invoke("test")
+		result, invocationErr = inter.Invoke("test")
 	}
 
-	require.NoError(t, err)
+	require.NoError(t, invocationErr)
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(3),
@@ -644,8 +644,8 @@ func TestInterpretImportAliasGetType(t *testing.T) {
 	}
 
 	var (
-		err    error
-		result interpreter.Value
+		invocationErr error
+		result        interpreter.Value
 	)
 
 	if *compile {
@@ -658,7 +658,7 @@ func TestInterpretImportAliasGetType(t *testing.T) {
 			programs,
 		)
 
-		result, err = test.CompileAndInvokeWithOptionsAndPrograms(t,
+		result, invocationErr = test.CompileAndInvokeWithOptionsAndPrograms(t,
 			code,
 			"test",
 			test.CompilerAndVMOptions{
@@ -732,10 +732,10 @@ func TestInterpretImportAliasGetType(t *testing.T) {
 		err = inter.Interpret()
 		require.NoError(t, err)
 
-		result, err = inter.Invoke("test")
+		result, invocationErr = inter.Invoke("test")
 	}
 
-	require.NoError(t, err)
+	require.NoError(t, invocationErr)
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredStringValue("A.0000000000000001.Foo"),
@@ -790,8 +790,8 @@ func TestInterpretImportTypeEquality(t *testing.T) {
 	}
 
 	var (
-		err    error
-		result interpreter.Value
+		invocationErr error
+		result        interpreter.Value
 	)
 
 	if *compile {
@@ -811,7 +811,7 @@ func TestInterpretImportTypeEquality(t *testing.T) {
 			programs,
 		)
 
-		result, err = test.CompileAndInvokeWithOptionsAndPrograms(t,
+		result, invocationErr = test.CompileAndInvokeWithOptionsAndPrograms(t,
 			code,
 			"test",
 			test.CompilerAndVMOptions{
@@ -930,10 +930,10 @@ func TestInterpretImportTypeEquality(t *testing.T) {
 		err = inter.Interpret()
 		require.NoError(t, err)
 
-		result, err = inter.Invoke("test")
+		result, invocationErr = inter.Invoke("test")
 	}
 
-	require.NoError(t, err)
+	require.NoError(t, invocationErr)
 
 	require.IsType(t, &interpreter.CompositeValue{}, result)
 	compositeValue := result.(*interpreter.CompositeValue)
@@ -978,8 +978,8 @@ func TestInterpretImportAliasOtherMember(t *testing.T) {
 	}
 
 	var (
-		err    error
-		result interpreter.Value
+		invocationErr error
+		result        interpreter.Value
 	)
 
 	if *compile {
@@ -1006,7 +1006,7 @@ func TestInterpretImportAliasOtherMember(t *testing.T) {
 		myContractValue, err := importVM.InitializeContract("MyContract")
 		require.NoError(t, err)
 
-		result, err = test.CompileAndInvokeWithOptionsAndPrograms(t,
+		result, invocationErr = test.CompileAndInvokeWithOptionsAndPrograms(t,
 			code,
 			"test",
 			test.CompilerAndVMOptions{
@@ -1082,10 +1082,10 @@ func TestInterpretImportAliasOtherMember(t *testing.T) {
 		err = inter.Interpret()
 		require.NoError(t, err)
 
-		result, err = inter.Invoke("test")
+		result, invocationErr = inter.Invoke("test")
 	}
 
-	require.NoError(t, err)
+	require.NoError(t, invocationErr)
 
 	require.Equal(
 		t,
