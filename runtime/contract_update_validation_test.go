@@ -681,7 +681,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
-			return []byte(fmt.Sprintf(
+			return fmt.Appendf(nil,
 				`
 				  transaction {
 					prepare(signer: auth(BorrowValue) &Account) {
@@ -692,7 +692,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 				`,
 				name,
 				hex.EncodeToString([]byte(code)),
-			))
+			)
 		}
 
 		accountCodes := map[Location][]byte{}
@@ -849,7 +849,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
-			return []byte(fmt.Sprintf(
+			return fmt.Appendf(nil,
 				`
 				  transaction {
 					prepare(signer: auth(Storage) &Account) {
@@ -860,7 +860,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 				`,
 				name,
 				hex.EncodeToString([]byte(code)),
-			))
+			)
 		}
 
 		accountCodes := map[Location][]byte{}
@@ -1009,7 +1009,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		runtime := NewTestRuntime()
 
 		makeDeployTransaction := func(name, code string) []byte {
-			return []byte(fmt.Sprintf(
+			return fmt.Appendf(nil,
 				`
 				  transaction {
 					prepare(signer: auth(Storage) &Account) {
@@ -1020,7 +1020,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 				`,
 				name,
 				hex.EncodeToString([]byte(code)),
-			))
+			)
 		}
 
 		accountCodes := map[Location][]byte{}
@@ -1980,7 +1980,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		// Errors reporting was previously non-deterministic,
 		// assert that reports are deterministic
 
-		for i := 0; i < 1000; i++ {
+		for range 1000 {
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 			RequireError(t, err)

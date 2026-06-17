@@ -38,12 +38,12 @@ func (e CircularDependencyError) Error() string {
 }
 
 type Node struct {
-	Value        interface{}
+	Value        any
 	dependents   NodeSet
 	dependencies NodeSet
 }
 
-func NewNode(value interface{}, newNodeSet func() NodeSet) *Node {
+func NewNode(value any, newNodeSet func() NodeSet) *Node {
 	return &Node{
 		Value:        value,
 		dependents:   newNodeSet(),

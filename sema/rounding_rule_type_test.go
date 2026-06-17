@@ -46,7 +46,7 @@ func TestRoundingRuleValues(t *testing.T) {
 
 	// Check that no new values have been added
 	// without updating the expected values above.
-	for i := uint8(0); i < uint8(RoundingRule_Count); i++ {
+	for i := range uint8(RoundingRule_Count) {
 		rule := RoundingRule(i)
 		_, ok := expectedValues[rule]
 		require.True(t, ok,

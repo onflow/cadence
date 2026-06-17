@@ -62,8 +62,8 @@ func TestRuntimeContract(t *testing.T) {
 
 		var deployedCode []byte
 
-		addTx := []byte(
-			fmt.Sprintf(
+		addTx :=
+			fmt.Appendf(nil,
 				`
                   transaction {
                       prepare(signer: auth(AddContract) &Account) {
@@ -86,11 +86,10 @@ func TestRuntimeContract(t *testing.T) {
                 `,
 				tc.name,
 				hex.EncodeToString([]byte(tc.code)),
-			),
-		)
+			)
 
-		updateTx := []byte(
-			fmt.Sprintf(
+		updateTx :=
+			fmt.Appendf(nil,
 				`
                  transaction {
                      prepare(signer: auth(UpdateContract) &Account) {
@@ -111,11 +110,10 @@ func TestRuntimeContract(t *testing.T) {
                `,
 				tc.name,
 				hex.EncodeToString([]byte(tc.code2)),
-			),
-		)
+			)
 
-		removeTx := []byte(
-			fmt.Sprintf(
+		removeTx :=
+			fmt.Appendf(nil,
 				`
                   transaction {
                       prepare(signer: auth(RemoveContract) &Account) {
@@ -133,11 +131,10 @@ func TestRuntimeContract(t *testing.T) {
                    }
                 `,
 				tc.name,
-			),
-		)
+			)
 
-		removeAndAddTx := []byte(
-			fmt.Sprintf(
+		removeAndAddTx :=
+			fmt.Appendf(nil,
 				`
                   transaction {
                       prepare(signer: auth(Contracts) &Account) {
@@ -164,8 +161,7 @@ func TestRuntimeContract(t *testing.T) {
                 `,
 				tc.name,
 				hex.EncodeToString([]byte(tc.code2)),
-			),
-		)
+			)
 
 		var events []cadence.Event
 
@@ -657,18 +653,16 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
     `
 
 	addTx := func(name, code string) []byte {
-		return []byte(
-			fmt.Sprintf(
-				`
+		return fmt.Appendf(nil,
+			`
                   transaction {
                       prepare(signer: auth(Contracts) &Account) {
                           signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
                       }
                    }
                 `,
-				name,
-				hex.EncodeToString([]byte(code)),
-			),
+			name,
+			hex.EncodeToString([]byte(code)),
 		)
 	}
 

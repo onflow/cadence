@@ -75,13 +75,11 @@ func TestParameterList_ParametersByIdentifier(t *testing.T) {
 		var wg sync.WaitGroup
 		const parallelExecutionCount = 10
 
-		for i := 0; i < parallelExecutionCount; i++ {
-			wg.Add(1)
+		for range parallelExecutionCount {
 
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				l.ParametersByIdentifier()
-			}()
+			})
 		}
 
 		wg.Wait()

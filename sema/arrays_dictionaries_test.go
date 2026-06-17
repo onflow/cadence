@@ -642,7 +642,7 @@ func TestCheckArrayConcat(t *testing.T) {
 func TestCheckVariableSizedArrayEqual(t *testing.T) {
 	t.Parallel()
 
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		nestingLevel := i
 		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
 

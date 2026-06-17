@@ -2974,7 +2974,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		var str *StringValue
 		maxInlineElementSize := uint32(64) // use a small max inline size for testing
-		for i := uint32(0); i < maxInlineElementSize; i++ {
+		for i := range maxInlineElementSize {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
@@ -3020,7 +3020,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		var str *StringValue
 		maxInlineElementSize := uint32(64) // use a small max inline size for testing
-		for i := uint32(0); i < maxInlineElementSize; i++ {
+		for i := range maxInlineElementSize {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
@@ -3066,7 +3066,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		var str *StringValue
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
-		for i := uint32(0); i < maxInlineElementSize; i++ {
+		for i := range maxInlineElementSize {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
@@ -3101,7 +3101,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		var str *StringValue
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
-		for i := uint32(0); i < maxInlineElementSize; i++ {
+		for i := range maxInlineElementSize {
 			str = NewUnmeteredStringValue(strings.Repeat("x", int(maxInlineElementSize-i)))
 			size, err := StorableSize(str)
 			require.NoError(t, err)
@@ -3853,7 +3853,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
-		for i := uint32(0); i < maxInlineElementSize; i++ {
+		for range maxInlineElementSize {
 			borrowType = &OptionalStaticType{
 				Type: borrowType,
 			}
@@ -4741,7 +4741,7 @@ func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
 		maxInlineElementSize := atree.MaxInlineArrayElementSize()
 		var borrowType StaticType = PrimitiveStaticTypeNever
 
-		for i := uint32(0); i < maxInlineElementSize; i++ {
+		for range maxInlineElementSize {
 			borrowType = &OptionalStaticType{
 				Type: borrowType,
 			}

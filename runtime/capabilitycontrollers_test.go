@@ -3672,7 +3672,7 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
 
 			rt := NewTestRuntime()
 
-			tx := []byte(fmt.Sprintf(
+			tx := fmt.Appendf(nil,
 				`
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
@@ -3683,7 +3683,7 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
                 `,
 				testCase.setup,
 				operation.code,
-			))
+			)
 
 			address := common.MustBytesToAddress([]byte{0x1})
 			accountIDs := map[common.Address]uint64{}

@@ -45,7 +45,7 @@ type bytewiseFieldSorter struct {
 
 func newBytewiseFieldSorter(types []cadence.Field) bytewiseFieldSorter {
 	indexes := make([]int, len(types))
-	for i := 0; i < len(indexes); i++ {
+	for i := range indexes {
 		indexes[i] = i
 	}
 	return bytewiseFieldSorter{fields: types, indexes: indexes}
@@ -129,7 +129,7 @@ type bytewiseCadenceTypeSorter struct {
 
 func newBytewiseCadenceTypeSorter(types []cadence.Type) bytewiseCadenceTypeSorter {
 	indexes := make([]int, len(types))
-	for i := 0; i < len(indexes); i++ {
+	for i := range indexes {
 		indexes[i] = i
 	}
 	return bytewiseCadenceTypeSorter{types: types, indexes: indexes}
@@ -169,7 +169,7 @@ type bytewiseCadenceTypeIDSorter struct {
 
 func newBytewiseCadenceTypeIDSorter(types []common.TypeID) bytewiseCadenceTypeIDSorter {
 	indexes := make([]int, len(types))
-	for i := 0; i < len(indexes); i++ {
+	for i := range indexes {
 		indexes[i] = i
 	}
 	return bytewiseCadenceTypeIDSorter{types: types, indexes: indexes}

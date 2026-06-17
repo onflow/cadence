@@ -947,7 +947,7 @@ func TestParseExpressionDepthLimit(t *testing.T) {
 
 	var builder strings.Builder
 	builder.WriteString("let x = y")
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		builder.WriteString(" ?? z")
 	}
 
@@ -978,11 +978,11 @@ func TestParseTypeDepthLimit(t *testing.T) {
 
 	var builder strings.Builder
 	builder.WriteString("let x: T<")
-	for i := 0; i < nesting; i++ {
+	for range nesting {
 		builder.WriteString("T<")
 	}
 	builder.WriteString("U")
-	for i := 0; i < nesting; i++ {
+	for range nesting {
 		builder.WriteString(">")
 	}
 	builder.WriteString(">? = nil")
@@ -1011,7 +1011,7 @@ func TestParseLocalReplayLimit(t *testing.T) {
 
 	var builder strings.Builder
 	builder.WriteString("let t = T")
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		builder.WriteString("<T")
 	}
 	builder.WriteString(">()")
@@ -1044,9 +1044,9 @@ func TestParseGlobalReplayLimit(t *testing.T) {
 	t.Parallel()
 
 	var builder strings.Builder
-	for j := 0; j < 2; j++ {
+	for range 2 {
 		builder.WriteString(";let t = T")
-		for i := 0; i < 16; i++ {
+		for range 16 {
 			builder.WriteString("<T")
 		}
 	}

@@ -3581,7 +3581,6 @@ func TestInterpretDynamicCastingResourceConstructor(t *testing.T) {
 	t.Parallel()
 
 	for operation, returnsOptional := range dynamicCastingOperations {
-		returnsOptional := returnsOptional
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
 			t.Parallel()

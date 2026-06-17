@@ -1300,7 +1300,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		err := rt.ExecuteTransaction(
 			Script{
-				Source: []byte(fmt.Sprintf(
+				Source: fmt.Appendf(nil,
 					`
                       transaction() {
                           prepare(acc: auth(Storage) &Account) {
@@ -1310,7 +1310,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
                       }
                     `,
 					text,
-				)),
+				),
 			},
 			Context{
 				Interface:   runtimeInterface,
@@ -1351,7 +1351,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
 
 		err := rt.ExecuteTransaction(
 			Script{
-				Source: []byte(fmt.Sprintf(
+				Source: fmt.Appendf(nil,
 					`
                       transaction() {
                           prepare(acc: auth(Storage) &Account) {
@@ -1366,7 +1366,7 @@ func TestRuntimeMeterEncoding(t *testing.T) {
                       }
                     `,
 					text,
-				)),
+				),
 			},
 			Context{
 				Interface:   runtimeInterface,

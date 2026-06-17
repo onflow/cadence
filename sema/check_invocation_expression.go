@@ -463,7 +463,7 @@ func (checker *Checker) checkInvocation(
 
 		// Check all the required arguments
 
-		for argumentIndex := 0; argumentIndex < minCount; argumentIndex++ {
+		for argumentIndex := range minCount {
 
 			parameterTypes[argumentIndex] =
 				checker.checkInvocationRequiredArgument(
@@ -777,7 +777,7 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 	typeParameters []*TypeParameter,
 	typeArgumentsMap *TypeParameterTypeOrderedMap,
 ) {
-	for i := 0; i < len(typeArguments); i++ {
+	for i := range typeArguments {
 		rawTypeArgument := typeArguments[i]
 
 		typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)

@@ -1074,7 +1074,7 @@ func encodeAndSortKeyValuePairs(
 	// Reslice buf for encoded key and pair by offset and length.
 	b := buf.Bytes()
 	off := 0
-	for i := 0; i < len(encodedPairs); i++ {
+	for i := range encodedPairs {
 		encodedPairs[i].encodedKey = b[off : off+encodedPairs[i].keyLength]
 		encodedPairs[i].encodedPair = b[off : off+encodedPairs[i].pairLength]
 		off += encodedPairs[i].pairLength
@@ -2272,7 +2272,7 @@ func isOptionalNeverType(t cadence.Type) bool {
 }
 
 var bufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		e := new(bytes.Buffer)
 		e.Grow(64)
 		return e
