@@ -107,10 +107,7 @@ func (s *scanner) scanLineComment() Comment {
 	text := string(s.source[startOff:s.pos])
 
 	// End position: last character of the comment (same line as start)
-	endOff := s.pos - 1
-	if endOff < startOff {
-		endOff = startOff
-	}
+	endOff := max(s.pos-1, startOff)
 	end := ast.Position{
 		Offset: endOff,
 		Line:   start.Line,
