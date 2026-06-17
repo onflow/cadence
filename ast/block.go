@@ -58,30 +58,58 @@ var blockStartDoc prettier.Doc = prettier.Text("{")
 var blockEndDoc prettier.Doc = prettier.Text("}")
 var blockEmptyDoc prettier.Doc = prettier.Text("{}")
 
-func (b *Block) Doc() prettier.Doc {
-	if b == nil || b.IsEmpty() {
+func (b *Block) Doc(ctx PrettyContext) prettier.Doc {
+	if b == nil {
 		return blockEmptyDoc
+	}
+
+	// For a block, "leading" comments mean "at the start of the body inside
+	// the braces" and "trailing" means "at the end of the body". Take them
+	// here so we can position them between the braces rather than around the
+	// whole block. Same-line on a block has no natural position; drop it.
+	leading, _, trailing := ctx.Take(b)
+	hasComments := leading != nil || trailing != nil
+
+	if b.IsEmpty() && !hasComments {
+		return blockEmptyDoc
+	}
+
+	body := prettier.Concat{}
+	if leading != nil {
+		body = append(body, prettier.HardLine{}, leading)
+	}
+	if !b.IsEmpty() {
+		// Inline the StatementsDoc loop so we append items directly to body
+		// instead of nesting another Concat.
+		for i, statement := range b.Statements {
+			body = append(body, prettier.HardLine{})
+			if i > 0 && ctx.BlankLineBetween(b.Statements[i-1], statement) {
+				body = append(body, prettier.HardLine{})
+			}
+			body = append(body, docOrEmpty(statement, ctx))
+		}
+	}
+	if trailing != nil {
+		body = append(body, prettier.HardLine{}, trailing)
 	}
 
 	return prettier.Concat{
 		blockStartDoc,
-		prettier.Indent{
-			Doc: StatementsDoc(b.Statements),
-		},
+		prettier.Indent{Doc: body},
 		prettier.HardLine{},
 		blockEndDoc,
 	}
 }
 
-func StatementsDoc(statements []Statement) prettier.Doc {
+func StatementsDoc(ctx PrettyContext, statements []Statement) prettier.Doc {
 	var doc prettier.Concat
 
-	for _, statement := range statements {
-		doc = append(
-			doc,
-			prettier.HardLine{},
-			docOrEmpty(statement),
-		)
+	for i, statement := range statements {
+		doc = append(doc, prettier.HardLine{})
+		if i > 0 && ctx.BlankLineBetween(statements[i-1], statement) {
+			doc = append(doc, prettier.HardLine{})
+		}
+		doc = append(doc, docOrEmpty(statement, ctx))
 	}
 
 	return doc
@@ -167,14 +195,20 @@ func (b *FunctionBlock) EndPosition(common.MemoryGauge) Position {
 var preConditionsKeywordDoc = prettier.Text("pre")
 var postConditionsKeywordDoc = prettier.Text("post")
 
-func (b *FunctionBlock) Doc() prettier.Doc {
-	if b.IsEmpty() {
-		return blockEmptyDoc
+func (b *FunctionBlock) Doc(ctx PrettyContext) prettier.Doc {
+	hasPre := b.PreConditions != nil && !b.PreConditions.IsEmpty()
+	hasPost := b.PostConditions != nil && !b.PostConditions.IsEmpty()
+
+	// Without pre/post conditions, delegate to Block.Doc which handles
+	// empty-with-comments correctly (e.g., `{ // note }` keeps the comment
+	// inside the braces).
+	if !hasPre && !hasPost {
+		return ctx.Wrap(b, b.Block.Doc(ctx))
 	}
 
 	var conditionDocs []prettier.Doc
 
-	if conditionsDoc := b.PreConditions.Doc(preConditionsKeywordDoc); conditionsDoc != nil {
+	if conditionsDoc := b.PreConditions.Doc(ctx, preConditionsKeywordDoc); conditionsDoc != nil {
 		conditionDocs = append(
 			conditionDocs,
 			prettier.HardLine{},
@@ -182,7 +216,7 @@ func (b *FunctionBlock) Doc() prettier.Doc {
 		)
 	}
 
-	if conditionsDoc := b.PostConditions.Doc(postConditionsKeywordDoc); conditionsDoc != nil {
+	if conditionsDoc := b.PostConditions.Doc(ctx, postConditionsKeywordDoc); conditionsDoc != nil {
 		conditionDocs = append(
 			conditionDocs,
 			prettier.HardLine{},
@@ -190,29 +224,29 @@ func (b *FunctionBlock) Doc() prettier.Doc {
 		)
 	}
 
-	var bodyDoc prettier.Doc
+	// Take inner Block's own comments so they render inside the function-block
+	// braces (alongside conditions/statements) instead of being orphaned.
+	blockLeading, _, blockTrailing := ctx.Take(b.Block)
 
-	statementsDoc := StatementsDoc(b.Block.Statements)
-
-	if len(conditionDocs) > 0 {
-		bodyConcatDoc := prettier.Concat(conditionDocs)
-		bodyConcatDoc = append(
-			bodyConcatDoc,
-			statementsDoc,
-		)
-		bodyDoc = bodyConcatDoc
-	} else {
-		bodyDoc = statementsDoc
+	bodyDoc := prettier.Concat(conditionDocs)
+	if blockLeading != nil {
+		bodyDoc = append(bodyDoc, prettier.HardLine{}, blockLeading)
+	}
+	if !b.Block.IsEmpty() {
+		bodyDoc = append(bodyDoc, StatementsDoc(ctx, b.Block.Statements))
+	}
+	if blockTrailing != nil {
+		bodyDoc = append(bodyDoc, prettier.HardLine{}, blockTrailing)
 	}
 
-	return prettier.Concat{
+	return ctx.Wrap(b, prettier.Concat{
 		blockStartDoc,
 		prettier.Indent{
 			Doc: bodyDoc,
 		},
 		prettier.HardLine{},
 		blockEndDoc,
-	}
+	})
 }
 
 func (b *FunctionBlock) String() string {
@@ -234,7 +268,7 @@ type Condition interface {
 	Element
 	isCondition()
 	CodeElement() Element
-	Doc() prettier.Doc
+	Doc(ctx PrettyContext) prettier.Doc
 	HasPosition
 }
 
@@ -288,13 +322,18 @@ func (c TestCondition) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (c TestCondition) Doc() prettier.Doc {
-	doc := docOrEmpty(c.Test)
+func (c TestCondition) Doc(ctx PrettyContext) prettier.Doc {
+	doc := docOrEmpty(c.Test, ctx)
 
 	if c.Message != nil {
-		messageDoc := c.Message.Doc()
+		messageDoc := c.Message.Doc(ctx)
 
-		doc = prettier.Concat{
+		// No outer Group around `test : message`: the Indent{HardLine, message}
+		// would make the Group's "fits" check trivially succeed at the HardLine
+		// and force-flatten nested expressions in `test` (e.g., long binary
+		// expressions). The test's own Doc (e.g., BinaryExpression.Doc) handles
+		// its own break decisions.
+		return ctx.Wrap(c, prettier.Concat{
 			doc,
 			prettier.Text(":"),
 			prettier.Indent{
@@ -303,12 +342,10 @@ func (c TestCondition) Doc() prettier.Doc {
 					messageDoc,
 				},
 			},
-		}
+		})
 	}
 
-	return prettier.Group{
-		Doc: doc,
-	}
+	return ctx.Wrap(c, doc)
 }
 
 // EmitCondition
@@ -331,8 +368,8 @@ func (c *EmitCondition) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return (*EmitStatement)(c).EndPosition(memoryGauge)
 }
 
-func (c *EmitCondition) Doc() prettier.Doc {
-	return (*EmitStatement)(c).Doc()
+func (c *EmitCondition) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(c, (*EmitStatement)(c).Doc(ctx))
 }
 
 func (c *EmitCondition) MarshalJSON() ([]byte, error) {
@@ -367,7 +404,7 @@ func (c *Conditions) IsEmpty() bool {
 	return c == nil || len(c.Conditions) == 0
 }
 
-func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
+func (c *Conditions) Doc(ctx PrettyContext, keywordDoc prettier.Doc) prettier.Doc {
 	if c.IsEmpty() {
 		return nil
 	}
@@ -378,21 +415,22 @@ func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
 		doc = append(
 			doc,
 			prettier.HardLine{},
-			docOrEmpty(condition),
+			docOrEmpty(condition, ctx),
 		)
 	}
 
-	return prettier.Group{
-		Doc: prettier.Concat{
-			keywordDoc,
-			prettier.Space,
-			blockStartDoc,
-			prettier.Indent{
-				Doc: doc,
-			},
-			prettier.HardLine{},
-			blockEndDoc,
+	// No outer Group: the block body contains HardLines, which would make
+	// the Group's "fits" check trivially succeed at the opening `{` and
+	// force-flatten nested expressions inside conditions.
+	return prettier.Concat{
+		keywordDoc,
+		prettier.Space,
+		blockStartDoc,
+		prettier.Indent{
+			Doc: doc,
 		},
+		prettier.HardLine{},
+		blockEndDoc,
 	}
 }
 

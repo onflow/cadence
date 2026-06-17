@@ -69,7 +69,7 @@ var moveTransferDoc prettier.Doc = prettier.Text("<-")
 var forceMoveTransferDoc prettier.Doc = prettier.Text("<-!")
 var noTransferDoc prettier.Doc = prettier.Text("$noTransfer")
 
-func (f Transfer) Doc() prettier.Doc {
+func (f Transfer) Doc(_ PrettyContext) prettier.Doc {
 	switch f.Operation {
 	case TransferOperationCopy:
 		return copyTransferDoc

@@ -34,7 +34,7 @@ func FuzzFormat(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Must not panic on any input
-		_, _ = formatter.Format(data, "fuzz.cdc", formatter.Default())
+		_, _ = formatter.Format(data, formatter.Default())
 	})
 }
 
@@ -44,14 +44,14 @@ func FuzzRoundtrip(f *testing.F) {
 	seedFromTestdata(f)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		first, err := formatter.Format(data, "fuzz.cdc", formatter.Default())
+		first, err := formatter.Format(data, formatter.Default())
 		if err != nil {
 			return // parse errors are fine
 		}
 
 		opts := formatter.Default()
 		opts.SkipVerify = true // already verified in first pass
-		second, err := formatter.Format(first, "fuzz.cdc", opts)
+		second, err := formatter.Format(first, opts)
 		if err != nil {
 			t.Fatalf("second format failed: %v", err)
 		}

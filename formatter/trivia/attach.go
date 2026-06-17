@@ -26,15 +26,22 @@ import (
 )
 
 // CommentMap binds comment groups to AST nodes by position class.
-// Take() removes and returns comments for a node — this ensures each
+// TakeRaw() removes and returns comments for a node — this ensures each
 // comment is emitted exactly once during rendering. After rendering,
 // the map should be empty; any leftovers indicate a bug.
+//
+// CommentMap also implements ast.PrettyContext, so it can be passed directly
+// to ast.Doc(ctx) and supply comment placement, blank-line preservation,
+// and header/footer rendering. The Take/HasComments/BlankLineBetween/Header/
+// Footer/Wrap methods (see render.go) are the PrettyContext implementation.
 type CommentMap struct {
-	Header   []*CommentGroup // before first declaration
-	Footer   []*CommentGroup // after last declaration
-	Leading  map[ast.Element][]*CommentGroup
-	Trailing map[ast.Element][]*CommentGroup
-	SameLine map[ast.Element]*CommentGroup // at most one per node
+	HeaderComments []*CommentGroup // before first declaration
+	FooterComments []*CommentGroup // after last declaration
+	Leading        map[ast.Element][]*CommentGroup
+	Trailing       map[ast.Element][]*CommentGroup
+	SameLine       map[ast.Element]*CommentGroup // at most one per node
+	Source         []byte                        // original source bytes, for blank-line detection
+	Semicolons     map[ast.Element]bool          // elements that had a trailing semicolon in source
 }
 
 // NewCommentMap creates an empty CommentMap with initialized maps.
@@ -46,8 +53,11 @@ func NewCommentMap() *CommentMap {
 	}
 }
 
-// Take removes and returns all comments associated with n.
-func (cm *CommentMap) Take(n ast.Element) (leading []*CommentGroup, sameLine *CommentGroup, trailing []*CommentGroup) {
+// TakeRaw removes and returns all comments associated with n as raw comment
+// groups. Use this when callers need to manipulate the groups directly;
+// renderers should use Take (the PrettyContext method) which returns
+// already-rendered prettier docs.
+func (cm *CommentMap) TakeRaw(n ast.Element) (leading []*CommentGroup, sameLine *CommentGroup, trailing []*CommentGroup) {
 	leading = cm.Leading[n]
 	delete(cm.Leading, n)
 	sameLine = cm.SameLine[n]
@@ -59,22 +69,22 @@ func (cm *CommentMap) Take(n ast.Element) (leading []*CommentGroup, sameLine *Co
 
 // TakeHeader removes and returns header comments.
 func (cm *CommentMap) TakeHeader() []*CommentGroup {
-	h := cm.Header
-	cm.Header = nil
+	h := cm.HeaderComments
+	cm.HeaderComments = nil
 	return h
 }
 
 // TakeFooter removes and returns footer comments.
 func (cm *CommentMap) TakeFooter() []*CommentGroup {
-	f := cm.Footer
-	cm.Footer = nil
+	f := cm.FooterComments
+	cm.FooterComments = nil
 	return f
 }
 
 // IsEmpty returns true if no comments remain in the map.
 func (cm *CommentMap) IsEmpty() bool {
-	return len(cm.Header) == 0 &&
-		len(cm.Footer) == 0 &&
+	return len(cm.HeaderComments) == 0 &&
+		len(cm.FooterComments) == 0 &&
 		len(cm.Leading) == 0 &&
 		len(cm.Trailing) == 0 &&
 		len(cm.SameLine) == 0
@@ -102,6 +112,7 @@ func (cm *CommentMap) OrphanDetails() string {
 // Attach walks the AST and binds comment groups to nodes by position.
 func Attach(program *ast.Program, groups []*CommentGroup, source []byte) *CommentMap {
 	cm := NewCommentMap()
+	cm.Source = source
 	if len(groups) == 0 {
 		return cm
 	}
@@ -115,8 +126,247 @@ func Attach(program *ast.Program, groups []*CommentGroup, source []byte) *Commen
 	remaining := attachLevel(cm, elements, groups, true, source)
 
 	// Anything left over is footer
-	cm.Footer = append(cm.Footer, remaining...)
+	cm.FooterComments = append(cm.FooterComments, remaining...)
+
+	// Post-process: hoist comments between a variable declaration's type
+	// annotation and its value to the leading position of the value. Without
+	// this, a `// comment` after the type annotation would render on the same
+	// line as the type, swallowing the `=` operator that follows.
+	hoistVarDeclTypeComments(cm, program)
+
+	// Post-process: hoist comments positionally inside `access(...)` parens
+	// to be trailing of the last entitlement, so they render inline rather
+	// than getting attached to the next AST element (e.g., TypeAnnotation).
+	hoistAccessInlineComments(cm, program, source)
+
+	// Post-process: hoist comments positionally after the opening `{` of a
+	// composite/interface body that got attached as trailing of the last
+	// conformance type. These comments are inside the body and should render
+	// as leading of the first member.
+	hoistConformanceBodyComments(cm, program, source)
 	return cm
+}
+
+// hoistConformanceBodyComments walks each composite/interface declaration
+// with conformances and a non-empty body. If the last conformance has a
+// trailing comment whose position is past the opening `{` of the body, that
+// comment is actually inside the body — move it to leading of the first
+// member.
+func hoistConformanceBodyComments(cm *CommentMap, program *ast.Program, source []byte) {
+	if len(source) == 0 {
+		return
+	}
+	ast.Inspect(program, func(node ast.Element) bool {
+		var conformances []*ast.NominalType
+		var members *ast.Members
+		switch d := node.(type) {
+		case *ast.CompositeDeclaration:
+			conformances = d.Conformances
+			members = d.Members
+		case *ast.InterfaceDeclaration:
+			conformances = d.Conformances
+			members = d.Members
+		default:
+			return true
+		}
+		if len(conformances) == 0 || members == nil {
+			return true
+		}
+		decls := members.Declarations()
+		if len(decls) == 0 {
+			return true
+		}
+		lastConf := conformances[len(conformances)-1]
+		trailing := cm.Trailing[lastConf]
+		if len(trailing) == 0 {
+			return true
+		}
+		// Find the opening `{` byte after the last conformance.
+		startScan := lastConf.EndPosition(nil).Offset + 1
+		braceOffset := -1
+		for i := startScan; i < len(source); i++ {
+			if source[i] == '{' {
+				braceOffset = i
+				break
+			}
+		}
+		if braceOffset < 0 {
+			return true
+		}
+		// Partition trailing comments: those past `{` go to leading of first member.
+		keep := trailing[:0]
+		var hoisted []*CommentGroup
+		for _, g := range trailing {
+			if g.StartPos().Offset > braceOffset {
+				hoisted = append(hoisted, g)
+			} else {
+				keep = append(keep, g)
+			}
+		}
+		if len(hoisted) == 0 {
+			return true
+		}
+		if len(keep) == 0 {
+			delete(cm.Trailing, lastConf)
+		} else {
+			cm.Trailing[lastConf] = keep
+		}
+		firstMember := decls[0]
+		cm.Leading[firstMember] = append(hoisted, cm.Leading[firstMember]...)
+		return true
+	})
+}
+
+// hoistAccessInlineComments walks each declaration with an access modifier,
+// finds the closing `)` of `access(...)` in the source, and moves any
+// comment whose start offset falls between the last entitlement's end and
+// the `)` to be trailing of that last entitlement. Without this, comments
+// like `access(A /* note */) let x` would attach to the next AST element
+// (the TypeAnnotation, etc.) due to the deliberate exclusion of entitlement
+// children in getChildren.
+func hoistAccessInlineComments(cm *CommentMap, program *ast.Program, source []byte) {
+	if len(source) == 0 {
+		return
+	}
+	ast.Inspect(program, func(node ast.Element) bool {
+		decl, ok := node.(ast.Declaration)
+		if !ok {
+			return true
+		}
+		access := decl.DeclarationAccess()
+		if access == nil {
+			return true
+		}
+		// Find the last entitlement element.
+		var lastEntitlement ast.Element
+		access.Walk(func(child ast.Element) {
+			if child != nil {
+				lastEntitlement = child
+			}
+		})
+		if lastEntitlement == nil {
+			return true
+		}
+		// Scan forward from the last entitlement's end position to find the
+		// closing `)` of the access modifier.
+		startScan := lastEntitlement.EndPosition(nil).Offset + 1
+		closeOffset := -1
+		for i := startScan; i < len(source); i++ {
+			if source[i] == ')' {
+				closeOffset = i
+				break
+			}
+		}
+		if closeOffset < 0 {
+			return true
+		}
+		// Iterate the declaration's direct children's leading-comment maps and
+		// hoist any comment positionally inside (lastEntitlement.End, closeOffset).
+		decl.Walk(func(child ast.Element) {
+			if child == nil {
+				return
+			}
+			groups := cm.Leading[child]
+			if len(groups) == 0 {
+				return
+			}
+			keep := groups[:0]
+			var hoisted []*CommentGroup
+			for _, g := range groups {
+				gStart := g.StartPos().Offset
+				if gStart > lastEntitlement.EndPosition(nil).Offset && gStart < closeOffset {
+					hoisted = append(hoisted, g)
+				} else {
+					keep = append(keep, g)
+				}
+			}
+			if len(hoisted) > 0 {
+				if len(keep) == 0 {
+					delete(cm.Leading, child)
+				} else {
+					cm.Leading[child] = keep
+				}
+				// Place the first hoisted comment in the same-line slot so it
+				// renders inline (e.g., `access(A  /* note */)`). Any additional
+				// hoisted comments go to trailing.
+				for _, g := range hoisted {
+					if cm.SameLine[lastEntitlement] == nil {
+						cm.SameLine[lastEntitlement] = g
+					} else {
+						cm.Trailing[lastEntitlement] = append(cm.Trailing[lastEntitlement], g)
+					}
+				}
+			}
+		})
+		return true
+	})
+}
+
+// hoistVarDeclTypeComments walks the program and, for every VariableDeclaration
+// that has both a type annotation and a value, moves any trailing or same-line
+// comment attached to the type annotation to the leading-comment slot of the
+// value. This keeps the comment on its own line between `: T` and `= value`.
+// It also hoists trailing comments on an invocation's InvokedExpression to the
+// leading of the first argument when those comments fall after the opening
+// paren (between `func(` and the first argument).
+func hoistVarDeclTypeComments(cm *CommentMap, program *ast.Program) {
+	ast.Inspect(program, func(node ast.Element) bool {
+		switch d := node.(type) {
+		case *ast.VariableDeclaration:
+			if d.TypeAnnotation != nil && d.Value != nil {
+				// Move trailing first, then same-line, so the resulting
+				// leading order matches source order (same-line was before
+				// trailing in source).
+				cm.MoveTrailingToLeading(d.TypeAnnotation, d.Value)
+				cm.MoveSameLineToLeading(d.TypeAnnotation, d.Value)
+			}
+		case *ast.PragmaDeclaration:
+			// Comments inside an empty pragma `#()` get attached to the
+			// VoidExpression. They'd render between `#` and `()`, producing
+			// invalid Cadence. Hoist them to trailing of the pragma itself.
+			if _, isVoid := d.Expression.(*ast.VoidExpression); isVoid {
+				lead, same, trail := cm.TakeRaw(d.Expression)
+				if same != nil {
+					cm.Trailing[d] = append(cm.Trailing[d], same)
+				}
+				cm.Trailing[d] = append(cm.Trailing[d], lead...)
+				cm.Trailing[d] = append(cm.Trailing[d], trail...)
+			}
+		case *ast.InvocationExpression:
+			// Comments attached as trailing to the InvokedExpression that
+			// fall after the opening paren (i.e., inside the argument list)
+			// belong to the first argument's leading position.
+			if len(d.Arguments) == 0 {
+				return true
+			}
+			invoked := d.InvokedExpression
+			trailing := cm.Trailing[invoked]
+			if len(trailing) == 0 {
+				return true
+			}
+			parenOffset := d.ArgumentsStartPos.Offset
+			keep := trailing[:0]
+			var hoist []*CommentGroup
+			for _, g := range trailing {
+				if g.StartPos().Offset > parenOffset {
+					hoist = append(hoist, g)
+				} else {
+					keep = append(keep, g)
+				}
+			}
+			if len(hoist) == 0 {
+				return true
+			}
+			if len(keep) == 0 {
+				delete(cm.Trailing, invoked)
+			} else {
+				cm.Trailing[invoked] = keep
+			}
+			firstArg := d.Arguments[0]
+			cm.Leading[firstArg] = append(hoist, cm.Leading[firstArg]...)
+		}
+		return true
+	})
 }
 
 // attachLevel distributes comment groups among a sequence of sibling elements.
@@ -129,7 +379,7 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 
 	if len(siblings) == 0 {
 		if isTopLevel {
-			cm.Header = append(cm.Header, groups...)
+			cm.HeaderComments = append(cm.HeaderComments, groups...)
 			return nil
 		}
 		return groups
@@ -146,7 +396,7 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 			isLastBefore := nextGi >= len(groups) || groups[nextGi].EndPos().Offset >= firstStart.Offset
 
 			if !isLastBefore || blankLineBetween(groups[gi].EndPos(), firstStart) {
-				cm.Header = append(cm.Header, groups[gi])
+				cm.HeaderComments = append(cm.HeaderComments, groups[gi])
 			} else {
 				cm.Leading[siblings[0]] = append(cm.Leading[siblings[0]], groups[gi])
 			}
@@ -298,9 +548,10 @@ func trueEndPosition(reportedEnd ast.Position, source []byte) ast.Position {
 // getChildren returns the direct children of an AST element, sorted by position.
 // Children from access modifier entitlement types are excluded so that comments
 // between the access modifier and the declaration keyword are not misclassified
-// as trailing on the NominalType inside access(X).
+// as trailing on the NominalType inside access(X). Comments that fall
+// positionally inside `access(...)` are handled by hoistAccessInlineComments
+// at post-attach time.
 func getChildren(node ast.Element) []ast.Element {
-	// Collect elements from the access modifier so we can exclude them.
 	excluded := map[ast.Element]bool{}
 	if decl, ok := node.(ast.Declaration); ok {
 		access := decl.DeclarationAccess()

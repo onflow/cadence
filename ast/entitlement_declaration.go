@@ -105,13 +105,13 @@ func (d *EntitlementDeclaration) MarshalJSON() ([]byte, error) {
 
 var entitlementKeywordSpaceDoc = prettier.Text("entitlement ")
 
-func (d *EntitlementDeclaration) Doc() prettier.Doc {
+func (d *EntitlementDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 	var doc prettier.Concat
 
 	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			docOrEmpty(d.Access),
+			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 		)
 	}
@@ -122,9 +122,9 @@ func (d *EntitlementDeclaration) Doc() prettier.Doc {
 		prettier.Text(d.Identifier.Identifier),
 	)
 
-	return prettier.Group{
+	return ctx.Wrap(d, prettier.Group{
 		Doc: doc,
-	}
+	})
 }
 
 func (d *EntitlementDeclaration) String() string {
@@ -134,7 +134,7 @@ func (d *EntitlementDeclaration) String() string {
 type EntitlementMapElement interface {
 	isEntitlementMapElement()
 	Walk(walkChild func(Element))
-	Doc() prettier.Doc
+	Doc(ctx PrettyContext) prettier.Doc
 }
 
 type EntitlementMapRelation struct {
@@ -157,16 +157,20 @@ func NewEntitlementMapRelation(
 	}
 }
 
-var arrowKeywordSpaceDoc = prettier.Text(" -> ")
+var arrowKeywordDoc = prettier.Text("->")
 
 func (*EntitlementMapRelation) isEntitlementMapElement() {}
 
-func (d *EntitlementMapRelation) Doc() prettier.Doc {
-	return prettier.Concat{
-		docOrEmpty(d.Input),
-		arrowKeywordSpaceDoc,
-		docOrEmpty(d.Output),
+func (d *EntitlementMapRelation) Doc(ctx PrettyContext) prettier.Doc {
+	parts := prettier.Concat{}
+	if d.Input != nil {
+		parts = append(parts, d.Input.Doc(ctx))
 	}
+	parts = append(parts, prettier.Space, arrowKeywordDoc)
+	if d.Output != nil {
+		parts = append(parts, prettier.Space, d.Output.Doc(ctx))
+	}
+	return parts
 }
 
 func (d *EntitlementMapRelation) Walk(walkChild func(Element)) {
@@ -288,16 +292,28 @@ var includeKeywordSpaceDoc = prettier.Text("include ")
 var mappingStartDoc prettier.Doc = prettier.Text("{")
 var mappingEndDoc prettier.Doc = prettier.Text("}")
 
-func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
-	var doc prettier.Concat
+func (d *EntitlementMappingDeclaration) Doc(ctx PrettyContext) prettier.Doc {
+	// Wrap only the header (access + entitlement + mapping + name) in a Group
+	// so the access modifier's soft-break decision is independent of the body.
+	// The body block has HardLines which would make any wrapping Group's
+	// "fits" check trivially succeed at `{`, force-flattening everything
+	// inside.
+	var headerDoc prettier.Concat
 
 	if d.Access != AccessNotSpecified {
-		doc = append(
-			doc,
-			docOrEmpty(d.Access),
+		headerDoc = append(
+			headerDoc,
+			docOrEmpty(d.Access, ctx),
 			prettier.Line{},
 		)
 	}
+
+	headerDoc = append(
+		headerDoc,
+		entitlementKeywordSpaceDoc,
+		mappingKeywordSpaceDoc,
+		prettier.Text(d.Identifier.Identifier),
+	)
 
 	var elementsDocs prettier.Concat
 
@@ -308,12 +324,12 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		if _, isNominalType := element.(*NominalType); isNominalType {
 			elementDoc = prettier.Concat{
 				includeKeywordSpaceDoc,
-				element.Doc(),
+				element.Doc(ctx),
 			}
 		} else if element == nil {
 			elementDoc = prettier.Text("")
 		} else {
-			elementDoc = element.Doc()
+			elementDoc = element.Doc(ctx)
 		}
 
 		elementsDocs = append(
@@ -322,27 +338,22 @@ func (d *EntitlementMappingDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	doc = append(
-		doc,
-		entitlementKeywordSpaceDoc,
-		mappingKeywordSpaceDoc,
-		prettier.Text(d.Identifier.Identifier),
+	return ctx.Wrap(d, prettier.Concat{
+		prettier.Group{Doc: headerDoc},
 		prettier.Space,
 		mappingStartDoc,
-		prettier.HardLine{},
 		prettier.Indent{
-			Doc: prettier.Join(
+			Doc: prettier.Concat{
 				prettier.HardLine{},
-				elementsDocs...,
-			),
+				prettier.Join(
+					prettier.HardLine{},
+					elementsDocs...,
+				),
+			},
 		},
 		prettier.HardLine{},
 		mappingEndDoc,
-	)
-
-	return prettier.Group{
-		Doc: doc,
-	}
+	})
 }
 
 func (d *EntitlementMappingDeclaration) String() string {

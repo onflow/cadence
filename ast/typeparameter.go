@@ -54,14 +54,14 @@ func (t *TypeParameter) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return t.Identifier.EndPosition(memoryGauge)
 }
 
-func (t *TypeParameter) Doc() prettier.Doc {
+func (t *TypeParameter) Doc(ctx PrettyContext) prettier.Doc {
 	var doc prettier.Doc = prettier.Text(t.Identifier.Identifier)
 
 	if t.TypeBound != nil {
 		doc = prettier.Concat{
 			doc,
 			typeSeparatorSpaceDoc,
-			t.TypeBound.Doc(),
+			t.TypeBound.Doc(ctx),
 		}
 	}
 

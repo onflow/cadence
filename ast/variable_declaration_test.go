@@ -168,39 +168,33 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 		}
 
 		require.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("access(all)"),
-					prettier.Line{},
-					prettier.Text("let"),
-					prettier.Space,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("let"),
+						prettier.Space,
+					},
+				},
+				prettier.Concat{
 					prettier.Group{
 						Doc: prettier.Concat{
-							prettier.Group{
-								Doc: prettier.Concat{
-									prettier.Text("foo"),
-									prettier.Text(": "),
-									prettier.Concat{
-										prettier.Text("@"),
-										prettier.Text("AB"),
-									},
-								},
-							},
-							prettier.Space,
-							prettier.Text("<-"),
-							prettier.Group{
-								Doc: prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.Line{},
-										prettier.Text("true"),
-									},
-								},
+							prettier.Text("foo"),
+							prettier.Text(": "),
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("AB"),
 							},
 						},
 					},
+					prettier.Space,
+					prettier.Text("<-"),
+					prettier.Space,
+					prettier.Text("true"),
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -237,43 +231,43 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 		}
 
 		require.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("access(all)"),
-					prettier.Line{},
-					prettier.Text("let"),
-					prettier.Space,
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("let"),
+						prettier.Space,
+					},
+				},
+				prettier.Concat{
 					prettier.Group{
 						Doc: prettier.Concat{
-							prettier.Group{
-								Doc: prettier.Concat{
-									prettier.Text("foo"),
-									prettier.Text(": "),
-									prettier.Concat{
-										prettier.Text("@"),
-										prettier.Text("AB"),
-									},
-								},
+							prettier.Text("foo"),
+							prettier.Text(": "),
+							prettier.Concat{
+								prettier.Text("@"),
+								prettier.Text("AB"),
 							},
-							prettier.Group{
-								Doc: prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.Line{},
-										prettier.Text("<-"),
-										prettier.Space,
-										prettier.Text("true"),
-										prettier.Line{},
-										prettier.Text("<-"),
-										prettier.Space,
-										prettier.Text("false"),
-									},
-								},
+						},
+					},
+					prettier.Group{
+						Doc: prettier.Indent{
+							Doc: prettier.Concat{
+								prettier.Line{},
+								prettier.Text("<-"),
+								prettier.Space,
+								prettier.Text("true"),
+								prettier.Line{},
+								prettier.Text("<-"),
+								prettier.Space,
+								prettier.Text("false"),
 							},
 						},
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -290,32 +284,26 @@ func TestVariableDeclaration_Doc(t *testing.T) {
 		}
 
 		require.Equal(t,
-			prettier.Group{
-				Doc: prettier.Concat{
-					prettier.Text("let"),
-					prettier.Space,
-					prettier.Group{
-						Doc: prettier.Concat{
-							prettier.Group{
-								Doc: prettier.Concat{
-									prettier.Text("foo"),
-								},
-							},
-							prettier.Space,
-							prettier.Text(""),
-							prettier.Group{
-								Doc: prettier.Indent{
-									Doc: prettier.Concat{
-										prettier.Line{},
-										prettier.Text(""),
-									},
-								},
-							},
-						},
+			prettier.Concat{
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("let"),
+						prettier.Space,
 					},
 				},
+				prettier.Concat{
+					prettier.Group{
+						Doc: prettier.Concat{
+							prettier.Text("foo"),
+						},
+					},
+					prettier.Space,
+					prettier.Text(""),
+					prettier.Space,
+					prettier.Text(""),
+				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 }

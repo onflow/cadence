@@ -129,7 +129,7 @@ func TestArgument_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Text("false"),
-			argument.Doc(),
+			argument.Doc(NopContext{}),
 		)
 	})
 
@@ -150,7 +150,7 @@ func TestArgument_Doc(t *testing.T) {
 				prettier.Text("ok: "),
 				prettier.Text("false"),
 			},
-			argument.Doc(),
+			argument.Doc(NopContext{}),
 		)
 	})
 
@@ -163,7 +163,7 @@ func TestArgument_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Text(""),
-			argument.Doc(),
+			argument.Doc(NopContext{}),
 		)
 	})
 
@@ -181,7 +181,7 @@ func TestArgument_Doc(t *testing.T) {
 				prettier.Text("ok: "),
 				prettier.Text(""),
 			},
-			argument.Doc(),
+			argument.Doc(NopContext{}),
 		)
 	})
 }

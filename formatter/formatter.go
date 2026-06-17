@@ -26,8 +26,6 @@ import (
 
 	"github.com/turbolent/prettier"
 
-	"github.com/onflow/cadence/ast"
-	"github.com/onflow/cadence/formatter/render"
 	"github.com/onflow/cadence/formatter/rewrite"
 	"github.com/onflow/cadence/formatter/trivia"
 	"github.com/onflow/cadence/formatter/verify"
@@ -45,7 +43,7 @@ var (
 
 // Format parses Cadence source and returns deterministically formatted output.
 // filename is used for diagnostics only; the file need not exist on disk.
-func Format(src []byte, filename string, opts Options) ([]byte, error) {
+func Format(src []byte, opts Options) ([]byte, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}
@@ -67,12 +65,12 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 
 	indent := strings.Repeat(opts.IndentCharacter, opts.IndentCount)
 
-	// Render AST with interleaved comments
-	var semicolons map[ast.Element]bool
+	// Render AST with interleaved comments. The CommentMap implements
+	// ast.PrettyContext so it can be passed directly to Doc().
 	if !opts.StripSemicolons {
-		semicolons = trivia.ScanSemicolons(src, program)
+		cm.Semicolons = trivia.ScanSemicolons(src, program)
 	}
-	doc := render.Program(program, cm, src, semicolons)
+	doc := program.Doc(cm)
 
 	var buf bytes.Buffer
 	prettier.Prettier(&buf, doc, opts.LineWidth, indent)
@@ -81,6 +79,14 @@ func Format(src []byte, filename string, opts Options) ([]byte, error) {
 		rejoinStringInterpolations(stripTrailingLineWhitespace(buf.Bytes())),
 		opts.KeepBlankLines,
 	)
+
+	// Ensure trailing newline at end of file.
+	if len(result) > 0 {
+		last := result[len(result)-1]
+		if last != '\n' {
+			result = append(result, '\n')
+		}
+	}
 
 	// Verify no orphaned comments remain
 	if !cm.IsEmpty() {

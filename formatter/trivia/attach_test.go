@@ -53,11 +53,11 @@ access(all) fun main() {}
 	program, cm := attachComments(t, source)
 	decls := program.Declarations()
 
-	if len(cm.Header) != 1 {
-		t.Fatalf("expected 1 header group, got %d", len(cm.Header))
+	if len(cm.HeaderComments) != 1 {
+		t.Fatalf("expected 1 header group, got %d", len(cm.HeaderComments))
 	}
-	if cm.Header[0].Comments[0].Text != "// copyright 2024" {
-		t.Errorf("header text = %q", cm.Header[0].Comments[0].Text)
+	if cm.HeaderComments[0].Comments[0].Text != "// copyright 2024" {
+		t.Errorf("header text = %q", cm.HeaderComments[0].Comments[0].Text)
 	}
 
 	// No leading on the function (header is separated by blank line)
@@ -75,8 +75,8 @@ func TestAttach_FileFooter(t *testing.T) {
 	program, cm := attachComments(t, source)
 	decls := program.Declarations()
 
-	if len(cm.Footer) != 0 {
-		t.Errorf("expected no footer, got %d", len(cm.Footer))
+	if len(cm.FooterComments) != 0 {
+		t.Errorf("expected no footer, got %d", len(cm.FooterComments))
 	}
 	trailing := cm.Trailing[decls[0]]
 	if len(trailing) != 1 {
@@ -95,11 +95,11 @@ func TestAttach_FooterWithBlankLine(t *testing.T) {
 `
 	_, cm := attachComments(t, source)
 
-	if len(cm.Footer) != 1 {
-		t.Fatalf("expected 1 footer group, got %d", len(cm.Footer))
+	if len(cm.FooterComments) != 1 {
+		t.Fatalf("expected 1 footer group, got %d", len(cm.FooterComments))
 	}
-	if cm.Footer[0].Comments[0].Text != "// footer comment" {
-		t.Errorf("footer text = %q", cm.Footer[0].Comments[0].Text)
+	if cm.FooterComments[0].Comments[0].Text != "// footer comment" {
+		t.Errorf("footer text = %q", cm.FooterComments[0].Comments[0].Text)
 	}
 }
 
@@ -110,8 +110,8 @@ access(all) fun main() {}
 	program, cm := attachComments(t, source)
 	decls := program.Declarations()
 
-	if len(cm.Header) != 0 {
-		t.Errorf("expected no header, got %d", len(cm.Header))
+	if len(cm.HeaderComments) != 0 {
+		t.Errorf("expected no header, got %d", len(cm.HeaderComments))
 	}
 
 	leading := cm.Leading[decls[0]]
@@ -204,8 +204,8 @@ access(all) fun main() {}
 	program, cm := attachComments(t, source)
 	decls := program.Declarations()
 
-	if len(cm.Header) != 1 {
-		t.Fatalf("expected 1 header group, got %d", len(cm.Header))
+	if len(cm.HeaderComments) != 1 {
+		t.Fatalf("expected 1 header group, got %d", len(cm.HeaderComments))
 	}
 
 	leading := cm.Leading[decls[0]]
@@ -226,11 +226,11 @@ func TestAttach_InsideFunctionBody(t *testing.T) {
 
 	// The comment should be attached somewhere inside the function
 	// Verify it's not at the top level
-	if len(cm.Header) != 0 {
-		t.Errorf("expected no header, got %d", len(cm.Header))
+	if len(cm.HeaderComments) != 0 {
+		t.Errorf("expected no header, got %d", len(cm.HeaderComments))
 	}
-	if len(cm.Footer) != 0 {
-		t.Errorf("expected no footer, got %d", len(cm.Footer))
+	if len(cm.FooterComments) != 0 {
+		t.Errorf("expected no footer, got %d", len(cm.FooterComments))
 	}
 	if len(cm.Leading[decls[0]]) != 0 {
 		t.Errorf("expected no leading on function, got %d", len(cm.Leading[decls[0]]))
@@ -272,7 +272,7 @@ access(all) fun other() {}
 	program, cm := attachComments(t, source)
 	decls := program.Declarations()
 
-	leading, sameLine, trailing := cm.Take(decls[0])
+	leading, sameLine, trailing := cm.TakeRaw(decls[0])
 
 	if len(leading) != 1 {
 		t.Errorf("Take leading: got %d, want 1", len(leading))
@@ -285,7 +285,7 @@ access(all) fun other() {}
 	}
 
 	// After Take, the node should have no comments
-	leading2, sameLine2, trailing2 := cm.Take(decls[0])
+	leading2, sameLine2, trailing2 := cm.TakeRaw(decls[0])
 	if len(leading2) != 0 || sameLine2 != nil || len(trailing2) != 0 {
 		t.Error("Take should return nothing on second call")
 	}
@@ -305,8 +305,8 @@ access(all) fun b() {}
 	program, cm := attachComments(t, source)
 	decls := program.Declarations()
 
-	if len(cm.Header) != 1 {
-		t.Errorf("header: got %d, want 1", len(cm.Header))
+	if len(cm.HeaderComments) != 1 {
+		t.Errorf("header: got %d, want 1", len(cm.HeaderComments))
 	}
 
 	if len(cm.Leading[decls[0]]) != 1 {
@@ -321,8 +321,8 @@ access(all) fun b() {}
 		t.Errorf("leading on b: got %d, want 1", len(cm.Leading[decls[1]]))
 	}
 
-	if len(cm.Footer) != 1 {
-		t.Errorf("footer: got %d, want 1", len(cm.Footer))
+	if len(cm.FooterComments) != 1 {
+		t.Errorf("footer: got %d, want 1", len(cm.FooterComments))
 	}
 }
 

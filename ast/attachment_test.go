@@ -158,17 +158,13 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 						Doc: prettier.Concat{
 							prettier.Line{},
 							prettier.Text("Baz"),
-							prettier.Dedent{
-								Doc: prettier.Concat{
-									prettier.Line{},
-									prettier.Text("{}"),
-								},
-							},
 						},
 					},
 				},
+				prettier.Space,
+				prettier.Text("{}"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -193,7 +189,7 @@ func TestAttachmentDeclaration_Doc(t *testing.T) {
 				prettier.Space,
 				prettier.Text("{}"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 }
@@ -498,7 +494,7 @@ func TestAttachExpression_Doc(t *testing.T) {
 				prettier.Space,
 				prettier.Text("foo"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -518,7 +514,7 @@ func TestAttachExpression_Doc(t *testing.T) {
 				prettier.Space,
 				prettier.Text(""),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 }
@@ -690,7 +686,7 @@ func TestRemoveStatement_Doc(t *testing.T) {
 				prettier.Space,
 				prettier.Text("baz"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -713,7 +709,7 @@ func TestRemoveStatement_Doc(t *testing.T) {
 				prettier.Space,
 				prettier.Text(""),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 }
