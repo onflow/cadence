@@ -482,6 +482,11 @@
 - name: "wrap"
   description: |
     Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+    If `skipIfOptional` is set, the value is left unchanged if it is already an optional
+    (used for optional-chaining member access, which flattens nested optionals).
+  operands:
+    - name: "skipIfOptional"
+      type: "bool"
   valueEffects:
     pop:
       - name: "value"

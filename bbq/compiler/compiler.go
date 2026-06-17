@@ -3061,6 +3061,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 					hasImplicitArgument,
 				)
 			},
+
 			true,
 		)
 	}
@@ -3122,10 +3123,24 @@ func (c *Compiler[_, _]) patchOptionalChainingNilJump(
 		return
 	}
 
-	if isMethodInvocation {
-		// Wrap the result back with an optional, if `memberAccessInfo.IsOptional`
-		c.emit(opcode.InstructionWrap{})
-	}
+	// For an optional-chaining invocation, the result is ALWAYS wrapped.
+	// Unlike member access, invocation does not flatten nested optionals:
+	// the checker types `a?.foo()` as `(returnType)?` via `wrapWithOptionalIfNotNil`,
+	// which adds an optional layer regardless of whether `returnType` is already optional
+	// (e.g. `a?.foo()` with `foo(): T?` is typed `T??`).
+	// This matches the interpreter. See `Interpreter.visitInvocationExpressionWithImplicitArgument`.
+	//
+	// For optional-chaining member access (e.g: `s?.x`), the result is
+	// wrapped back into an optional, ONLY if it is NOT already an optional.
+	// i.e: the result must not be double-wrapped if it is already an optional.
+	//
+	// Whether the value is already an optional cannot always be decided statically.
+	// e.g: a member of a dynamic type (e.g: `AnyStruct`) may hold an optional value at runtime,
+	// even though its static type is not an optional.
+	// Therefore, defer the decision to runtime via `SkipIfOptional`.
+	c.emit(opcode.InstructionWrap{
+		SkipIfOptional: !isMethodInvocation,
+	})
 
 	// Jump to the end to skip the nil returning instructions.
 	jumpToEnd := c.emitUndefinedJump()

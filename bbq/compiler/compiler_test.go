@@ -8938,7 +8938,7 @@ func TestCompileOptionalChaining(t *testing.T) {
 
 				// Nil check
 				opcode.PrettyInstructionGetLocal{Local: tempIndex},
-				opcode.PrettyInstructionJumpIfNil{Target: 13},
+				opcode.PrettyInstructionJumpIfNil{Target: 14},
 
 				// If `foo != nil`
 				// Unwrap optional
@@ -8953,7 +8953,13 @@ func TestCompileOptionalChaining(t *testing.T) {
 					},
 					AccessedType: fooType,
 				},
-				opcode.PrettyInstructionJump{Target: 14},
+				// Wrap the result back into an optional, to match the optional
+				// result type of the chaining. `SkipIfOptional` is set so that an
+				// already-optional value is not double-wrapped (flattening).
+				opcode.PrettyInstructionWrap{
+					SkipIfOptional: true,
+				},
+				opcode.PrettyInstructionJump{Target: 15},
 
 				// If `foo == nil`
 				opcode.PrettyInstructionNil{},
