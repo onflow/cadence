@@ -1793,3 +1793,80 @@ func TestInterpretFunctionBeforePostConditionAndInheritedBeforePostCondition(t *
 		require.NoError(t, err)
 	}
 }
+
+func TestInterpretInheritedBeforeConditionWithRenamedParameter(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("different names, one has matching label", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int): Int {
+                  post {
+                      result == before(a) + 1
+                  }
+              }
+          }
+
+          struct S: I {
+              // Different parameter name "x". Label ("a") matches interface function's parameter name.
+              fun foo(a x: Int): Int {
+                  return x + 1
+              }
+          }
+
+          fun test(): Int {
+              let s = S()
+              return s.foo(a: 5)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(6),
+			value,
+		)
+	})
+
+	t.Run("different names, no labels", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(_ a: Int): Int {
+                  post {
+                      result == before(a) + 1
+                  }
+              }
+          }
+
+          struct S: I {
+              // Different parameter name "x". No label.
+              fun foo(_ x: Int): Int {
+                  return x + 1
+              }
+          }
+
+          fun test(): Int {
+              let s = S()
+              return s.foo(5)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(6),
+			value,
+		)
+	})
+}

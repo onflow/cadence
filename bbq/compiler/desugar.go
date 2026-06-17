@@ -514,8 +514,18 @@ func (d *Desugar) desugarPostConditions(
 
 			rewrittenBeforeStatements := inheritedFunc.rewrittenConditions.BeforeStatements
 			beforeStatements = append(beforeStatements, rewrittenBeforeStatements...)
+
+			// The before-statements are inherited code, so they may refer to the
+			// inherited function's parameters. Just like the conditions, they must be
+			// bound to the implementation's parameters (which may have different names),
+			// so the compiler can resolve those identifiers.
+			beforeStatementParamBinding := d.inheritedConditionParamBindings(parameterList, inheritedFunc)
+
 			for _, statement := range rewrittenBeforeStatements {
 				d.elaboration.inheritedCodeElaborations[statement] = inheritedFunc.elaboration
+				if beforeStatementParamBinding != nil {
+					d.inheritedConditionParamBinding[statement] = beforeStatementParamBinding
+				}
 			}
 
 			for _, condition := range inheritedFunc.rewrittenConditions.RewrittenPostConditions {
@@ -564,20 +574,37 @@ func (d *Desugar) desugarInheritedCondition(
 	// (Not in the inherited function's elaboration)
 	d.elaboration.inheritedCodeElaborations[desugaredCondition] = inheritedFunc.elaboration
 
-	if len(functionParams.Parameters) > 0 {
-		paramBinding := make(map[string]string)
-
-		inheritedFunctionParams := inheritedFunc.functionDecl.ParameterList
-		for i, parameter := range inheritedFunctionParams.Parameters {
-			currentFunctionParamName := functionParams.Parameters[i].Identifier.Identifier
-			inheritedFunctionParamName := parameter.Identifier.Identifier
-			paramBinding[inheritedFunctionParamName] = currentFunctionParamName
-		}
-
+	paramBinding := d.inheritedConditionParamBindings(functionParams, inheritedFunc)
+	if paramBinding != nil {
 		d.inheritedConditionParamBinding[desugaredCondition] = paramBinding
 	}
 
 	return desugaredCondition
+}
+
+// inheritedConditionParamBindings builds a mapping from the inherited function's
+// parameter names to the implementation's parameter names (matched by position).
+// This is used to rewrite identifiers in inherited code (conditions and the
+// `before`-statements they desugar to), so they refer to the implementation's
+// parameters even when the implementation uses different (internal) parameter names.
+func (d *Desugar) inheritedConditionParamBindings(
+	functionParams *ast.ParameterList,
+	inheritedFunc *inheritedFunction,
+) map[string]string {
+	if functionParams == nil || len(functionParams.Parameters) == 0 {
+		return nil
+	}
+
+	paramBinding := make(map[string]string)
+
+	inheritedFunctionParams := inheritedFunc.functionDecl.ParameterList
+	for i, parameter := range inheritedFunctionParams.Parameters {
+		currentFunctionParamName := functionParams.Parameters[i].Identifier.Identifier
+		inheritedFunctionParamName := parameter.Identifier.Identifier
+		paramBinding[inheritedFunctionParamName] = currentFunctionParamName
+	}
+
+	return paramBinding
 }
 
 func (d *Desugar) includeConditions(conditions *ast.Conditions) bool {
