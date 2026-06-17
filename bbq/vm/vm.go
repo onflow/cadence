@@ -1884,7 +1884,7 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 	typeIndex := ins.Type
 	typ := vm.loadType(typeIndex).(*interpreter.DictionaryStaticType)
 
-	entries := vm.peekN(int(ins.Size * 2))
+	entries := vm.peekN(int(ins.Size) * 2)
 	dictionary := interpreter.NewDictionaryValue(
 		vm.context,
 		typ,
@@ -1955,7 +1955,7 @@ func opDeref(vm *VM) {
 
 func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 	expressions := vm.popN(int(ins.ExprSize))
-	values := vm.popN(int(ins.ExprSize + 1))
+	values := vm.popN(int(ins.ExprSize) + 1)
 	var valuesStr []string
 
 	// convert values to string[]

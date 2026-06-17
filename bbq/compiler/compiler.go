@@ -3669,6 +3669,9 @@ func (c *Compiler[_, _]) VisitStringExpression(expression *ast.StringExpression)
 
 func (c *Compiler[_, _]) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) (_ struct{}) {
 	exprArrSize := len(expression.Expressions)
+	if exprArrSize >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid string template expression"))
+	}
 
 	for _, value := range expression.Values {
 		c.emitStringConst(value)
@@ -4714,6 +4717,20 @@ func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
 	// Get the index of the instruction to be emitted.
 	// This is the offset before emitting the current instruction.
 	instructionIndex := c.codeGen.Offset()
+
+	// The VM's instruction pointer and all jump targets are `uint16`,
+	// so every instruction must be addressable within the `uint16` range.
+	// If a function's code grows beyond this limit, the instruction pointer
+	// would wrap around at runtime, causing the function to never terminate.
+	// Constant-pool size, local count, and jump targets are already guarded
+	// elsewhere against `math.MaxUint16`; guard the instruction index here too.
+	if instructionIndex >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError(
+			"function %s is too large: instruction count exceeds the maximum of %d",
+			c.currentFunction.qualifiedName,
+			math.MaxUint16-1,
+		))
+	}
 
 	c.codeGen.Emit(instruction)
 
