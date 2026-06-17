@@ -38,7 +38,7 @@ func TestTypeParameter_Doc(t *testing.T) {
 
 		require.Equal(t,
 			prettier.Text("T"),
-			parameter.Doc(),
+			parameter.Doc(NopContext{}),
 		)
 
 	})
@@ -61,7 +61,7 @@ func TestTypeParameter_Doc(t *testing.T) {
 				prettier.Text(": "),
 				prettier.Text("U"),
 			},
-			parameter.Doc(),
+			parameter.Doc(NopContext{}),
 		)
 	})
 }

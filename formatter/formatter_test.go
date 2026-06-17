@@ -1,0 +1,755 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright Flow Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package formatter_test
+
+import (
+	"flag"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/onflow/cadence/formatter"
+	"github.com/onflow/cadence/formatter/trivia"
+	"github.com/onflow/cadence/formatter/verify"
+)
+
+const testdataRoot = "testdata"
+
+var update = flag.Bool("update", false, "update golden files")
+
+func TestSnapshot(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testdataRoot, "format")
+
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("reading testdata dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := filepath.Join(testdataDir, name)
+			inputPath := filepath.Join(dir, "input.cdc")
+			goldenPath := filepath.Join(dir, "golden.cdc")
+
+			input, err := os.ReadFile(inputPath)
+			if err != nil {
+				t.Fatalf("reading input: %v", err)
+			}
+
+			got, err := formatter.Format(input, formatter.Default())
+			if err != nil {
+				t.Fatalf("format error: %v", err)
+			}
+
+			if *update {
+				if err := os.WriteFile(goldenPath, got, 0644); err != nil {
+					t.Fatalf("writing golden: %v", err)
+				}
+				return
+			}
+
+			golden, err := os.ReadFile(goldenPath)
+			if err != nil {
+				t.Fatalf("reading golden (run with -update to create): %v", err)
+			}
+
+			if string(got) != string(golden) {
+				t.Errorf("output does not match golden.\n--- got ---\n%s\n--- golden ---\n%s",
+					string(got), string(golden))
+			}
+		})
+	}
+}
+
+func TestIdempotence(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testdataRoot, "format")
+
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("reading testdata dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := filepath.Join(testdataDir, name)
+			inputPath := filepath.Join(dir, "input.cdc")
+
+			input, err := os.ReadFile(inputPath)
+			if err != nil {
+				t.Fatalf("reading input: %v", err)
+			}
+
+			first, err := formatter.Format(input, formatter.Default())
+			if err != nil {
+				t.Fatalf("first format: %v", err)
+			}
+
+			second, err := formatter.Format(first, formatter.Default())
+			if err != nil {
+				t.Fatalf("second format: %v", err)
+			}
+
+			if string(first) != string(second) {
+				t.Errorf("not idempotent.\n--- first ---\n%s\n--- second ---\n%s",
+					string(first), string(second))
+			}
+		})
+	}
+}
+
+func TestRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testdataRoot, "format")
+
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("reading testdata dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := filepath.Join(testdataDir, name)
+			inputPath := filepath.Join(dir, "input.cdc")
+
+			input, err := os.ReadFile(inputPath)
+			if err != nil {
+				t.Fatalf("reading input: %v", err)
+			}
+
+			output, err := formatter.Format(input, formatter.Default())
+			if err != nil {
+				t.Fatalf("format error: %v", err)
+			}
+
+			if err := verify.RoundTrip(input, output); err != nil {
+				t.Errorf("round-trip failed: %v", err)
+			}
+		})
+	}
+}
+
+func TestCommentPreservation(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testdataRoot, "format")
+
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("reading testdata dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := filepath.Join(testdataDir, name)
+			inputPath := filepath.Join(dir, "input.cdc")
+
+			input, err := os.ReadFile(inputPath)
+			if err != nil {
+				t.Fatalf("reading input: %v", err)
+			}
+
+			output, err := formatter.Format(input, formatter.Default())
+			if err != nil {
+				t.Fatalf("format error: %v", err)
+			}
+
+			// Extract comment texts from input and output
+			inputComments := commentTexts(input)
+			outputComments := commentTexts(output)
+
+			if len(inputComments) == 0 {
+				return // no comments to check
+			}
+
+			// Compare as sorted multisets
+			sort.Strings(inputComments)
+			sort.Strings(outputComments)
+
+			if strings.Join(inputComments, "\n") != strings.Join(outputComments, "\n") {
+				t.Errorf("comment preservation failed.\ninput comments:  %v\noutput comments: %v",
+					inputComments, outputComments)
+			}
+		})
+	}
+}
+
+func TestKeepBlankLines_Zero(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun a() {}\n\n\naccess(all) fun b() {}\n")
+	opts := formatter.Default()
+	opts.KeepBlankLines = 0
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if strings.Contains(string(got), "\n\n") {
+		t.Errorf("expected no blank lines with KeepBlankLines=0, got:\n%s", got)
+	}
+}
+
+func TestKeepBlankLines_Two(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun a() {}\n\n\n\n\naccess(all) fun b() {}\n")
+	opts := formatter.Default()
+	opts.KeepBlankLines = 2
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if strings.Contains(string(got), "\n\n\n\n") {
+		t.Errorf("expected at most 2 blank lines with KeepBlankLines=2, got:\n%s", got)
+	}
+}
+
+func TestKeepBlankLines_Default(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun a() {}\n\n\n\n\naccess(all) fun b() {}\n")
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if strings.Contains(string(got), "\n\n\n") {
+		t.Errorf("expected at most 1 blank line with default options, got:\n%s", got)
+	}
+}
+
+func TestAccessModifierComment_FuzzCase(t *testing.T) {
+	t.Parallel()
+	src := []byte("contract A{access(A)event00(\nA\n//\n:A)}")
+	first, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("first format: %v", err)
+	}
+	second, err := formatter.Format(first, formatter.Default())
+	if err != nil {
+		t.Fatalf("second format: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Errorf("not idempotent.\n--- first ---\n%s\n--- second ---\n%s",
+			first, second)
+	}
+}
+
+func TestAccessModifierComment_ContractBody(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(A)contract A{A(//\n)}")
+	first, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("first format: %v", err)
+	}
+	second, err := formatter.Format(first, formatter.Default())
+	if err != nil {
+		t.Fatalf("second format: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Errorf("not idempotent.\n--- first ---\n%s\n--- second ---\n%s",
+			first, second)
+	}
+}
+
+// TestCommentInEmptyBlock guards against orphaned comments when a comment
+// is the only thing inside a block (no statements). The block's IsEmpty()
+// check used to shortcut to `{}` without consuming the inner comment,
+// causing an orphan-comments error.
+func TestCommentInEmptyBlock(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]struct {
+		src  string
+		want string
+	}{
+		"function body": {
+			src: "fun foo() {\n  // test\n}\n",
+			want: `fun foo() {
+    // test
+}
+`,
+		},
+		"nested if body": {
+			src: "fun foo() {\n  if true {\n    // test\n  }\n}\n",
+			want: `fun foo() {
+    if true {
+        // test
+    }
+}
+`,
+		},
+		"block comment in empty body": {
+			src: "fun foo() {\n  /* test */\n}\n",
+			want: `fun foo() {
+    /* test */
+}
+`,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got, err := formatter.Format([]byte(tc.src), formatter.Default())
+			if err != nil {
+				t.Fatalf("format: %v", err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestBinaryExpressionBreak guards against double-indenting (or no break at
+// all) when a binary-expression value is too long for one line. The expected
+// layout: left operand stays on the same line as the assignment operator,
+// and the binary operator + right operand wrap onto the next line at
+// 4-space continuation indent.
+func TestBinaryExpressionBreak(t *testing.T) {
+	t.Parallel()
+
+	src := []byte("fun foo() {\n  effectiveDebtTotalNamed = effectiveDebtTotalNamed + snapShot.effectiveDebt(debitBalance: trueBalance)\n}\n")
+	want := `fun foo() {
+    effectiveDebtTotalNamed = effectiveDebtTotalNamed
+        + snapShot.effectiveDebt(debitBalance: trueBalance)
+}
+`
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestConformanceBodyWrapping guards against the conformance Group wrapping
+// the body too — which caused the Group's "fits" check to trivially pass at
+// the opening `{`+HardLine, force-flattening all nested expressions inside
+// the body and preventing any wrapping no matter how long the lines.
+func TestConformanceBodyWrapping(t *testing.T) {
+	t.Parallel()
+
+	src := []byte(`resource R: Y {
+    fun f() {
+        callWithVeryVeryLongFunctionName(argumentOne: 1, argumentTwo: 2, argumentThree: 3, argumentFour: 4)
+    }
+}
+`)
+	want := `resource R: Y {
+    fun f() {
+        callWithVeryVeryLongFunctionName(
+            argumentOne: 1,
+            argumentTwo: 2,
+            argumentThree: 3,
+            argumentFour: 4
+        )
+    }
+}
+`
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestCommentInsideConformanceBody guards against a comment positionally
+// inside the body of a composite-with-conformances getting misattached as
+// trailing of the last conformance type, which would render before the
+// opening `{` and break syntax.
+func TestCommentInsideConformanceBody(t *testing.T) {
+	t.Parallel()
+
+	src := []byte("resource X: Y {\n        /// foo\n        var x: Y\n}\n")
+	want := `resource X: Y {
+    /// foo
+    var x: Y
+}
+`
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+// TestBinaryExpressionBreakInNestedBlock guards against a prettier "fits"
+// bug where the outer Group around a block-containing statement (for/while/
+// if/guard) would trivially fit at the opening `{`+HardLine, force-flattening
+// any nested binary expressions deep inside and suppressing their own break
+// decisions.
+func TestBinaryExpressionBreakInNestedBlock(t *testing.T) {
+	t.Parallel()
+
+	src := []byte(`fun bar() {
+    for a in b {
+        switch x {
+            case y:
+               z = 11111111111111111 + 11111111111111111 + 11111111111111111 + 11111111111111111 + 11 + 22
+        }
+    }
+}
+`)
+	want := `fun bar() {
+    for a in b {
+        switch x {
+            case y:
+                z = 11111111111111111 + 11111111111111111 + 11111111111111111 + 11111111111111111
+                    + 11
+                    + 22
+        }
+    }
+}
+`
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("mismatch.\n--- got ---\n%s\n--- want ---\n%s", got, want)
+	}
+}
+
+func TestStripSemicolons_Default(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) let x: Int = 1;\n")
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if strings.Contains(string(got), ";") {
+		t.Errorf("expected semicolons stripped by default, got:\n%s", got)
+	}
+}
+
+func TestStripSemicolons_False(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) let x: Int = 1;\n")
+	opts := formatter.Default()
+	opts.StripSemicolons = false
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), ";") {
+		t.Errorf("expected semicolons preserved with StripSemicolons=false, got:\n%s", got)
+	}
+}
+
+func TestStripSemicolons_Idempotent(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) let x: Int = 1;\n")
+	opts := formatter.Default()
+	opts.StripSemicolons = false
+	first, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("first format error: %v", err)
+	}
+	second, err := formatter.Format(first, opts)
+	if err != nil {
+		t.Fatalf("second format error: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Errorf("not idempotent with StripSemicolons=false.\n--- first ---\n%s\n--- second ---\n%s",
+			first, second)
+	}
+}
+
+func TestFormatVersion_Unsupported(t *testing.T) {
+	t.Parallel()
+	opts := formatter.Default()
+	opts.FormatVersion = "99"
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), opts)
+	if err == nil {
+		t.Fatal("expected error for unsupported format version")
+	}
+	if !strings.Contains(err.Error(), "unsupported format version") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestFormatVersion_Current(t *testing.T) {
+	t.Parallel()
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), formatter.Default())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// --- Indent option tests ---
+
+func TestIndent_Default(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), "\n    let x") {
+		t.Errorf("expected 4-space indent, got:\n%s", got)
+	}
+}
+
+func TestIndent_TwoSpaces(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	opts := formatter.Default()
+	opts.IndentCount = 2
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), "\n  let x") {
+		t.Errorf("expected 2-space indent, got:\n%s", got)
+	}
+	if strings.Contains(string(got), "\n    let x") {
+		t.Errorf("should not have 4-space indent, got:\n%s", got)
+	}
+}
+
+func TestIndent_ThreeSpaces(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	opts := formatter.Default()
+	opts.IndentCount = 3
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), "\n   let x") {
+		t.Errorf("expected 3-space indent, got:\n%s", got)
+	}
+}
+
+func TestIndent_Tabs(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	opts := formatter.Default()
+	opts.IndentCharacter = "\t"
+	opts.IndentCount = 1
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	if !strings.Contains(string(got), "\n\tlet x") {
+		t.Errorf("expected tab indent, got:\n%s", got)
+	}
+}
+
+func TestIndent_Idempotent(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main() {\nlet x = 1\n}\n")
+	opts := formatter.Default()
+	opts.IndentCount = 2
+	first, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("first format: %v", err)
+	}
+	second, err := formatter.Format(first, opts)
+	if err != nil {
+		t.Fatalf("second format: %v", err)
+	}
+	if string(first) != string(second) {
+		t.Errorf("not idempotent.\n--- first ---\n%s\n--- second ---\n%s", first, second)
+	}
+}
+
+func TestIndentCharacter_Invalid(t *testing.T) {
+	t.Parallel()
+	opts := formatter.Default()
+	opts.IndentCharacter = "x"
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), opts)
+	if err == nil {
+		t.Fatal("expected error for invalid IndentCharacter")
+	}
+	if !strings.Contains(err.Error(), "IndentCharacter") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestIndentCount_Zero(t *testing.T) {
+	t.Parallel()
+	opts := formatter.Default()
+	opts.IndentCount = 0
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), opts)
+	if err == nil {
+		t.Fatal("expected error for IndentCount=0")
+	}
+	if !strings.Contains(err.Error(), "IndentCount") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// --- LineWidth option tests ---
+
+func TestLineWidth_Narrow(t *testing.T) {
+	t.Parallel()
+	// This expression fits in 100 cols but not 40
+	src := []byte("access(all) fun main(parameterOne: Int, parameterTwo: String) {}\n")
+	opts := formatter.Default()
+	opts.LineWidth = 40
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	// With narrow width, params should break across lines
+	if !strings.Contains(string(got), "\n") || strings.Count(string(got), "\n") < 2 {
+		t.Errorf("expected line break with LineWidth=40, got:\n%s", got)
+	}
+}
+
+func TestLineWidth_Wide(t *testing.T) {
+	t.Parallel()
+	src := []byte("access(all) fun main(parameterOne: Int, parameterTwo: String) {}\n")
+	opts := formatter.Default()
+	opts.LineWidth = 200
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	// With wide width, should stay on one line (just the declaration + trailing newline)
+	lines := strings.Split(strings.TrimRight(string(got), "\n"), "\n")
+	if len(lines) != 1 {
+		t.Errorf("expected single line with LineWidth=200, got %d lines:\n%s", len(lines), got)
+	}
+}
+
+// --- SortImports option test ---
+
+func TestSortImports_True(t *testing.T) {
+	t.Parallel()
+	src := []byte("import \"Zebra\"\nimport \"Alpha\"\n\naccess(all) fun main() {}\n")
+	got, err := formatter.Format(src, formatter.Default())
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	alphaIdx := strings.Index(string(got), "\"Alpha\"")
+	zebraIdx := strings.Index(string(got), "\"Zebra\"")
+	if alphaIdx > zebraIdx {
+		t.Errorf("expected imports sorted (Alpha before Zebra), got:\n%s", got)
+	}
+}
+
+func TestSortImports_False(t *testing.T) {
+	t.Parallel()
+	src := []byte("import \"Zebra\"\nimport \"Alpha\"\n\naccess(all) fun main() {}\n")
+	opts := formatter.Default()
+	opts.SortImports = false
+	got, err := formatter.Format(src, opts)
+	if err != nil {
+		t.Fatalf("format error: %v", err)
+	}
+	zebraIdx := strings.Index(string(got), "\"Zebra\"")
+	alphaIdx := strings.Index(string(got), "\"Alpha\"")
+	if zebraIdx > alphaIdx {
+		t.Errorf("expected imports to stay unsorted (Zebra before Alpha), got:\n%s", got)
+	}
+}
+
+// --- SkipVerify option test ---
+
+func TestSkipVerify(t *testing.T) {
+	t.Parallel()
+	opts := formatter.Default()
+	opts.SkipVerify = true
+	_, err := formatter.Format([]byte("access(all) fun main() {}"), opts)
+	if err != nil {
+		t.Fatalf("unexpected error with SkipVerify=true: %v", err)
+	}
+}
+
+func commentTexts(src []byte) []string {
+	comments := trivia.Scan(src)
+	texts := make([]string, len(comments))
+	for i, c := range comments {
+		// Normalize: strip trailing whitespace from each line within the
+		// comment, so blank lines inside block comments compare equal
+		// regardless of indentation whitespace.
+		lines := strings.Split(c.Text, "\n")
+		for j, line := range lines {
+			lines[j] = strings.TrimRight(line, " \t")
+		}
+		texts[i] = strings.Join(lines, "\n")
+	}
+	return texts
+}
+
+func TestNoTrailingWhitespace(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testdataRoot, "format")
+	entries, err := os.ReadDir(testdataDir)
+	if err != nil {
+		t.Fatalf("reading testdata dir: %v", err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			input, err := os.ReadFile(filepath.Join(testdataDir, name, "input.cdc"))
+			if err != nil {
+				t.Fatalf("reading input: %v", err)
+			}
+			got, err := formatter.Format(input, formatter.Default())
+			if err != nil {
+				t.Fatalf("format error: %v", err)
+			}
+			for i, line := range strings.Split(string(got), "\n") {
+				trimmed := strings.TrimRight(line, " \t")
+				if trimmed != line {
+					t.Errorf("line %d has trailing whitespace: %q", i+1, line)
+				}
+			}
+		})
+	}
+}

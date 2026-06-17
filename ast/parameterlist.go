@@ -99,28 +99,97 @@ var parameterSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Line{},
 }
 
-func (l *ParameterList) Doc() prettier.Doc {
+func (l *ParameterList) Doc(ctx PrettyContext) prettier.Doc {
 
 	if len(l.Parameters) == 0 {
 		return parameterListEmptyDoc
 	}
 
-	parameterDocs := make([]prettier.Doc, 0, len(l.Parameters))
+	// If any parameter carries comments, force a hard-break layout
+	// and weave the comments around the commas.
+	// Otherwise, use the soft-break layout.
+	hardBreak := false
+	for _, p := range l.Parameters {
+		if p != nil && p.TypeAnnotation != nil && ctx.HasComments(p.TypeAnnotation) {
+			hardBreak = true
+			break
+		}
+	}
 
-	for _, parameter := range l.Parameters {
-		parameterDocs = append(
-			parameterDocs,
-			docOrEmpty(parameter),
+	if !hardBreak {
+		parameterDocs := make([]prettier.Doc, 0, len(l.Parameters))
+
+		for _, parameter := range l.Parameters {
+			parameterDocs = append(
+				parameterDocs,
+				docOrEmpty(parameter, ctx),
+			)
+		}
+
+		return prettier.WrapParentheses(
+			prettier.Join(
+				parameterSeparatorDoc,
+				parameterDocs...,
+			),
+			prettier.SoftLine{},
 		)
 	}
 
-	return prettier.WrapParentheses(
-		prettier.Join(
-			parameterSeparatorDoc,
-			parameterDocs...,
-		),
-		prettier.SoftLine{},
-	)
+	type paramInfo struct {
+		doc      prettier.Doc
+		leading  prettier.Doc
+		sameLine prettier.Doc
+		trailing prettier.Doc
+	}
+
+	infos := make([]paramInfo, len(l.Parameters))
+	for i, p := range l.Parameters {
+		// Take comments BEFORE rendering the parameter,
+		// otherwise the parameter's own ctx.Wrap would absorb the same-line comment
+		// into its doc and the comma we emit between params would land after it.
+		if p != nil && p.TypeAnnotation != nil {
+			infos[i].leading, infos[i].sameLine, infos[i].trailing = ctx.Take(p.TypeAnnotation)
+		}
+		infos[i].doc = docOrEmpty(p, ctx)
+	}
+
+	inner := prettier.Concat{}
+	for i, info := range infos {
+		if i > 0 {
+			prev := infos[i-1]
+			inner = append(inner, prettier.Text(","))
+			if prev.sameLine != nil {
+				inner = append(inner, prettier.Text("  "), prev.sameLine)
+			}
+			inner = append(inner, prettier.HardLine{})
+			if prev.trailing != nil {
+				inner = append(inner, prev.trailing, prettier.HardLine{})
+			}
+		}
+		if info.leading != nil {
+			inner = append(inner, info.leading, prettier.HardLine{})
+		}
+		inner = append(inner, info.doc)
+	}
+	last := infos[len(infos)-1]
+	if last.sameLine != nil {
+		inner = append(inner, prettier.Text("  "), last.sameLine)
+	}
+	if last.trailing != nil {
+		inner = append(inner, prettier.HardLine{}, last.trailing)
+	}
+
+	return prettier.Concat{
+		prettier.Text("("),
+		prettier.Indent{
+			Doc: prettier.Concat{
+				prettier.HardLine{},
+				inner,
+			},
+		},
+		prettier.HardLine{},
+		prettier.Text(")"),
+	}
 }
 
 func (l *ParameterList) String() string {

@@ -188,25 +188,71 @@ func (p *Program) MarshalJSON() ([]byte, error) {
 	})
 }
 
-var programSeparatorDoc = prettier.Concat{
-	prettier.HardLine{},
-	prettier.HardLine{},
+// importGroupOrder returns the sort group for an import:
+// 0 = identifier (standard), 1 = address, 2 = string, 3 = other.
+// Imports in the same group render tight (no blank line between); imports
+// in different groups render with a blank line between.
+func importGroupOrder(imp *ImportDeclaration) int {
+	switch imp.Location.(type) {
+	case common.IdentifierLocation:
+		return 0
+	case common.AddressLocation:
+		return 1
+	case common.StringLocation:
+		return 2
+	default:
+		return 3
+	}
 }
 
-func (p *Program) Doc() prettier.Doc {
+// declSeparatorHardLineCount returns the number of HardLines to insert
+// between two consecutive top-level declarations.
+// Same-group imports get one; otherwise at least two (a blank line).
+// The blank line is also requested when the source had one between the pair.
+func declSeparatorHardLineCount(ctx PrettyContext, prev, next Declaration) int {
+	prevImp, prevIsImport := prev.(*ImportDeclaration)
+	nextImp, nextIsImport := next.(*ImportDeclaration)
+	if prevIsImport && nextIsImport {
+		if importGroupOrder(prevImp) == importGroupOrder(nextImp) {
+			return 1
+		}
+		return 2
+	}
+	if ctx.BlankLineBetween(prev, next) {
+		return 2
+	}
+	return 2
+}
+
+func (p *Program) Doc(ctx PrettyContext) prettier.Doc {
 	declarations := p.Declarations()
 
-	if len(declarations) == 0 {
-		return prettier.Text("")
+	var parts prettier.Concat
+
+	if header := ctx.Header(); header != nil {
+		parts = append(parts, header)
 	}
 
-	docs := make([]prettier.Doc, 0, len(declarations))
-
-	for _, declaration := range declarations {
-		docs = append(docs, docOrEmpty(declaration))
+	for i, declaration := range declarations {
+		if i > 0 {
+			previousDeclaration := declarations[i-1]
+			sep := declSeparatorHardLineCount(ctx, previousDeclaration, declaration)
+			for j := 0; j < sep; j++ {
+				parts = append(parts, prettier.HardLine{})
+			}
+		}
+		parts = append(parts, docOrEmpty(declaration, ctx))
 	}
 
-	return prettier.Join(programSeparatorDoc, docs...)
+	if footer := ctx.Footer(); footer != nil {
+		parts = append(parts, footer)
+	}
+
+	if len(declarations) == 0 && len(parts) == 0 {
+		return ctx.Wrap(p, prettier.Text(""))
+	}
+
+	return ctx.Wrap(p, parts)
 }
 
 func (p *Program) String() string {

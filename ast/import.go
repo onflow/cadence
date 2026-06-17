@@ -115,7 +115,7 @@ var importDeclarationSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Line{},
 }
 
-func (d *ImportDeclaration) Doc() prettier.Doc {
+func (d *ImportDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 	doc := prettier.Concat{
 		importDeclarationImportKeywordDoc,
 	}
@@ -179,10 +179,10 @@ func (d *ImportDeclaration) Doc() prettier.Doc {
 		)
 	}
 
-	return append(
+	return ctx.Wrap(d, append(
 		doc,
 		LocationDoc(d.Location),
-	)
+	))
 }
 
 func (d *ImportDeclaration) String() string {

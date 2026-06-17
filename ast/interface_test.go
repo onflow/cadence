@@ -162,16 +162,20 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("resource"),
-				prettier.Space,
-				prettier.Text("interface "),
-				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("resource"),
+						prettier.Space,
+						prettier.Text("interface "),
+						prettier.Text("AB"),
+					},
+				},
 				prettier.Space,
 				prettier.Text("{}"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 
 	})
@@ -206,12 +210,16 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("resource"),
-				prettier.Space,
-				prettier.Text("interface "),
-				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("resource"),
+						prettier.Space,
+						prettier.Text("interface "),
+						prettier.Text("AB"),
+					},
+				},
 				prettier.Space,
 				prettier.Concat{
 					prettier.Text("{"),
@@ -231,7 +239,7 @@ func TestInterfaceDeclaration_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 
 	})

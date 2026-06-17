@@ -187,50 +187,47 @@ func TestRuntimeProfile(t *testing.T) {
 	// Samples. NOT in execution / appearance order,
 	// but lexically ordered aggregate key of stack trace
 
-	require.Len(t, profile.Sample, 14)
+	require.Len(t, profile.Sample, 15)
 
+	// The entry-point function invocation (`main`) is metered before any
+	// statement executes, so it is attributed to an empty stack trace.
 	assert.Equal(t,
-		[]int64{4},
+		[]int64{2},
 		profile.Sample[0].Value,
 	)
-	assert.Equal(t,
-		[]*pprof.Location{
-			profile.Location[0],
-		},
+	assert.Empty(t,
 		profile.Sample[0].Location,
 	)
 
 	assert.Equal(t,
-		[]int64{2},
+		[]int64{4},
 		profile.Sample[1].Value,
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[1],
 			profile.Location[0],
 		},
 		profile.Sample[1].Location,
 	)
 
 	assert.Equal(t,
-		[]int64{4},
+		[]int64{2},
 		profile.Sample[2].Value,
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[2],
+			profile.Location[1],
 			profile.Location[0],
 		},
 		profile.Sample[2].Location,
 	)
 
 	assert.Equal(t,
-		[]int64{2},
+		[]int64{4},
 		profile.Sample[3].Value,
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[1],
 			profile.Location[2],
 			profile.Location[0],
 		},
@@ -238,12 +235,12 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]int64{4},
+		[]int64{2},
 		profile.Sample[4].Value,
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[2],
+			profile.Location[1],
 			profile.Location[2],
 			profile.Location[0],
 		},
@@ -251,12 +248,11 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		[]int64{2},
+		[]int64{4},
 		profile.Sample[5].Value,
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[1],
 			profile.Location[2],
 			profile.Location[2],
 			profile.Location[0],
@@ -270,7 +266,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[3],
+			profile.Location[1],
 			profile.Location[2],
 			profile.Location[2],
 			profile.Location[0],
@@ -284,7 +280,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[4],
+			profile.Location[3],
 			profile.Location[2],
 			profile.Location[2],
 			profile.Location[0],
@@ -298,7 +294,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[5],
+			profile.Location[4],
 			profile.Location[2],
 			profile.Location[2],
 			profile.Location[0],
@@ -312,7 +308,8 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[4],
+			profile.Location[5],
+			profile.Location[2],
 			profile.Location[2],
 			profile.Location[0],
 		},
@@ -325,7 +322,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[5],
+			profile.Location[4],
 			profile.Location[2],
 			profile.Location[0],
 		},
@@ -338,7 +335,8 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[4],
+			profile.Location[5],
+			profile.Location[2],
 			profile.Location[0],
 		},
 		profile.Sample[11].Location,
@@ -350,7 +348,7 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[5],
+			profile.Location[4],
 			profile.Location[0],
 		},
 		profile.Sample[12].Location,
@@ -362,8 +360,20 @@ func TestRuntimeProfile(t *testing.T) {
 	)
 	assert.Equal(t,
 		[]*pprof.Location{
-			profile.Location[6],
+			profile.Location[5],
+			profile.Location[0],
 		},
 		profile.Sample[13].Location,
+	)
+
+	assert.Equal(t,
+		[]int64{2},
+		profile.Sample[14].Value,
+	)
+	assert.Equal(t,
+		[]*pprof.Location{
+			profile.Location[6],
+		},
+		profile.Sample[14].Location,
 	)
 }

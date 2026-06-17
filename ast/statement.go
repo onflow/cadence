@@ -31,7 +31,7 @@ type Statement interface {
 	Element
 	fmt.Stringer
 	isStatement()
-	Doc() prettier.Doc
+	Doc(ctx PrettyContext) prettier.Doc
 }
 
 // ReturnStatement
@@ -67,15 +67,18 @@ func (s *ReturnStatement) Walk(walkChild func(Element)) {
 const returnStatementKeywordDoc = prettier.Text("return")
 const returnStatementKeywordSpaceDoc = prettier.Text("return ")
 
-func (s *ReturnStatement) Doc() prettier.Doc {
+func (s *ReturnStatement) Doc(ctx PrettyContext) prettier.Doc {
 	if s.Expression == nil {
-		return returnStatementKeywordDoc
+		return ctx.Wrap(s, returnStatementKeywordDoc)
 	}
 
-	return prettier.Concat{
+	// BinaryExpression.Doc already provides its own Group+Indent for
+	// continuation-line indentation; render inline without an extra Indent
+	// wrapper to avoid double-indenting the continuation.
+	return ctx.Wrap(s, prettier.Concat{
 		returnStatementKeywordSpaceDoc,
-		s.Expression.Doc(),
-	}
+		s.Expression.Doc(ctx),
+	})
 }
 
 func (s *ReturnStatement) String() string {
@@ -121,8 +124,8 @@ func (*BreakStatement) Walk(_ func(Element)) {
 
 const breakStatementKeywordDoc = prettier.Text("break")
 
-func (*BreakStatement) Doc() prettier.Doc {
-	return breakStatementKeywordDoc
+func (s *BreakStatement) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(s, breakStatementKeywordDoc)
 }
 
 func (s *BreakStatement) String() string {
@@ -168,8 +171,8 @@ func (*ContinueStatement) Walk(_ func(Element)) {
 
 const continueStatementKeywordDoc = prettier.Text("continue")
 
-func (*ContinueStatement) Doc() prettier.Doc {
-	return continueStatementKeywordDoc
+func (s *ContinueStatement) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(s, continueStatementKeywordDoc)
 }
 
 func (s *ContinueStatement) String() string {
@@ -192,7 +195,7 @@ func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
 type IfStatementTest interface {
 	Element
 	isIfStatementTest()
-	Doc() prettier.Doc
+	Doc(ctx PrettyContext) prettier.Doc
 }
 
 // IfStatement
@@ -251,38 +254,35 @@ func (s *IfStatement) Walk(walkChild func(Element)) {
 const ifStatementIfKeywordSpaceDoc = prettier.Text("if ")
 const ifStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
 
-func (s *IfStatement) Doc() prettier.Doc {
+func (s *IfStatement) Doc(ctx PrettyContext) prettier.Doc {
 
 	doc := prettier.Concat{
 		ifStatementIfKeywordSpaceDoc,
-		docOrEmpty(s.Test),
+		docOrEmpty(s.Test, ctx),
 		prettier.Space,
-		s.Then.Doc(),
+		s.Then.Doc(ctx),
 	}
 
 	if s.Else != nil && len(s.Else.Statements) > 0 {
 		var elseDoc prettier.Doc
 		if len(s.Else.Statements) == 1 {
 			if elseIfStatement, ok := s.Else.Statements[0].(*IfStatement); ok {
-				elseDoc = elseIfStatement.Doc()
+				elseDoc = elseIfStatement.Doc(ctx)
 			}
 		}
 		if elseDoc == nil {
-			elseDoc = s.Else.Doc()
+			elseDoc = s.Else.Doc(ctx)
 		}
 
 		doc = append(
 			doc,
 			ifStatementSpaceElseKeywordSpaceDoc,
-			prettier.Group{
-				Doc: elseDoc,
-			},
+			elseDoc,
 		)
 	}
 
-	return prettier.Group{
-		Doc: doc,
-	}
+	// No outer Group: see WhileStatement.Doc for the rationale.
+	return ctx.Wrap(s, doc)
 }
 
 func (s *IfStatement) String() string {
@@ -349,15 +349,14 @@ func (s *GuardStatement) Walk(walkChild func(Element)) {
 const guardStatementGuardKeywordSpaceDoc = prettier.Text("guard ")
 const guardStatementSpaceElseKeywordSpaceDoc = prettier.Text(" else ")
 
-func (s *GuardStatement) Doc() prettier.Doc {
-	return prettier.Group{
-		Doc: prettier.Concat{
-			guardStatementGuardKeywordSpaceDoc,
-			docOrEmpty(s.Test),
-			guardStatementSpaceElseKeywordSpaceDoc,
-			s.Else.Doc(),
-		},
-	}
+func (s *GuardStatement) Doc(ctx PrettyContext) prettier.Doc {
+	// No outer Group: see WhileStatement.Doc for the rationale.
+	return ctx.Wrap(s, prettier.Concat{
+		guardStatementGuardKeywordSpaceDoc,
+		docOrEmpty(s.Test, ctx),
+		guardStatementSpaceElseKeywordSpaceDoc,
+		s.Else.Doc(ctx),
+	})
 }
 
 func (s *GuardStatement) String() string {
@@ -423,15 +422,17 @@ func (s *WhileStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 
 const whileStatementKeywordSpaceDoc = prettier.Text("while ")
 
-func (s *WhileStatement) Doc() prettier.Doc {
-	return prettier.Group{
-		Doc: prettier.Concat{
-			whileStatementKeywordSpaceDoc,
-			docOrEmpty(s.Test),
-			prettier.Space,
-			s.Block.Doc(),
-		},
-	}
+func (s *WhileStatement) Doc(ctx PrettyContext) prettier.Doc {
+	// No outer Group: wrapping a block-containing statement in a Group causes
+	// the Group's "fits" check to succeed at the opening `{` (followed by a
+	// HardLine), force-flattening the whole body and suppressing any nested
+	// Group's break decisions (e.g., long binary expressions inside).
+	return ctx.Wrap(s, prettier.Concat{
+		whileStatementKeywordSpaceDoc,
+		docOrEmpty(s.Test, ctx),
+		prettier.Space,
+		s.Block.Doc(ctx),
+	})
 }
 
 func (s *WhileStatement) String() string {
@@ -505,7 +506,7 @@ func (s *ForStatement) EndPosition(memoryGauge common.MemoryGauge) Position {
 const forStatementForKeywordSpaceDoc = prettier.Text("for ")
 const forStatementSpaceInKeywordSpaceDoc = prettier.Text(" in ")
 
-func (s *ForStatement) Doc() prettier.Doc {
+func (s *ForStatement) Doc(ctx PrettyContext) prettier.Doc {
 	doc := prettier.Concat{
 		forStatementForKeywordSpaceDoc,
 	}
@@ -522,14 +523,13 @@ func (s *ForStatement) Doc() prettier.Doc {
 		doc,
 		prettier.Text(s.Identifier.Identifier),
 		forStatementSpaceInKeywordSpaceDoc,
-		docOrEmpty(s.Value),
+		docOrEmpty(s.Value, ctx),
 		prettier.Space,
-		s.Block.Doc(),
+		s.Block.Doc(ctx),
 	)
 
-	return prettier.Group{
-		Doc: doc,
-	}
+	// No outer Group: see WhileStatement.Doc for the rationale.
+	return ctx.Wrap(s, doc)
 }
 
 func (s *ForStatement) String() string {
@@ -591,11 +591,11 @@ func (s *EmitStatement) Walk(walkChild func(Element)) {
 
 const emitStatementKeywordSpaceDoc = prettier.Text("emit ")
 
-func (s *EmitStatement) Doc() prettier.Doc {
-	return prettier.Concat{
+func (s *EmitStatement) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(s, prettier.Concat{
 		emitStatementKeywordSpaceDoc,
-		docOrEmpty(s.InvocationExpression),
-	}
+		docOrEmpty(s.InvocationExpression, ctx),
+	})
 }
 
 func (s *EmitStatement) String() string {
@@ -660,20 +660,22 @@ func (s *AssignmentStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Value)
 }
 
-func (s *AssignmentStatement) Doc() prettier.Doc {
-	return prettier.Group{
-		Doc: prettier.Concat{
-			docOrEmpty(s.Target),
-			prettier.Space,
-			docOrEmpty(s.Transfer),
-			prettier.Space,
-			prettier.Group{
-				Doc: prettier.Indent{
-					Doc: docOrEmpty(s.Value),
-				},
-			},
-		},
-	}
+func (s *AssignmentStatement) Doc(ctx PrettyContext) prettier.Doc {
+	// BinaryExpression.Doc already provides its own Group+Indent for
+	// continuation-line indentation, so we render the value inline here
+	// without adding another Indent layer (which would double-indent).
+	valueDoc := docOrEmpty(s.Value, ctx)
+
+	// No outer Group: a value containing HardLines (e.g., a function
+	// expression body) would make the Group's "fits" check trivially succeed
+	// and force-flatten nested expressions inside.
+	return ctx.Wrap(s, prettier.Concat{
+		docOrEmpty(s.Target, ctx),
+		prettier.Space,
+		docOrEmpty(s.Transfer, ctx),
+		prettier.Space,
+		valueDoc,
+	})
 }
 
 func (s *AssignmentStatement) String() string {
@@ -732,14 +734,13 @@ func (s *SwapStatement) Walk(walkChild func(Element)) {
 
 const swapStatementSpaceSymbolSpaceDoc = prettier.Text(" <-> ")
 
-func (s *SwapStatement) Doc() prettier.Doc {
-	return prettier.Group{
-		Doc: prettier.Concat{
-			docOrEmpty(s.Left),
-			swapStatementSpaceSymbolSpaceDoc,
-			docOrEmpty(s.Right),
-		},
-	}
+func (s *SwapStatement) Doc(ctx PrettyContext) prettier.Doc {
+	// No outer Group: see AssignmentStatement.Doc for the rationale.
+	return ctx.Wrap(s, prettier.Concat{
+		docOrEmpty(s.Left, ctx),
+		swapStatementSpaceSymbolSpaceDoc,
+		docOrEmpty(s.Right, ctx),
+	})
 }
 
 func (s *SwapStatement) String() string {
@@ -793,8 +794,8 @@ func (s *ExpressionStatement) Walk(walkChild func(Element)) {
 	walkChild(s.Expression)
 }
 
-func (s *ExpressionStatement) Doc() prettier.Doc {
-	return docOrEmpty(s.Expression)
+func (s *ExpressionStatement) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(s, docOrEmpty(s.Expression, ctx))
 }
 
 func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
@@ -859,7 +860,7 @@ func (s *SwitchStatement) Walk(walkChild func(Element)) {
 
 const switchStatementKeywordSpaceDoc = prettier.Text("switch ")
 
-func (s *SwitchStatement) Doc() prettier.Doc {
+func (s *SwitchStatement) Doc(ctx PrettyContext) prettier.Doc {
 
 	bodyDoc := make(prettier.Concat, 0, len(s.Cases))
 
@@ -869,18 +870,18 @@ func (s *SwitchStatement) Doc() prettier.Doc {
 		bodyDoc = append(
 			bodyDoc,
 			prettier.HardLine{},
-			switchCase.Doc(isLast),
+			switchCase.Doc(ctx, isLast),
 		)
 	}
 
-	return prettier.Concat{
+	return ctx.Wrap(s, prettier.Concat{
 		prettier.Group{
 			Doc: prettier.Concat{
 				switchStatementKeywordSpaceDoc,
 				prettier.Indent{
 					Doc: prettier.Concat{
 						prettier.SoftLine{},
-						docOrEmpty(s.Expression),
+						docOrEmpty(s.Expression, ctx),
 					},
 				},
 				prettier.Line{},
@@ -892,7 +893,7 @@ func (s *SwitchStatement) Doc() prettier.Doc {
 		},
 		prettier.HardLine{},
 		blockEndDoc,
-	}
+	})
 }
 
 func (s *SwitchStatement) String() string {
@@ -947,9 +948,9 @@ const switchCaseKeywordSpaceDoc = prettier.Text("case ")
 const switchCaseColonSymbolDoc = prettier.Text(":")
 const switchCaseDefaultKeywordSpaceDoc = prettier.Text("default:")
 
-func (s *SwitchCase) Doc(isLast bool) prettier.Doc {
+func (s *SwitchCase) Doc(ctx PrettyContext, isLast bool) prettier.Doc {
 	statementsDoc := prettier.Indent{
-		Doc: StatementsDoc(s.Statements),
+		Doc: StatementsDoc(ctx, s.Statements),
 	}
 
 	if isLast && s.Expression == nil {
@@ -961,7 +962,7 @@ func (s *SwitchCase) Doc(isLast bool) prettier.Doc {
 
 	return prettier.Concat{
 		switchCaseKeywordSpaceDoc,
-		docOrEmpty(s.Expression),
+		docOrEmpty(s.Expression, ctx),
 		switchCaseColonSymbolDoc,
 		statementsDoc,
 	}

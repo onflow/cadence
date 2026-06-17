@@ -47,7 +47,7 @@ func TestParameter_Doc(t *testing.T) {
 				prettier.Text(": "),
 				prettier.Text("E"),
 			},
-			parameter.Doc(),
+			parameter.Doc(NopContext{}),
 		)
 
 	})
@@ -73,7 +73,7 @@ func TestParameter_Doc(t *testing.T) {
 				prettier.Text(": "),
 				prettier.Text("D"),
 			},
-			parameter.Doc(),
+			parameter.Doc(NopContext{}),
 		)
 	})
 
@@ -93,7 +93,7 @@ func TestParameter_Doc(t *testing.T) {
 				prettier.Text(": "),
 				prettier.Text(""),
 			},
-			parameter.Doc(),
+			parameter.Doc(NopContext{}),
 		)
 	})
 
@@ -110,7 +110,7 @@ func TestParameter_Doc(t *testing.T) {
 				prettier.Text(": "),
 				prettier.Text(""),
 			},
-			parameter.Doc(),
+			parameter.Doc(NopContext{}),
 		)
 	})
 
@@ -137,7 +137,7 @@ func TestParameter_Doc(t *testing.T) {
 				prettier.Space,
 				prettier.Text("true"),
 			},
-			parameter.Doc(),
+			parameter.Doc(NopContext{}),
 		)
 	})
 }

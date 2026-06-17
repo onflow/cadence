@@ -39,7 +39,7 @@ func TestTypeAnnotation_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text(""),
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -56,7 +56,7 @@ func TestTypeAnnotation_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text("T"),
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -72,7 +72,7 @@ func TestTypeAnnotation_Doc(t *testing.T) {
 				prettier.Text("@"),
 				prettier.Text(""),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -93,7 +93,7 @@ func TestTypeAnnotation_Doc(t *testing.T) {
 				prettier.Text("@"),
 				prettier.Text("R"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 }
@@ -602,7 +602,7 @@ func TestNominalType_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Text("R"),
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 
 	})
@@ -633,7 +633,7 @@ func TestNominalType_Doc(t *testing.T) {
 				prettier.Text("."),
 				prettier.Text("T"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 
 	})
@@ -772,7 +772,7 @@ func TestOptionalType_Doc(t *testing.T) {
 				prettier.Text("R"),
 				prettier.Text("?"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -786,7 +786,7 @@ func TestOptionalType_Doc(t *testing.T) {
 				prettier.Text(""),
 				prettier.Text("?"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 }
@@ -920,7 +920,7 @@ func TestVariableSizedType_Doc(t *testing.T) {
 					prettier.Text("]"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -943,7 +943,7 @@ func TestVariableSizedType_Doc(t *testing.T) {
 					prettier.Text("]"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 }
@@ -1085,7 +1085,7 @@ func TestConstantSizedType_Doc(t *testing.T) {
 					prettier.Text("]"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1116,7 +1116,7 @@ func TestConstantSizedType_Doc(t *testing.T) {
 					prettier.Text("]"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1147,7 +1147,7 @@ func TestConstantSizedType_Doc(t *testing.T) {
 					prettier.Text("]"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1172,7 +1172,7 @@ func TestConstantSizedType_Doc(t *testing.T) {
 					prettier.Text("]"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 }
@@ -1377,7 +1377,7 @@ func TestDictionaryType_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1408,7 +1408,7 @@ func TestDictionaryType_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1439,7 +1439,7 @@ func TestDictionaryType_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1464,7 +1464,7 @@ func TestDictionaryType_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1705,7 +1705,7 @@ func TestFunctionType_Doc(t *testing.T) {
 				prettier.Text(": "),
 				prettier.Text("EF"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1740,7 +1740,7 @@ func TestFunctionType_Doc(t *testing.T) {
 				prettier.Text(": "),
 				prettier.Text(""),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -1972,7 +1972,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2003,7 +2003,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2037,7 +2037,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2067,7 +2067,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2109,7 +2109,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2151,7 +2151,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2172,7 +2172,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2187,7 +2187,7 @@ func TestReferenceType_Doc(t *testing.T) {
 				prettier.Text("&"),
 				prettier.Text(""),
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 }
@@ -2599,7 +2599,7 @@ func TestIntersectionType_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2626,7 +2626,7 @@ func TestIntersectionType_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2665,7 +2665,7 @@ func TestIntersectionType_Doc(t *testing.T) {
 					prettier.Text("}"),
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 }
@@ -2855,7 +2855,7 @@ func TestInstantiationType_Doc(t *testing.T) {
 					},
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2880,7 +2880,7 @@ func TestInstantiationType_Doc(t *testing.T) {
 					},
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2936,7 +2936,7 @@ func TestInstantiationType_Doc(t *testing.T) {
 					},
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 
@@ -2971,7 +2971,7 @@ func TestInstantiationType_Doc(t *testing.T) {
 					},
 				},
 			},
-			ty.Doc(),
+			ty.Doc(NopContext{}),
 		)
 	})
 }

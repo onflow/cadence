@@ -93,14 +93,14 @@ func (a *Argument) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (a *Argument) Doc() prettier.Doc {
-	argumentDoc := docOrEmpty(a.Expression)
+func (a *Argument) Doc(ctx PrettyContext) prettier.Doc {
+	argumentDoc := docOrEmpty(a.Expression, ctx)
 
 	if a.Label == "" {
-		return argumentDoc
+		return ctx.Wrap(a, argumentDoc)
 	}
-	return prettier.Concat{
+	return ctx.Wrap(a, prettier.Concat{
 		prettier.Text(a.Label + ": "),
 		argumentDoc,
-	}
+	})
 }
