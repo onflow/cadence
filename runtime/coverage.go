@@ -663,15 +663,49 @@ func (r *CoverageReport) sourcePathForLocation(location common.Location) string 
 
 func (r *CoverageReport) newOnStatementHandler() interpreter.OnStatementFunc {
 	return func(inter *interpreter.Interpreter, statement ast.Statement) {
-		location := inter.Location
-		line := statement.StartPosition().Line
-
-		r.lock.Lock()
-		defer r.lock.Unlock()
-
-		if !r.isLocationInspected(location) {
-			r.inspectProgram(location, inter.Program.Program)
-		}
-		r.addLineHit(location, line)
+		r.RecordStatementHit(
+			inter.Location,
+			statement.StartPosition().Line,
+			inter.Program.Program,
+		)
 	}
+}
+
+// RecordStatementHit records a hit for the given line of the given location.
+// If the location has not been inspected yet, the given program is inspected
+// first. The whole operation is performed atomically, so it is safe to call
+// concurrently, e.g. from multiple VMs sharing the same CoverageReport.
+//
+// A hit is only recorded if the given line is recognized as a statement of the
+// location's program (i.e. it was found during inspection). This matters for
+// execution engines that may execute synthetic, compiler-generated statements
+// which are not present in the original source: e.g. the compiler/VM desugars
+// pre/post-conditions into additional `$_result` and `result` variable
+// declarations, positioned at the enclosing function's start and end.
+// Those should not be reported as covered source statements.
+func (r *CoverageReport) RecordStatementHit(
+	location Location,
+	line int,
+	program *ast.Program,
+) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	if !r.isLocationInspected(location) {
+		if program == nil {
+			return
+		}
+		r.inspectProgram(location, program)
+	}
+
+	locationCoverage, ok := r.Coverage[location]
+	if !ok {
+		return
+	}
+
+	if _, tracked := locationCoverage.LineHits[line]; !tracked {
+		return
+	}
+
+	r.addLineHit(location, line)
 }

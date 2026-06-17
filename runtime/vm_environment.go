@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -147,6 +148,7 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	conf.UUIDHandler = newUUIDHandler(&e.Interface)
 	conf.AccountHandlerFunc = e.newAccountValue
 	conf.OnEventEmitted = newOnEventEmittedHandler(&e.Interface)
+	conf.OnStatement = e.newOnStatementHandler()
 	conf.CapabilityBorrowHandler = newCapabilityBorrowHandler(e)
 	conf.CapabilityCheckHandler = newCapabilityCheckHandler(e)
 	conf.ValidateAccountCapabilitiesGetHandler = newValidateAccountCapabilitiesGetHandler(&e.Interface)
@@ -159,6 +161,43 @@ func (e *vmEnvironment) newVMConfig() *vm.Config {
 	}
 
 	return conf
+}
+
+func (e *vmEnvironment) newOnStatementHandler() vm.OnStatementFunc {
+	coverageReport := e.config.CoverageReport
+	if coverageReport == nil {
+		return nil
+	}
+
+	// Cache the resolved program AST per location, so that each program is
+	// resolved at most once, instead of on every statement.
+	programs := map[common.Location]*ast.Program{}
+
+	return func(locationRangeProvider interpreter.LocationRangeProvider) {
+		locationRange := locationRangeProvider.LocationRange()
+		location := locationRange.Location
+		if location == nil || locationRange.HasPosition == nil {
+			return
+		}
+
+		astProgram, ok := programs[location]
+		if !ok {
+			program, err := e.loadProgram(location)
+			if err == nil &&
+				program != nil &&
+				program.interpreterProgram != nil {
+
+				astProgram = program.interpreterProgram.Program
+			}
+
+			// Store the result (even if nil) to avoid re-resolving.
+			programs[location] = astProgram
+		}
+
+		line := locationRange.StartPosition().Line
+
+		coverageReport.RecordStatementHit(location, line, astProgram)
+	}
 }
 
 func (e *vmEnvironment) defineValue(name string, value vm.Value) {

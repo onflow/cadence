@@ -2393,6 +2393,11 @@ func opLoop(vm *VM) {
 
 func opStatement(vm *VM) {
 	common.UseComputation(vm.context, common.StatementComputationUsage)
+
+	onStatement := vm.context.OnStatement
+	if onStatement != nil {
+		onStatement(vm)
+	}
 }
 
 func (vm *VM) initializeValueTypedConstant(index uint16) Value {
