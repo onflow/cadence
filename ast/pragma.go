@@ -90,17 +90,17 @@ func (d *PragmaDeclaration) MarshalJSON() ([]byte, error) {
 
 var pragmaStartDoc prettier.Doc = prettier.Text("#")
 
-func (d *PragmaDeclaration) Doc() prettier.Doc {
+func (d *PragmaDeclaration) Doc(ctx PrettyContext) prettier.Doc {
 	doc := pragmaStartDoc
 
 	if d.Expression == nil {
-		return doc
+		return ctx.Wrap(d, doc)
 	}
 
-	return prettier.Concat{
+	return ctx.Wrap(d, prettier.Concat{
 		doc,
-		d.Expression.Doc(),
-	}
+		d.Expression.Doc(ctx),
+	})
 }
 
 func (d *PragmaDeclaration) String() string {

@@ -167,6 +167,6 @@ func (s Operation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-func (s Operation) Doc() prettier.Doc {
+func (s Operation) Doc(_ PrettyContext) prettier.Doc {
 	return prettier.Text(s.Symbol())
 }

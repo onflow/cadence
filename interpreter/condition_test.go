@@ -896,7 +896,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 						invokable = test_utils.NewVMInvokable(vmInstance, nil)
 					} else {
-						invokable, err = parseCheckAndInterpretWithOptions(t,
+						// Running with the compiler separately above
+						invokable, err = parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 							code,
 							ParseCheckAndInterpretOptions{
 								InterpreterConfig: &interpreter.Config{
@@ -1759,7 +1760,8 @@ func TestInterpretFunctionBeforePostConditionAndInheritedBeforePostCondition(t *
 		)
 		require.NoError(t, err)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		// Already running with compiler above.
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			testCode,
 			ParseCheckAndInterpretOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{

@@ -150,7 +150,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -192,7 +192,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -231,7 +231,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -266,7 +266,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -288,7 +288,7 @@ func TestFieldDeclaration_Doc(t *testing.T) {
 					prettier.Text("xyz"),
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -604,11 +604,15 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("resource"),
-				prettier.Space,
-				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("resource"),
+						prettier.Space,
+						prettier.Text("AB"),
+					},
+				},
 				prettier.Text(":"),
 				prettier.Group{
 					Doc: prettier.Indent{
@@ -620,17 +624,13 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 								prettier.Line{},
 							},
 							prettier.Text("EF"),
-							prettier.Dedent{
-								Doc: prettier.Concat{
-									prettier.Line{},
-									prettier.Text("{}"),
-								},
-							},
 						},
 					},
 				},
+				prettier.Space,
+				prettier.Text("{}"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -652,28 +652,28 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("resource"),
-				prettier.Space,
-				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("resource"),
+						prettier.Space,
+						prettier.Text("AB"),
+					},
+				},
 				prettier.Text(":"),
 				prettier.Group{
 					Doc: prettier.Indent{
 						Doc: prettier.Concat{
 							prettier.Line{},
 							prettier.Text(""),
-							prettier.Dedent{
-								Doc: prettier.Concat{
-									prettier.Line{},
-									prettier.Text("{}"),
-								},
-							},
 						},
 					},
 				},
+				prettier.Space,
+				prettier.Text("{}"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -719,11 +719,15 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("resource"),
-				prettier.Space,
-				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("resource"),
+						prettier.Space,
+						prettier.Text("AB"),
+					},
+				},
 				prettier.Text(":"),
 				prettier.Group{
 					Doc: prettier.Indent{
@@ -735,33 +739,29 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 								prettier.Line{},
 							},
 							prettier.Text("EF"),
-							prettier.Dedent{
+						},
+					},
+				},
+				prettier.Space,
+				prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.HardLine{},
+							prettier.Group{
 								Doc: prettier.Concat{
-									prettier.Line{},
-									prettier.Concat{
-										prettier.Text("{"),
-										prettier.Indent{
-											Doc: prettier.Concat{
-												prettier.HardLine{},
-												prettier.Group{
-													Doc: prettier.Concat{
-														prettier.Text("x"),
-														prettier.Text(": "),
-														prettier.Text("X"),
-													},
-												},
-											},
-										},
-										prettier.HardLine{},
-										prettier.Text("}"),
-									},
+									prettier.Text("x"),
+									prettier.Text(": "),
+									prettier.Text("X"),
 								},
 							},
 						},
 					},
+					prettier.HardLine{},
+					prettier.Text("}"),
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -800,11 +800,15 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("event"),
-				prettier.Space,
-				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("event"),
+						prettier.Space,
+						prettier.Text("AB"),
+					},
+				},
 				prettier.Group{
 					Doc: prettier.Concat{
 						prettier.Text("("),
@@ -823,7 +827,7 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 					},
 				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -857,41 +861,41 @@ func TestCompositeDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Concat{
-				prettier.Text("access(all)"),
-				prettier.Line{},
-				prettier.Text("enum"),
-				prettier.Space,
-				prettier.Text("AB"),
+				prettier.Group{
+					Doc: prettier.Concat{
+						prettier.Text("access(all)"),
+						prettier.Line{},
+						prettier.Text("enum"),
+						prettier.Space,
+						prettier.Text("AB"),
+					},
+				},
 				prettier.Text(":"),
 				prettier.Group{
 					Doc: prettier.Indent{
 						Doc: prettier.Concat{
 							prettier.Line{},
 							prettier.Text("CD"),
-							prettier.Dedent{
-								Doc: prettier.Concat{
-									prettier.Line{},
-									prettier.Concat{
-										prettier.Text("{"),
-										prettier.Indent{
-											Doc: prettier.Concat{
-												prettier.HardLine{},
-												prettier.Concat{
-													prettier.Text("case "),
-													prettier.Text("x"),
-												},
-											},
-										},
-										prettier.HardLine{},
-										prettier.Text("}"),
-									},
-								},
-							},
 						},
 					},
 				},
+				prettier.Space,
+				prettier.Concat{
+					prettier.Text("{"),
+					prettier.Indent{
+						Doc: prettier.Concat{
+							prettier.HardLine{},
+							prettier.Concat{
+								prettier.Text("case "),
+								prettier.Text("x"),
+							},
+						},
+					},
+					prettier.HardLine{},
+					prettier.Text("}"),
+				},
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 }
@@ -1141,7 +1145,7 @@ func TestEnumCaseDeclaration_Doc(t *testing.T) {
 			prettier.Text("case "),
 			prettier.Text("x"),
 		},
-		decl.Doc(),
+		decl.Doc(NopContext{}),
 	)
 }
 

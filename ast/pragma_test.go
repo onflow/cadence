@@ -77,7 +77,7 @@ func TestPragmaDeclaration_Doc(t *testing.T) {
 		require.Equal(
 			t,
 			prettier.Text("#"),
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 
@@ -95,7 +95,7 @@ func TestPragmaDeclaration_Doc(t *testing.T) {
 				prettier.Text("#"),
 				prettier.Text("false"),
 			},
-			decl.Doc(),
+			decl.Doc(NopContext{}),
 		)
 	})
 }

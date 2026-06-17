@@ -1746,6 +1746,7 @@ type FixedPointNumericType struct {
 }
 
 var _ Type = &FixedPointNumericType{}
+var _ ConformingType = &FixedPointNumericType{}
 var _ IntegerRangedType = &FixedPointNumericType{}
 var _ FractionalRangedType = &FixedPointNumericType{}
 var _ SaturatingArithmeticType = &FixedPointNumericType{}
@@ -1966,6 +1967,34 @@ func (*FixedPointNumericType) CheckInstantiated(
 	_ SeenTypes,
 ) {
 	// NO-OP
+}
+
+var fixedPointNumericTypeEffectiveInterfaceConformanceSet *InterfaceSet
+var fixedPointNumericTypeEffectiveInterfaceConformances []Conformance
+
+func init() {
+	fixedPointNumericTypeInterfaces := []*InterfaceType{
+		StructStringerType,
+	}
+
+	fixedPointNumericTypeEffectiveInterfaceConformanceSet = NewInterfaceSet()
+	for _, interfaceType := range fixedPointNumericTypeInterfaces {
+		fixedPointNumericTypeEffectiveInterfaceConformanceSet.Add(interfaceType)
+	}
+
+	fixedPointNumericTypeEffectiveInterfaceConformances = distinctConformances(
+		fixedPointNumericTypeInterfaces,
+		nil,
+		map[*InterfaceType]struct{}{},
+	)
+}
+
+func (t *FixedPointNumericType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	return fixedPointNumericTypeEffectiveInterfaceConformanceSet
+}
+
+func (t *FixedPointNumericType) EffectiveInterfaceConformances() []Conformance {
+	return fixedPointNumericTypeEffectiveInterfaceConformances
 }
 
 // Numeric types
@@ -8045,6 +8074,7 @@ var TheAddressType = &AddressType{}
 var AddressTypeAnnotation = NewTypeAnnotation(TheAddressType)
 
 var _ Type = &AddressType{}
+var _ ConformingType = &AddressType{}
 var _ IntegerRangedType = &AddressType{}
 
 func (*AddressType) IsType() {}
@@ -8197,13 +8227,31 @@ func (t *AddressType) GetMembers() map[string]MemberResolver {
 }
 
 var addressTypeEffectiveInterfaceConformanceSet *InterfaceSet
+var addressTypeEffectiveInterfaceConformances []Conformance
 
 func init() {
+	addressTypeInterfaces := []*InterfaceType{
+		StructStringerType,
+	}
+
 	addressTypeEffectiveInterfaceConformanceSet = NewInterfaceSet()
-	addressTypeEffectiveInterfaceConformanceSet.Add(StructStringerType)
+	for _, interfaceType := range addressTypeInterfaces {
+		addressTypeEffectiveInterfaceConformanceSet.Add(interfaceType)
+	}
+
+	addressTypeEffectiveInterfaceConformances = distinctConformances(
+		addressTypeInterfaces,
+		nil,
+		map[*InterfaceType]struct{}{},
+	)
 }
-func (t *AddressType) AddressInterfaceConformanceSet() *InterfaceSet {
-	return numericTypeEffectiveInterfaceConformanceSet
+
+func (t *AddressType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	return addressTypeEffectiveInterfaceConformanceSet
+}
+
+func (t *AddressType) EffectiveInterfaceConformances() []Conformance {
+	return addressTypeEffectiveInterfaceConformances
 }
 
 func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {

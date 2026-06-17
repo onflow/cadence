@@ -93,7 +93,7 @@ func (p *Parameter) MarshalJSON() ([]byte, error) {
 
 const parameterDefaultArgumentSeparator = "="
 
-func (p *Parameter) Doc() prettier.Doc {
+func (p *Parameter) Doc(ctx PrettyContext) prettier.Doc {
 	var parameterDoc prettier.Concat
 
 	if p.Label != "" {
@@ -108,7 +108,7 @@ func (p *Parameter) Doc() prettier.Doc {
 		parameterDoc,
 		prettier.Text(p.Identifier.Identifier),
 		typeSeparatorSpaceDoc,
-		docOrEmpty(p.TypeAnnotation),
+		docOrEmpty(p.TypeAnnotation, ctx),
 	)
 
 	if p.DefaultArgument != nil {
@@ -117,7 +117,7 @@ func (p *Parameter) Doc() prettier.Doc {
 			prettier.Space,
 			prettier.Text(parameterDefaultArgumentSeparator),
 			prettier.Space,
-			p.DefaultArgument.Doc(),
+			p.DefaultArgument.Doc(ctx),
 		)
 	}
 

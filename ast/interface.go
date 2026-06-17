@@ -114,15 +114,16 @@ func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (d *InterfaceDeclaration) Doc() prettier.Doc {
-	return CompositeDocument(
+func (d *InterfaceDeclaration) Doc(ctx PrettyContext) prettier.Doc {
+	return ctx.Wrap(d, CompositeDocument(
+		ctx,
 		d.Access,
 		d.CompositeKind,
 		true,
 		d.Identifier.Identifier,
 		d.Conformances,
 		d.Members,
-	)
+	))
 }
 
 func (d *InterfaceDeclaration) String() string {
