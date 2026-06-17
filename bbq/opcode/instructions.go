@@ -1687,7 +1687,10 @@ func (i InstructionUnwrap) Pretty(program ProgramForInstructions) PrettyInstruct
 // InstructionWrap
 //
 // Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+// If `skipIfOptional` is set, the value is left unchanged if it is already an optional
+// (used for optional-chaining member access, which flattens nested optionals).
 type InstructionWrap struct {
+	SkipIfOptional bool
 }
 
 var _ Instruction = InstructionWrap{}
@@ -1697,22 +1700,38 @@ func (InstructionWrap) Opcode() Opcode {
 }
 
 func (i InstructionWrap) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	i.OperandsString(&sb, false)
+	return sb.String()
 }
 
-func (i InstructionWrap) OperandsString(sb *strings.Builder, colorize bool) {}
+func (i InstructionWrap) OperandsString(sb *strings.Builder, colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "skipIfOptional", i.SkipIfOptional, colorize)
+}
 
 func (i InstructionWrap) ResolvedOperandsString(sb *strings.Builder,
 	program ProgramForInstructions,
 	colorize bool) {
+	sb.WriteByte(' ')
+	printfArgument(sb, "skipIfOptional", i.SkipIfOptional, colorize)
 }
 
 func (i InstructionWrap) Encode(code *[]byte) {
 	emitOpcode(code, i.Opcode())
+	emitBool(code, i.SkipIfOptional)
+}
+
+func DecodeWrap(ip *uint16, code []byte) (i InstructionWrap) {
+	i.SkipIfOptional = decodeBool(ip, code)
+	return i
 }
 
 func (i InstructionWrap) Pretty(program ProgramForInstructions) PrettyInstruction {
-	return PrettyInstructionWrap{}
+	return PrettyInstructionWrap{
+		SkipIfOptional: i.SkipIfOptional,
+	}
 }
 
 // InstructionBoxOptional
@@ -3636,7 +3655,7 @@ func DecodeInstruction(ip *uint16, code []byte) Instruction {
 	case Unwrap:
 		return InstructionUnwrap{}
 	case Wrap:
-		return InstructionWrap{}
+		return DecodeWrap(ip, code)
 	case BoxOptional:
 		return DecodeBoxOptional(ip, code)
 	case Transfer:

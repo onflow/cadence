@@ -803,7 +803,10 @@ func (i PrettyInstructionUnwrap) String() string {
 //
 // Pretty form of InstructionWrap with resolved operands.
 // Pops a value off the stack, wrap it with an optional, and pushes back onto the stack.
+// If `skipIfOptional` is set, the value is left unchanged if it is already an optional
+// (used for optional-chaining member access, which flattens nested optionals).
 type PrettyInstructionWrap struct {
+	SkipIfOptional bool
 }
 
 var _ PrettyInstruction = PrettyInstructionWrap{}
@@ -813,7 +816,11 @@ func (PrettyInstructionWrap) Opcode() Opcode {
 }
 
 func (i PrettyInstructionWrap) String() string {
-	return i.Opcode().String()
+	var sb strings.Builder
+	sb.WriteString(i.Opcode().String())
+	sb.WriteByte(' ')
+	printfArgument(&sb, "skipIfOptional", i.SkipIfOptional, false)
+	return sb.String()
 }
 
 // PrettyInstructionBoxOptional

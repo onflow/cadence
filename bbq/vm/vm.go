@@ -1839,7 +1839,8 @@ func opUnwrap(vm *VM) {
 	value := vm.peek()
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
-		vm.replaceTop(value.InnerValue())
+		unwrappedValue := value.InnerValue()
+		vm.replaceTop(unwrappedValue)
 	case interpreter.NilValue:
 		panic(&interpreter.ForceNilError{})
 	default:
@@ -1847,8 +1848,20 @@ func opUnwrap(vm *VM) {
 	}
 }
 
-func opWrap(vm *VM) {
+func opWrap(vm *VM, ins opcode.InstructionWrap) {
 	value := vm.peek()
+
+	// For optional-chaining member access, the result must not be double-wrapped
+	// if it is already an optional (flattening). The decision can only be made at
+	// runtime, since e.g. a member of a dynamic type (`AnyStruct`) may hold an
+	// optional value even though its static type is not an optional.
+	// This mirrors the interpreter, which checks `value is OptionalValue`.
+	if ins.SkipIfOptional {
+		if _, ok := value.(interpreter.OptionalValue); ok {
+			return
+		}
+	}
+
 	optional := interpreter.NewSomeValueNonCopying(vm.context, value)
 	vm.replaceTop(optional)
 }
@@ -1884,7 +1897,7 @@ func opNewDictionary(vm *VM, ins opcode.InstructionNewDictionary) {
 	typeIndex := ins.Type
 	typ := vm.loadType(typeIndex).(*interpreter.DictionaryStaticType)
 
-	entries := vm.peekN(int(ins.Size * 2))
+	entries := vm.peekN(int(ins.Size) * 2)
 	dictionary := interpreter.NewDictionaryValue(
 		vm.context,
 		typ,
@@ -1955,7 +1968,7 @@ func opDeref(vm *VM) {
 
 func opStringTemplate(vm *VM, ins opcode.InstructionTemplateString) {
 	expressions := vm.popN(int(ins.ExprSize))
-	values := vm.popN(int(ins.ExprSize + 1))
+	values := vm.popN(int(ins.ExprSize) + 1)
 	var valuesStr []string
 
 	// convert values to string[]
@@ -2276,7 +2289,7 @@ func (vm *VM) run() {
 		case opcode.InstructionNot:
 			opNot(vm)
 		case opcode.InstructionWrap:
-			opWrap(vm)
+			opWrap(vm, ins)
 		case opcode.InstructionBoxOptional:
 			opBoxOptional(vm, ins)
 		case opcode.InstructionUnwrap:
