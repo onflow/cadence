@@ -1930,7 +1930,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 		// this defensive check requires changing opGetTypeIndex to take on the work that
 		// previous instructions in VisitAttachExpression do which is not ideal
 		// same goes for all below attach defensive checks
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndInterpretWithOptions(t, ` //nolint:staticcheck
         struct S {}
         attachment A for S {}
         fun test() {
@@ -1972,7 +1972,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndInterpretWithOptions(t, ` //nolint:staticcheck
         struct S {}
         attachment A for S {}
         fun test() {
@@ -2012,7 +2012,7 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 
 		t.Parallel()
 
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
+		inter, _ := parseCheckAndInterpretWithOptions(t, ` //nolint:staticcheck
         struct S {}
         attachment A for S {}
         enum E: UInt8 {
@@ -2689,7 +2689,7 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 
 	// This test is adapted and available in vm_test.go
 	// TestAttachments/build-in type
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		`
           attachment A for AnyStruct {
               fun foo(): Int {

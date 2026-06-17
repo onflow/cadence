@@ -135,7 +135,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 
 		// NOTE: test only applies to the interpreter,
 		// the VM does not provide a way to check the caller's self
-		inter, err := parseCheckAndInterpretWithOptions(
+		inter, err := parseCheckAndInterpretWithOptions( //nolint:staticcheck
 			t,
 			code,
 			ParseCheckAndInterpretOptions{

@@ -8166,8 +8166,8 @@ func TestRuntimeComputationMetering(t *testing.T) {
               for i in [1] {}
             `,
 			ok:        true,
-			hits:      ifCompile[uint](8, 5),
-			intensity: ifCompile[uint64](8, 5),
+			hits:      ifCompile[uint](8, 6),
+			intensity: ifCompile[uint64](8, 6),
 		},
 		{
 			name: "statement + functionInvocation + encoding",
@@ -8175,8 +8175,8 @@ func TestRuntimeComputationMetering(t *testing.T) {
               acc.storage.save("A quick brown fox jumps over the lazy dog", to:/storage/some_path)
             `,
 			ok:        true,
-			hits:      ifCompile[uint](10, 8),
-			intensity: ifCompile[uint64](115, 113),
+			hits:      ifCompile[uint](10, 9),
+			intensity: ifCompile[uint64](115, 114),
 		},
 	}
 
@@ -14623,4 +14623,48 @@ func TestRuntimeBaseDowncastAfterContractUpgrade(t *testing.T) {
 
 	var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
 	require.ErrorAs(t, err, &forceCastTypeMismatchError)
+}
+
+func TestRuntimeScriptComputationMeteringEntryPoint(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+      access(all) fun main(): Int {
+          return 1
+      }
+    `)
+
+	runtime := NewTestRuntime()
+
+	var functionInvocations uint64
+	computationGauge := common.FunctionComputationGauge(
+		func(usage common.ComputationUsage) error {
+			if usage.Kind == common.ComputationKindFunctionInvocation {
+				functionInvocations += usage.Intensity
+			}
+			return nil
+		},
+	)
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+	}
+
+	value, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface:        runtimeInterface,
+			Location:         common.ScriptLocation{},
+			ComputationGauge: computationGauge,
+			UseVM:            *compile,
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, cadence.NewInt(1), value)
+
+	// The entry-point invocation must be metered.
+	assert.Equal(t, uint64(1), functionInvocations)
 }

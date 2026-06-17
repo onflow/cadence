@@ -100,7 +100,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 	)
 
 	// NOTE: virtual imports are not supported by the compiler/VM
-	inter, err := parseCheckAndInterpretWithOptions(t,
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		code,
 		ParseCheckAndInterpretOptions{
 			ParseAndCheckOptions: &ParseAndCheckOptions{
@@ -526,7 +526,9 @@ func TestInterpretImportWithAlias(t *testing.T) {
 	require.NoError(t, err)
 
 	storage := NewUnmeteredInMemoryStorage()
-	inter, err := parseCheckAndInterpretWithOptions(t,
+
+	// TODO: Also run with compiler
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		`
           import a as a1 from 0x1
           import a as a2 from 0x2
@@ -640,7 +642,9 @@ func TestInterpretImportAliasGetType(t *testing.T) {
 	require.NoError(t, err)
 
 	storage := NewUnmeteredInMemoryStorage()
-	inter, err := parseCheckAndInterpretWithOptions(t,
+
+	// TODO: Also run with compiler
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		`
           import Foo as Bar from 0x1
 
@@ -763,7 +767,9 @@ func TestInterpretImportTypeEquality(t *testing.T) {
 	// and uses bar to return Baz (i.e., Foo)
 
 	storage := NewUnmeteredInMemoryStorage()
-	inter, err := parseCheckAndInterpretWithOptions(t,
+
+	// TODO: Also run with compiler
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		`
           import Foo as Baz from 0x1
           import bar from 0x2
@@ -887,7 +893,9 @@ func TestInterpretImportAliasOtherMember(t *testing.T) {
 	require.NoError(t, err)
 
 	storage := NewUnmeteredInMemoryStorage()
-	inter, err := parseCheckAndInterpretWithOptions(t,
+
+	// TODO: Also run with compiler
+	inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 		`
 		import MyContract as TheirContract from 0x1
 		access(all) fun test(): Int {
@@ -1108,7 +1116,8 @@ func TestInterpretImportGlobals(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		// Already running with the compiler above
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			`
               import x, y from 0x1
 
@@ -1428,7 +1437,8 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 
 		// Program C
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		// Running with the compiler separately above
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			`
               import I from 0x1
 
@@ -1771,7 +1781,8 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 
 		// Program C
 
-		inter, err := parseCheckAndInterpretWithOptions(t,
+		// Running with the compiler separately above
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
 			codeC,
 			ParseCheckAndInterpretOptions{
 				ParseAndCheckOptions: &ParseAndCheckOptions{
