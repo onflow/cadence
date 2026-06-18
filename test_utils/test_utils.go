@@ -39,11 +39,25 @@ import (
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 )
+
+// builtinContractMemberVMFunctions maps the type-qualifier of a built-in contract
+// (e.g. `RLP`) to its member functions (e.g. RLP.decodeString) that tests may use.
+// When such a contract value is present in the base activation, its member functions
+// are registered as type-qualified globals in both the VM and the compiler,
+// mirroring how the runtime environment registers them.
+// NOTE: Only contains RLP functions for now. Add as needed.
+var builtinContractMemberVMFunctions = map[string][]stdlib.VMFunction{
+	commons.TypeQualifier(stdlib.RLPType): {
+		stdlib.VMRLPDecodeStringFunction,
+		stdlib.VMRLPDecodeListFunction,
+	},
+}
 
 type ParseCheckAndInterpretOptions struct {
 	ParseAndCheckOptions *ParseAndCheckOptions
@@ -328,6 +342,15 @@ func ParseCheckAndPrepareWithOptions(
 			}
 			var nestedEntries []nestedVariableEntry
 
+			// Collect member functions of built-in contract values that are present
+			// in the base activation (e.g. `RLP.decodeString`), so they can be
+			// registered as type-qualified globals in both the VM and the compiler.
+			type memberFunctionEntry struct {
+				qualifiedName string
+				value         vm.Value
+			}
+			var memberFunctionEntries []memberFunctionEntry
+
 			for name, variable := range interpreterBaseActivationVariables { //nolint:maprange
 				value := variable.GetValue(nil)
 				if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
@@ -338,8 +361,22 @@ func ParseCheckAndPrepareWithOptions(
 						})
 					}
 				}
+
+				for _, vmFunction := range builtinContractMemberVMFunctions[name] {
+					functionValue := vmFunction.FunctionValue
+					memberFunctionEntries = append(memberFunctionEntries, memberFunctionEntry{
+						qualifiedName: commons.TypeQualifiedName(
+							vmFunction.BaseType,
+							functionValue.Name,
+						),
+						value: functionValue,
+					})
+				}
 			}
 			slices.SortFunc(nestedEntries, func(a, b nestedVariableEntry) int {
+				return strings.Compare(a.qualifiedName, b.qualifiedName)
+			})
+			slices.SortFunc(memberFunctionEntries, func(a, b memberFunctionEntry) int {
 				return strings.Compare(a.qualifiedName, b.qualifiedName)
 			})
 
@@ -420,6 +457,15 @@ func ParseCheckAndPrepareWithOptions(
 					)
 				}
 
+				// Register member functions of built-in contract values
+				// as separate type-qualified globals (e.g. `RLP.decodeString`).
+				for _, entry := range memberFunctionEntries {
+					activation.Set(
+						entry.qualifiedName,
+						interpreter.NewVariableWithValue(nil, entry.value),
+					)
+				}
+
 				return activation
 			}
 
@@ -441,6 +487,15 @@ func ParseCheckAndPrepareWithOptions(
 
 					// Register nested variables as separate qualified compiler globals.
 					for _, entry := range nestedEntries {
+						activation.Set(
+							entry.qualifiedName,
+							compiler.NewGlobalImport(entry.qualifiedName),
+						)
+					}
+
+					// Register member functions of built-in contract values
+					// as separate type-qualified compiler globals (e.g. `RLP.decodeString`).
+					for _, entry := range memberFunctionEntries {
 						activation.Set(
 							entry.qualifiedName,
 							compiler.NewGlobalImport(entry.qualifiedName),
