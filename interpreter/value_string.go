@@ -728,7 +728,7 @@ func (v *StringValue) ReplaceAll(
 		func() string {
 			var b strings.Builder
 			b.Grow(newByteLength)
-			for i := 0; i < count; i++ {
+			for i := range count {
 
 				var originalCharacterIndex, originalByteOffset int
 				if original.Length(context) == 0 {

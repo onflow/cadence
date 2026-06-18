@@ -237,7 +237,7 @@ func (p *Program) Doc(ctx PrettyContext) prettier.Doc {
 		if i > 0 {
 			previousDeclaration := declarations[i-1]
 			sep := declSeparatorHardLineCount(ctx, previousDeclaration, declaration)
-			for j := 0; j < sep; j++ {
+			for range sep {
 				parts = append(parts, prettier.HardLine{})
 			}
 		}

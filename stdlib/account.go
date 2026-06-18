@@ -19,9 +19,9 @@
 package stdlib
 
 import (
+	"crypto/sha3"
 	"fmt"
 
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
 
 	"github.com/onflow/atree"
@@ -892,7 +892,7 @@ func AccountKeysForEach(
 		panic(err)
 	}
 
-	for index := uint32(0); index < count; index++ {
+	for index := range count {
 
 		accountKey, err := provider.GetAccountKey(address, index)
 		if err != nil {
@@ -1748,7 +1748,7 @@ func nativeAccountContractsChangeFunction(
 	) interpreter.Value {
 
 		argumentValueTypes := make([]sema.Type, len(args))
-		for i := 0; i < len(args); i++ {
+		for i := range args {
 			// TODO: optimize, avoid gathering the types
 			staticType := args[i].StaticType(context)
 			argumentValueTypes[i] = context.SemaTypeFromStaticType(staticType)
@@ -2158,7 +2158,7 @@ func nativeAccountContractsTryUpdateFunction(
 
 		// TODO: optimize, avoid gathering the types
 		argumentValueTypes := make([]sema.Type, len(args))
-		for i := 0; i < len(args); i++ {
+		for i := range args {
 			staticType := args[i].StaticType(context)
 			argumentValueTypes[i] = context.SemaTypeFromStaticType(staticType)
 		}
@@ -2433,7 +2433,7 @@ func instantiateContract(
 
 	// Check arguments match parameter
 
-	for argumentIndex := 0; argumentIndex < argumentCount; argumentIndex++ {
+	for argumentIndex := range argumentCount {
 
 		parameter := constructorParameters[argumentIndex]
 		parameterType := parameter.TypeAnnotation.Type

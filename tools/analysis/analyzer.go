@@ -22,7 +22,7 @@ package analysis
 type Analyzer struct {
 	Description string
 
-	Run func(*Pass) interface{}
+	Run func(*Pass) any
 
 	// Requires is a set of analyzers that must run before this one.
 	// This analyzer may inspect the outputs produced by each analyzer in Requires.

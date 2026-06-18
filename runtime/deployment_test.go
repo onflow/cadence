@@ -19,6 +19,7 @@
 package runtime_test
 
 import (
+	"crypto/sha3"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -27,7 +28,6 @@ import (
 	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/bbq/vm"
@@ -134,7 +134,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			argumentCode = ", " + argumentCode
 		}
 
-		script := []byte(fmt.Sprintf(
+		script := fmt.Appendf(nil,
 			`
               transaction {
 
@@ -145,7 +145,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
             `,
 			contractArrayCode,
 			argumentCode,
-		))
+		)
 
 		runtime := NewTestRuntime()
 

@@ -55,7 +55,7 @@ func TestStorageDomainValues(t *testing.T) {
 	// If a placeholder `_` is replaced with a new named value,
 	// its String() representation will no longer be a numeric fallback.
 	// NOTE: This requires the stringer-generated file to be up to date (CI runs go generate).
-	for i := uint8(0); i < uint8(StorageDomain_Count); i++ {
+	for i := range uint8(StorageDomain_Count) {
 
 		domain := StorageDomain(i)
 		if _, ok := expectedValues[domain]; ok {

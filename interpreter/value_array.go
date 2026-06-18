@@ -1258,7 +1258,7 @@ func (v *ArrayValue) Equal(context ValueComparisonContext, other Value) bool {
 		return false
 	}
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		value := v.Get(context, i)
 		otherValue := otherArray.Get(context, i)
 

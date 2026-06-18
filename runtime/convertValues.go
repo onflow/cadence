@@ -1365,7 +1365,7 @@ func (i valueImporter) importDictionaryValue(
 		keyTypes := make([]sema.Type, size)
 		valueTypes := make([]sema.Type, size)
 
-		for i := 0; i < size; i++ {
+		for i := range size {
 			keyType, err := interpreter.ConvertStaticToSemaType(inter, keysAndValues[i*2].StaticType(inter))
 			if err != nil {
 				return nil, err

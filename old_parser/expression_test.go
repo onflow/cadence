@@ -2214,7 +2214,7 @@ func BenchmarkParseInfix(b *testing.B) {
 func BenchmarkParseArray(b *testing.B) {
 
 	var builder strings.Builder
-	for i := 0; i < 10_000; i++ {
+	for i := range 10_000 {
 		if i > 0 {
 			builder.WriteString(", ")
 		}

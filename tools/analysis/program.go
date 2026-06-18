@@ -38,7 +38,7 @@ type Program struct {
 func (program *Program) Run(analyzers []*Analyzer, report func(Diagnostic)) {
 
 	type action struct {
-		result interface{}
+		result any
 		once   sync.Once
 	}
 
@@ -70,7 +70,7 @@ func (program *Program) Run(analyzers []*Analyzer, report func(Diagnostic)) {
 
 			// The inputs to this analysis are the
 			// results of its prerequisites.
-			inputs := make(map[*Analyzer]interface{})
+			inputs := make(map[*Analyzer]any)
 			for _, req := range a.Requires {
 				requirementAction := exec(req)
 				inputs[req] = requirementAction.result

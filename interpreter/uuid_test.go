@@ -128,7 +128,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	require.Equal(t, length, array.Count())
 
-	for i := 0; i < length; i++ {
+	for i := range length {
 		element := array.Get(inter, i)
 
 		require.IsType(t, &interpreter.CompositeValue{}, element)

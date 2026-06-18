@@ -49,7 +49,7 @@ func NewPositionAtCodeOffset(memoryGauge common.MemoryGauge, code string, offset
 	line := 1
 	column := 0
 
-	for i := 0; i < offset; i++ {
+	for i := range offset {
 		if code[i] == '\n' {
 			line++
 			column = 0

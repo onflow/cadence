@@ -2336,7 +2336,6 @@ func TestCheckKeywordsAsFieldNames(t *testing.T) {
 		"contract",
 		"default",
 	} {
-		keyword := keyword
 
 		t.Run(keyword, func(t *testing.T) {
 			t.Parallel()

@@ -497,7 +497,7 @@ func TestInterpretArrayEquality(t *testing.T) {
 	// variable sized arrays
 	nestingLimit := 4
 
-	for i := 0; i < nestingLimit; i++ {
+	for i := range nestingLimit {
 		nestingLevel := i
 		array := fmt.Sprintf("%s 42 %s", strings.Repeat("[", nestingLevel), strings.Repeat("]", nestingLevel))
 

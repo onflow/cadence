@@ -173,14 +173,14 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 
 		rt := NewTestRuntime()
 
-		script := []byte(fmt.Sprintf(`
+		script := fmt.Appendf(nil, `
             transaction {
 
                 prepare(signer: auth(SaveValue) &Account) {
                     signer.storage.save<%s>(panic(""))
                 }
             }
-        `, ty.String()))
+        `, ty.String())
 
 		runtimeInterface := &TestRuntimeInterface{}
 

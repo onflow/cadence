@@ -596,20 +596,6 @@ func NewCadenceEnumMemoryUsages(fields int) (MemoryUsage, MemoryUsage) {
 	}
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 const BigIntWordSize = int(unsafe.Sizeof(big.Word(0)))
 
 var bigIntWordSizeAsBig = big.NewInt(int64(BigIntWordSize))
