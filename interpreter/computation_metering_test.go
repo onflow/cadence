@@ -3045,17 +3045,35 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		expectedUsages := []common.ComputationUsage{
-			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
-			{Kind: common.ComputationKindStatement, Intensity: 1},
-			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
-			{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-			{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
-			{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
-			{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
-			{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
-			{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-			{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			// The compiler/VM meters the function invocation after the
+			// argument array has been constructed and transferred.
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 4},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 4},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 4},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 4},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 3},
+			}
 		}
 
 		AssertEqualWithDiff(t,
@@ -3113,18 +3131,37 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		expectedUsages := []common.ComputationUsage{
-			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
-			{Kind: common.ComputationKindStatement, Intensity: 1},
-			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
-			{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-			{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
-			{Kind: common.ComputationKindTransferArrayValue, Intensity: 303},
-			{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
-			{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 303},
-			{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 303},
-			{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-			{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 300},
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			// The compiler/VM meters the function invocation after the
+			// argument array has been constructed and transferred.
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 303},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 303},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 303},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 300},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 303},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 303},
+				{Kind: common.ComputationKindAtreeArrayReadIteration, Intensity: 303},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeString, Intensity: 303},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 300},
+			}
 		}
 
 		AssertEqualWithDiff(t,
@@ -3182,19 +3219,39 @@ func TestInterpretComputationMeteringRLP(t *testing.T) {
 		_, err = inter.Invoke("test")
 		require.NoError(t, err)
 
-		expectedUsages := []common.ComputationUsage{
-			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
-			{Kind: common.ComputationKindStatement, Intensity: 1},
-			{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
-			{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-			{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
-			{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
-			{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
-			{Kind: common.ComputationKindSTDLIBRLPDecodeList, Intensity: 2},
-			{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-			{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
-			{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
-			{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
+		var expectedUsages []common.ComputationUsage
+		if *compile {
+			// The compiler/VM meters the function invocation after the
+			// argument array has been constructed and transferred.
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeList, Intensity: 2},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
+			}
+		} else {
+			expectedUsages = []common.ComputationUsage{
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindStatement, Intensity: 1},
+				{Kind: common.ComputationKindFunctionInvocation, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 2},
+				{Kind: common.ComputationKindTransferArrayValue, Intensity: 2},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 2},
+				{Kind: common.ComputationKindSTDLIBRLPDecodeList, Intensity: 2},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArrayBatchConstruction, Intensity: 1},
+				{Kind: common.ComputationKindCreateArrayValue, Intensity: 1},
+				{Kind: common.ComputationKindAtreeArraySingleSlabConstruction, Intensity: 1},
+			}
 		}
 
 		AssertEqualWithDiff(t,
