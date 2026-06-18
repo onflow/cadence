@@ -605,10 +605,10 @@ func (d *Desugar) inheritedConditionParamBindings(
 		return nil
 	}
 
-	paramBinding := make(map[string]int)
+	inheritedFunctionParams := inheritedFunc.functionDecl.ParameterList.Parameters
 
-	inheritedFunctionParams := inheritedFunc.functionDecl.ParameterList
-	for i, parameter := range inheritedFunctionParams.Parameters {
+	paramBinding := make(map[string]int, len(inheritedFunctionParams))
+	for i, parameter := range inheritedFunctionParams {
 		inheritedFunctionParamName := parameter.Identifier.Identifier
 		paramBinding[inheritedFunctionParamName] = i
 	}
