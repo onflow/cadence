@@ -133,7 +133,16 @@ func (o *PeepholeInstructionStaticTypeOptimizer) OptimizeInstructions(instructio
 		// check candidates for pattern match for each instruction
 		for _, candidate := range candidates {
 			candidateOpcodes := candidate.Opcodes
-			window := instructions[i : i+len(candidateOpcodes)]
+
+			// Skip patterns that cannot fit in the remaining instructions.
+			// For e.g: the window slice below would go out of bounds
+			// when a pattern's first opcode matches near the end of the code.
+			candidateEndIndex := i + len(candidateOpcodes)
+			if candidateEndIndex > len(instructions) {
+				continue
+			}
+
+			window := instructions[i:candidateEndIndex]
 
 			if candidate.Match(window, i, o.jumpTargets) {
 				replacement := candidate.Replacement(window, o.compiler)
