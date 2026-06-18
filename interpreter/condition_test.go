@@ -2045,4 +2045,96 @@ func TestInterpretInheritedConditionWithRenamedParameter(t *testing.T) {
 			value,
 		)
 	})
+
+	// Multiple parameters where one implementation swaps the internal parameter
+	// names relative to the argument labels (valid: only labels must match). The
+	// inherited `before` arguments must still resolve to the correct parameter by
+	// position, even when shared across the two implementations.
+	t.Run("before stmt, two implementations, swapped internal names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int, b: Int): Int {
+                  post {
+                      result == before(a) * 10 + before(b)
+                  }
+              }
+          }
+
+          struct S1: I {
+              // Internal names swapped relative to the labels.
+              fun foo(a b: Int, b a: Int): Int {
+                  return b * 10 + a
+              }
+          }
+
+          struct S2: I {
+              fun foo(a p: Int, b q: Int): Int {
+                  return p * 10 + q
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 3, b: 4) + S2().foo(a: 5, b: 6)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(90),
+			value,
+		)
+	})
+
+	// Initializers are desugared through a separate entry path
+	// (special function declarations), so exercise the same shared-AST-statement
+	// scenario there: inherited initializer post-condition with `before`, two
+	// implementations using different internal parameter names.
+	t.Run("init before stmt, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              let v: Int
+              init(a: Int) {
+                  post {
+                      self.v == before(a) + 1
+                  }
+              }
+          }
+
+          struct S1: I {
+              let v: Int
+              init(a x: Int) {
+                  self.v = x + 1
+              }
+          }
+
+          struct S2: I {
+              let v: Int
+              init(a y: Int) {
+                  self.v = y + 1
+              }
+          }
+
+          fun test(): Int {
+              return S1(a: 10).v + S2(a: 20).v
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(32),
+			value,
+		)
+	})
 }
