@@ -73,7 +73,7 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 	// previousCadenceID is used to check if type definitions are sorted by cadence type IDs.
 	var previousCadenceID cadenceTypeID
 
-	for i := uint64(0); i < count; i++ {
+	for i := range count {
 		ccfID, cadenceID, rawFields, err := d.decodeTypeDef(types)
 		if err != nil {
 			return nil, err

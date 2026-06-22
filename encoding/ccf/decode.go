@@ -1201,7 +1201,7 @@ func (d *Decoder) decodeDictionary(typ *cadence.DictionaryType, types *cadenceTy
 			// previousKeyRawBytes is used to determine if dictionary keys are sorted
 			var previousKeyRawBytes []byte
 
-			for i := 0; i < pairCount; i++ {
+			for i := range pairCount {
 				// element i: key
 
 				// Decode key as raw bytes to check that key pairs are sorted by key.
@@ -1272,7 +1272,7 @@ func (d *Decoder) decodeComposite(fieldTypes []cadence.Field, types *cadenceType
 
 	fieldValues := make([]cadence.Value, fieldCount)
 
-	for i := 0; i < fieldCount; i++ {
+	for i := range fieldCount {
 		// Decode field.
 		field, err := d.decodeValue(fieldTypes[i].Type, types)
 		if err != nil {

@@ -544,7 +544,7 @@ payloadLoop:
 		}
 
 		var storageKey [keyPartCount]string
-		for i := 0; i < keyPartCount; i++ {
+		for i := range keyPartCount {
 			keyPart := e.Key.KeyParts[i].Value
 			k, err := hex.DecodeString(keyPart)
 			if err != nil {

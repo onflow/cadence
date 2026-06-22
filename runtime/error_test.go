@@ -528,7 +528,7 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
 	runtime := NewTestRuntime()
 
 	makeDeployTransaction := func(name, code string) []byte {
-		return []byte(fmt.Sprintf(
+		return fmt.Appendf(nil,
 			`
               transaction {
                 prepare(signer: auth(BorrowValue) &Account) {
@@ -539,7 +539,7 @@ func TestRuntimeMultipleInterfaceDefaultImplementationsError(t *testing.T) {
             `,
 			name,
 			hex.EncodeToString([]byte(code)),
-		))
+		)
 	}
 
 	contractInterfaceCode := `

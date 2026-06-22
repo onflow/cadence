@@ -1146,19 +1146,11 @@ func unwrapOptionals(types []Type) ([]Type, int) {
 }
 
 func wrapOptionals(typ Type, levels int) Type {
-	for i := 0; i < levels; i++ {
+	for range levels {
 		typ = &OptionalType{
 			Type: typ,
 		}
 	}
 
 	return typ
-}
-
-func max(a, b int) int {
-	if a >= b {
-		return a
-	}
-
-	return b
 }

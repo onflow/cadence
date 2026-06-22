@@ -351,9 +351,9 @@ func TestInclusiveRange(t *testing.T) {
 			t.Parallel()
 
 			// Generate code for the contains calls.
-			var containsCode string
+			var containsCode strings.Builder
 			for i, tc := range testCase.containsTests {
-				containsCode += fmt.Sprintf("\nlet c_%d = r.contains(%d)", i, tc.param)
+				containsCode.WriteString(fmt.Sprintf("\nlet c_%d = r.contains(%d)", i, tc.param))
 			}
 
 			var code string
@@ -374,7 +374,7 @@ func TestInclusiveRange(t *testing.T) {
 					testCase.ty.String(),
 					testCase.step,
 					testCase.ty.String(),
-					containsCode,
+					containsCode.String(),
 				)
 			} else {
 				code = fmt.Sprintf(
@@ -389,7 +389,7 @@ func TestInclusiveRange(t *testing.T) {
 					testCase.s,
 					testCase.ty.String(),
 					testCase.e,
-					containsCode,
+					containsCode.String(),
 				)
 			}
 

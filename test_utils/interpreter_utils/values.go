@@ -102,7 +102,7 @@ func AssertValuesEqual(t testing.TB, context interpreter.ValueComparisonContext,
 func ArrayElements(context interpreter.ContainerReadContext, array *interpreter.ArrayValue) []interpreter.Value {
 	count := array.Count()
 	result := make([]interpreter.Value, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		result[i] = array.Get(context, i)
 	}
 	return result

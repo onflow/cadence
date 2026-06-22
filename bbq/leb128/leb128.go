@@ -91,7 +91,7 @@ func AppendUint64(data []byte, v uint64) []byte {
 // in non-canonical (fixed-size, instead of with the fewest bytes possible)
 // unsigned little-endian base-128 format
 func AppendUint32FixedLength(data []byte, v uint32, length int) ([]byte, error) {
-	for i := 0; i < length; i++ {
+	for i := range length {
 		c := uint8(v & 0x7f)
 		v >>= 7
 		if i < length-1 {
@@ -109,7 +109,7 @@ func AppendUint32FixedLength(data []byte, v uint32, length int) ([]byte, error) 
 func ReadUint32(data []byte) (result uint32, count int, err error) {
 	var shift uint
 	// only read up to maximum number of bytes
-	for i := 0; i < max32bitByteCount; i++ {
+	for i := range max32bitByteCount {
 		if i >= len(data) {
 			return 0, 0, fmt.Errorf("data too short: %d", len(data))
 		}
@@ -129,7 +129,7 @@ func ReadUint32(data []byte) (result uint32, count int, err error) {
 func ReadUint64(data []byte) (result uint64, count int, err error) {
 	var shift uint
 	// only read up to maximum number of bytes
-	for i := 0; i < max64bitByteCount; i++ {
+	for i := range max64bitByteCount {
 		if i >= len(data) {
 			return 0, 0, fmt.Errorf("data too short: %d", len(data))
 		}

@@ -1795,3 +1795,346 @@ func TestInterpretFunctionBeforePostConditionAndInheritedBeforePostCondition(t *
 		require.NoError(t, err)
 	}
 }
+
+func TestInterpretInheritedConditionWithRenamedParameter(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("before stmt, different names, one has matching label", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int): Int {
+                  post {
+                      result == before(a) + 1
+                  }
+              }
+          }
+
+          struct S: I {
+              // Different parameter name "x". Label ("a") matches interface function's parameter name.
+              fun foo(a x: Int): Int {
+                  return x + 1
+              }
+          }
+
+          fun test(): Int {
+              let s = S()
+              return s.foo(a: 5)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(6),
+			value,
+		)
+	})
+
+	t.Run("before stmt, different names, no labels", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(_ a: Int): Int {
+                  post {
+                      result == before(a) + 1
+                  }
+              }
+          }
+
+          struct S: I {
+              // Different parameter name "x". No label.
+              fun foo(_ x: Int): Int {
+                  return x + 1
+              }
+          }
+
+          fun test(): Int {
+              let s = S()
+              return s.foo(5)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(6),
+			value,
+		)
+	})
+
+	t.Run("before stmt, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int): Int {
+                  post {
+                      result == before(a)
+                  }
+              }
+          }
+
+          struct S1: I {
+              fun foo(a x: Int): Int {
+                  return x
+              }
+          }
+
+          struct S2: I {
+              fun foo(a y: Int): Int {
+                  return y
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 10) + S2().foo(a: 20)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+			value,
+		)
+	})
+
+	t.Run(" emit condition, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter, getEvents, err := parseCheckAndPrepareWithEvents(t, `
+          event Logged(v: Int)
+
+          struct interface I {
+              fun foo(a: Int): Int {
+                  post {
+                      emit Logged(v: before(a))
+                  }
+              }
+          }
+
+          struct S1: I {
+              fun foo(a x: Int): Int {
+                  return x
+              }
+          }
+
+          struct S2: I {
+              fun foo(a y: Int): Int {
+                  return y
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 10) + S2().foo(a: 20)
+          }
+        `)
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+			value,
+		)
+
+		events := getEvents()
+		require.Len(t, events, 2)
+		assert.Equal(t,
+			[]interpreter.Value{interpreter.NewUnmeteredIntValueFromInt64(10)},
+			events[0].EventFields,
+		)
+		assert.Equal(t,
+			[]interpreter.Value{interpreter.NewUnmeteredIntValueFromInt64(20)},
+			events[1].EventFields,
+		)
+	})
+
+	t.Run(" pre-condition, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int): Int {
+                  pre {
+                      a > 0
+                  }
+              }
+          }
+
+          struct S1: I {
+              fun foo(a x: Int): Int {
+                  return x
+              }
+          }
+
+          struct S2: I {
+              fun foo(a y: Int): Int {
+                  return y
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 10) + S2().foo(a: 20)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+			value,
+		)
+	})
+
+	t.Run("post-condition, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int): Int {
+                  post {
+                      result == a
+                  }
+              }
+          }
+
+          struct S1: I {
+              fun foo(a x: Int): Int {
+                  return x
+              }
+          }
+
+          struct S2: I {
+              fun foo(a y: Int): Int {
+                  return y
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 10) + S2().foo(a: 20)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+			value,
+		)
+	})
+
+	// Multiple parameters where one implementation swaps the internal parameter
+	// names relative to the argument labels (valid: only labels must match). The
+	// inherited `before` arguments must still resolve to the correct parameter by
+	// position, even when shared across the two implementations.
+	t.Run("before stmt, two implementations, swapped internal names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              fun foo(a: Int, b: Int): Int {
+                  post {
+                      result == before(a) * 10 + before(b)
+                  }
+              }
+          }
+
+          struct S1: I {
+              // Internal names swapped relative to the labels.
+              fun foo(a b: Int, b a: Int): Int {
+                  return b * 10 + a
+              }
+          }
+
+          struct S2: I {
+              fun foo(a p: Int, b q: Int): Int {
+                  return p * 10 + q
+              }
+          }
+
+          fun test(): Int {
+              return S1().foo(a: 3, b: 4) + S2().foo(a: 5, b: 6)
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(90),
+			value,
+		)
+	})
+
+	// Initializers are desugared through a separate entry path
+	// (special function declarations), so exercise the same shared-AST-statement
+	// scenario there: inherited initializer post-condition with `before`, two
+	// implementations using different internal parameter names.
+	t.Run("init before stmt, two implementations, different names", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          struct interface I {
+              let v: Int
+              init(a: Int) {
+                  post {
+                      self.v == before(a) + 1
+                  }
+              }
+          }
+
+          struct S1: I {
+              let v: Int
+              init(a x: Int) {
+                  self.v = x + 1
+              }
+          }
+
+          struct S2: I {
+              let v: Int
+              init(a y: Int) {
+                  self.v = y + 1
+              }
+          }
+
+          fun test(): Int {
+              return S1(a: 10).v + S2(a: 20).v
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(32),
+			value,
+		)
+	})
+}

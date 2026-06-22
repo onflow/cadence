@@ -347,10 +347,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			// indicator line
 			p.writeString(emptyLineNumbers)
 
-			indicatorLength := min(excerpt.startPos.Column, maxLineLength)
-			if indicatorLength > len(line) {
-				indicatorLength = len(line)
-			}
+			indicatorLength := min(min(excerpt.startPos.Column, maxLineLength), len(line))
 
 			p.writeString(" ")
 			for i := 0; i < indicatorLength && i < excerpt.endPos.Column; i++ {
@@ -416,7 +413,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerptLocation(
 	startPosition *ast.Position,
 ) {
 	// write spaces before arrow
-	for i := 0; i < lineNumberLength; i++ {
+	for range lineNumberLength {
 		p.writeString(" ")
 	}
 
@@ -444,7 +441,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerptLocation(
 
 func (p ErrorPrettyPrinter) writeCodeExcerptContinuation(lineNumberLength int) {
 	// write spaces before dots
-	for i := 0; i < lineNumberLength; i++ {
+	for range lineNumberLength {
 		p.writeString(" ")
 	}
 

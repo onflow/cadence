@@ -3253,7 +3253,7 @@ func checkHashable(ty types.Type) error {
 
 	case *types.Struct:
 		numFields := ty.NumFields()
-		for i := 0; i < numFields; i++ {
+		for i := range numFields {
 			field := ty.Field(i)
 			fieldTy := field.Type()
 			err := checkHashable(fieldTy)
@@ -4352,8 +4352,6 @@ func TestFixedpointValueRangeCheck(t *testing.T) {
 				expectedError: &UnderflowError{},
 			},
 		} {
-
-			test := test
 
 			t.Run(test.name, func(t *testing.T) {
 				t.Parallel()

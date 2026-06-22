@@ -246,7 +246,7 @@ func (r *REPL) Accept(code []byte, eval bool) (inputIsComplete bool, err error) 
 	if lineSepCount > 0 {
 		prefixedCode := make([]byte, lineSepCount+len(code))
 
-		for i := 0; i < lineSepCount; i++ {
+		for i := range lineSepCount {
 			prefixedCode[i] = '\n'
 		}
 		copy(prefixedCode[lineSepCount:], code)

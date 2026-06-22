@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sort"
 	"sync"
 
@@ -325,15 +326,9 @@ func (r *CoverageReport) Merge(other *CoverageReport) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	for location, locationCoverage := range other.Coverage { // nolint:maprange
-		r.Coverage[location] = locationCoverage
-	}
-	for location, v := range other.Locations { // nolint:maprange
-		r.Locations[location] = v
-	}
-	for location, v := range other.ExcludedLocations { // nolint:maprange
-		r.ExcludedLocations[location] = v
-	}
+	maps.Copy(r.Coverage, other.Coverage)
+	maps.Copy(r.Locations, other.Locations)
+	maps.Copy(r.ExcludedLocations, other.ExcludedLocations)
 }
 
 // ExcludedLocationIDs returns the ID of each excluded location. This

@@ -281,7 +281,7 @@ func BenchmarkNewStructRaw(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < 1; j++ {
+		for range 1 {
 			structValue := interpreter.NewCompositeValue(
 				vmConfig,
 				nil,

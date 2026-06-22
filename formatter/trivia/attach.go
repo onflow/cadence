@@ -21,6 +21,7 @@ package trivia
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/onflow/cadence/ast"
 )
@@ -92,21 +93,21 @@ func (cm *CommentMap) IsEmpty() bool {
 
 // OrphanDetails returns a human-readable summary of remaining comments in the map.
 func (cm *CommentMap) OrphanDetails() string {
-	var details string
+	var details strings.Builder
 	for k, v := range cm.Leading { //nolint:maprange
 		for _, g := range v {
-			details += fmt.Sprintf("  Leading on %T at %s: %q\n", k, k.StartPosition(), g.Comments[0].Text)
+			details.WriteString(fmt.Sprintf("  Leading on %T at %s: %q\n", k, k.StartPosition(), g.Comments[0].Text))
 		}
 	}
 	for k, v := range cm.Trailing { //nolint:maprange
 		for _, g := range v {
-			details += fmt.Sprintf("  Trailing on %T at %s: %q\n", k, k.StartPosition(), g.Comments[0].Text)
+			details.WriteString(fmt.Sprintf("  Trailing on %T at %s: %q\n", k, k.StartPosition(), g.Comments[0].Text))
 		}
 	}
 	for k, v := range cm.SameLine { //nolint:maprange
-		details += fmt.Sprintf("  SameLine on %T at %s: %q\n", k, k.StartPosition(), v.Comments[0].Text)
+		details.WriteString(fmt.Sprintf("  SameLine on %T at %s: %q\n", k, k.StartPosition(), v.Comments[0].Text))
 	}
-	return details
+	return details.String()
 }
 
 // Attach walks the AST and binds comment groups to nodes by position.
@@ -407,7 +408,7 @@ func attachLevel(cm *CommentMap, siblings []ast.Element, groups []*CommentGroup,
 	}
 
 	// Process each sibling
-	for si := 0; si < len(siblings); si++ {
+	for si := range siblings {
 		node := siblings[si]
 		nodeStart := node.StartPosition()
 		// nodeEndRaw is what the parser reports — used for the inside check

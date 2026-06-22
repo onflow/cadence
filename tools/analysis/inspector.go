@@ -23,7 +23,7 @@ import (
 )
 
 var InspectorAnalyzer = &Analyzer{
-	Run: func(pass *Pass) interface{} {
+	Run: func(pass *Pass) any {
 		return ast.NewInspector(pass.Program.Program)
 	},
 }

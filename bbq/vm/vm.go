@@ -191,7 +191,7 @@ func (vm *VM) replaceTop(value Value) {
 }
 
 func fill(slice []Value, n int) []Value {
-	for i := 0; i < n; i++ {
+	for range n {
 		slice = append(slice, nil)
 	}
 	return slice

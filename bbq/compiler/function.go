@@ -29,13 +29,17 @@ import (
 )
 
 type function[E any] struct {
-	enclosing                  *function[E]
-	name                       string
-	qualifiedName              string
-	code                       []E
-	locals                     *activations.Activations[*local]
-	localCount                 uint16
-	parameterCount             uint16
+	enclosing      *function[E]
+	name           string
+	qualifiedName  string
+	code           []E
+	locals         *activations.Activations[*local]
+	localCount     uint16
+	parameterCount uint16
+	// parameterNames holds the user-visible parameter names, in declaration order
+	// (excluding synthetic receivers such as `self` and `base`).
+	// It is used to resolve inherited-condition parameter bindings positionally.
+	parameterNames             []string
 	upvalues                   []opcode.Upvalue
 	upvalueIndices             map[opcode.Upvalue]uint16
 	typeIndex                  uint16
