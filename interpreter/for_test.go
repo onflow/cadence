@@ -368,6 +368,418 @@ func TestInterpretForStatementCapturing(t *testing.T) {
 	)
 }
 
+func TestInterpretForStatementCapturingBodyLocal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("single closure", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           fun test(): [Int] {
+               let fs: [fun(): Int] = []
+               for x in [1, 2, 3] {
+                   let y = x * 10
+                   fs.append(fun (): Int {
+                       return y
+                   })
+               }
+
+               let values: [Int] = []
+               for f in fs {
+                  values.append(f())
+               }
+               return values
+           }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, value, &interpreter.ArrayValue{})
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		AssertValueSlicesEqual(
+			t,
+			inter,
+			[]interpreter.Value{
+				interpreter.NewUnmeteredIntValueFromInt64(10),
+				interpreter.NewUnmeteredIntValueFromInt64(20),
+				interpreter.NewUnmeteredIntValueFromInt64(30),
+			},
+			ArrayElements(inter, arrayValue),
+		)
+	})
+
+	t.Run("multiple closures, update in between", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           fun test(): [Int] {
+               let fs: [fun(): Int] = []
+               for x in [1, 2, 3] {
+                   var y = x * 10
+                   fs.append(fun (): Int {
+                       return y
+                   })
+
+                   y = y + 1
+
+                   fs.append(fun (): Int {
+                       return y
+                   })
+               }
+
+               let values: [Int] = []
+               for f in fs {
+                  values.append(f())
+               }
+               return values
+           }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, value, &interpreter.ArrayValue{})
+		arrayValue := value.(*interpreter.ArrayValue)
+
+		AssertValueSlicesEqual(
+			t,
+			inter,
+			[]interpreter.Value{
+				interpreter.NewUnmeteredIntValueFromInt64(11),
+				interpreter.NewUnmeteredIntValueFromInt64(11),
+				interpreter.NewUnmeteredIntValueFromInt64(21),
+				interpreter.NewUnmeteredIntValueFromInt64(21),
+				interpreter.NewUnmeteredIntValueFromInt64(31),
+				interpreter.NewUnmeteredIntValueFromInt64(31),
+			},
+			ArrayElements(inter, arrayValue),
+		)
+	})
+}
+
+func TestInterpretForStatementCapturingBodyLocalViaContinue(t *testing.T) {
+
+	t.Parallel()
+
+	// The captured loop-body local must also get an independent binding when
+	// the iteration's back-edge is reached via an explicit `continue`.
+	inter := parseCheckAndPrepare(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           for x in [1, 2, 3] {
+               let y = x * 10
+               fs.append(fun (): Int {
+                   return y
+               })
+               if x == 2 {
+                   continue
+               }
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(10),
+			interpreter.NewUnmeteredIntValueFromInt64(20),
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+		},
+		ArrayElements(inter, arrayValue),
+	)
+}
+
+func TestInterpretForStatementCapturingSiblingScopes(t *testing.T) {
+
+	t.Parallel()
+
+	// Two sibling nested blocks in the same iteration, each declaring and
+	// capturing its own local. The siblings must get independent bindings,
+	// and each iteration must get fresh ones.
+	inter := parseCheckAndPrepare(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           for x in [1, 2] {
+               if true {
+                   let a = x * 10
+                   fs.append(fun (): Int { return a })
+               }
+               if true {
+                   let b = x * 100
+                   fs.append(fun (): Int { return b })
+               }
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(10),
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+			interpreter.NewUnmeteredIntValueFromInt64(20),
+			interpreter.NewUnmeteredIntValueFromInt64(200),
+		},
+		ArrayElements(inter, arrayValue),
+	)
+}
+
+func TestInterpretForStatementCapturingSiblingScopesShadowed(t *testing.T) {
+
+	t.Parallel()
+
+	// Same as above, but the two sibling locals share the same name.
+	// They must still resolve to independent slots.
+	inter := parseCheckAndPrepare(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           for x in [1, 2] {
+               if true {
+                   let a = x * 10
+                   fs.append(fun (): Int { return a })
+               }
+               if true {
+                   let a = x * 100
+                   fs.append(fun (): Int { return a })
+               }
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(10),
+			interpreter.NewUnmeteredIntValueFromInt64(100),
+			interpreter.NewUnmeteredIntValueFromInt64(20),
+			interpreter.NewUnmeteredIntValueFromInt64(200),
+		},
+		ArrayElements(inter, arrayValue),
+	)
+}
+
+func TestInterpretForStatementCapturingConditional(t *testing.T) {
+
+	t.Parallel()
+
+	// The captured local is declared only in some iterations (inside a nested
+	// block that is entered conditionally). Closing the upvalue on iterations
+	// that did not enter the block must be a harmless no-op.
+	inter := parseCheckAndPrepare(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           for x in [1, 2, 3, 4] {
+               if x % 2 == 0 {
+                   let a = x
+                   fs.append(fun (): Int { return a })
+               }
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+		},
+		ArrayElements(inter, arrayValue),
+	)
+}
+
+func TestInterpretNestedForStatementCapturing(t *testing.T) {
+
+	t.Parallel()
+
+	// A closure captures a local from the outer loop body AND a local from the
+	// inner loop body. The outer local must be fresh per outer iteration, the
+	// inner local fresh per inner iteration. Only inner-loop locals are closed
+	// at the inner back-edge; the outer local is closed at the outer back-edge.
+	inter := parseCheckAndPrepare(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           for i in [1, 2] {
+               let x = i * 100
+               for j in [10, 20] {
+                   let y = j
+                   fs.append(fun (): Int { return x + y })
+               }
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(110),
+			interpreter.NewUnmeteredIntValueFromInt64(120),
+			interpreter.NewUnmeteredIntValueFromInt64(210),
+			interpreter.NewUnmeteredIntValueFromInt64(220),
+		},
+		ArrayElements(inter, arrayValue),
+	)
+}
+
+func TestInterpretForStatementCapturingSiblingLoops(t *testing.T) {
+
+	t.Parallel()
+
+	// Two sibling loops in the same function. The second loop's back-edge must
+	// not close (or otherwise affect) the first loop's already-captured locals,
+	// and vice versa. This exercises the single per-function locals list.
+	inter := parseCheckAndPrepare(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           for i in [1, 2] {
+               let x = i
+               fs.append(fun (): Int { return x })
+           }
+           for j in [10, 20] {
+               let y = j
+               fs.append(fun (): Int { return y })
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredIntValueFromInt64(10),
+			interpreter.NewUnmeteredIntValueFromInt64(20),
+		},
+		ArrayElements(inter, arrayValue),
+	)
+}
+
+func TestInterpretForStatementCapturingPreLoopLocal(t *testing.T) {
+
+	t.Parallel()
+
+	// A local declared *before* the loop is captured alongside a per-iteration
+	// local. The pre-loop local must NOT be reset per iteration: it is a single
+	// shared binding, so all closures observe its final value, while the
+	// per-iteration local stays distinct.
+	inter := parseCheckAndPrepare(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           var shared = 0
+           for x in [1, 2, 3] {
+               shared = shared + x
+               let local = x
+               fs.append(fun (): Int { return shared + local })
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	// shared ends at 1+2+3 = 6 (shared, read at call time);
+	// local is 1, 2, 3 respectively.
+	AssertValueSlicesEqual(
+		t,
+		inter,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(7),
+			interpreter.NewUnmeteredIntValueFromInt64(8),
+			interpreter.NewUnmeteredIntValueFromInt64(9),
+		},
+		ArrayElements(inter, arrayValue),
+	)
+}
+
 func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 
 	t.Parallel()

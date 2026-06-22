@@ -138,3 +138,47 @@ func TestInterpretWhileStatementWithBreak(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretWhileStatementCapturing(t *testing.T) {
+
+	t.Parallel()
+
+	// Each iteration declares a fresh `let y`, captured by a closure.
+	// Each closure must observe its own iteration's value, not the last one.
+	invokable := parseCheckAndPrepare(t, `
+       fun test(): [Int] {
+           let fs: [fun(): Int] = []
+           var x = 1
+           while x <= 3 {
+               let y = x * 10
+               fs.append(fun (): Int {
+                   return y
+               })
+               x = x + 1
+           }
+
+           let values: [Int] = []
+           for f in fs {
+              values.append(f())
+           }
+           return values
+       }
+    `)
+
+	value, err := invokable.Invoke("test")
+	require.NoError(t, err)
+
+	require.IsType(t, value, &interpreter.ArrayValue{})
+	arrayValue := value.(*interpreter.ArrayValue)
+
+	AssertValueSlicesEqual(
+		t,
+		invokable,
+		[]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(10),
+			interpreter.NewUnmeteredIntValueFromInt64(20),
+			interpreter.NewUnmeteredIntValueFromInt64(30),
+		},
+		ArrayElements(invokable, arrayValue),
+	)
+}
