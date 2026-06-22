@@ -1584,7 +1584,7 @@ func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ s
 }
 
 func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
-	// Any local declared from here on (including the ones at nested child scopes)
+	// Any locals declared from here on (including the ones at nested child scopes)
 	// belongs to the loop body, and its upvalue must be closed on every iteration's
 	// back-edge (see emitCloseLoopUpvalues), so that each iteration's captured locals
 	// get an independent binding.
