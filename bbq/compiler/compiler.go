@@ -1447,18 +1447,32 @@ func (c *Compiler[_, _]) VisitContinueStatement(_ *ast.ContinueStatement) (_ str
 }
 
 func (c *Compiler[_, _]) emitContinue() {
-	currentControlFlow := c.currentControlFlow
+	// `continue` targets the nearest enclosing loop.
+	// Skip any intervening control-flow frames that do not support continue
+	// (e.g. switch statements, which are pushed with an invalid start offset).
+	// This allows `continue` to be used inside a switch that is itself nested in a loop.
+	loopControlFlow := c.nearestLoopControlFlow()
 
-	preContinue := currentControlFlow.preContinue
+	preContinue := loopControlFlow.preContinue
 	if preContinue != nil {
 		preContinue()
 	}
 
-	start := currentControlFlow.start
-	if start <= 0 {
-		panic(errors.NewUnreachableError())
+	c.emitJump(loopControlFlow.start)
+}
+
+// nearestLoopControlFlow returns the innermost control-flow frame that supports
+// `continue` (i.e. a loop, which has a valid, positive start offset).
+// Switch frames are pushed with an invalid start offset and are skipped.
+func (c *Compiler[_, _]) nearestLoopControlFlow() *controlFlow {
+	for i := len(c.controlFlows) - 1; i >= 0; i-- {
+		controlFlow := &c.controlFlows[i]
+		if controlFlow.start > 0 {
+			return controlFlow
+		}
 	}
-	c.emitJump(start)
+
+	panic(errors.NewUnreachableError())
 }
 
 func (c *Compiler[_, _]) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
