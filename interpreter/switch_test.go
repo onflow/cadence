@@ -234,3 +234,159 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		}
 	})
 }
+
+func TestInterpretSwitchStatementControlFlowInLoop(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, code string, expected int64) {
+		inter := parseCheckAndPrepare(t, code)
+		actual, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(expected),
+			actual,
+		)
+	}
+
+	t.Run("continue in switch in while", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            fun test(): Int {
+                var sum = 0
+                var i = 0
+                while i < 5 {
+                    i = i + 1
+                    switch i {
+                        case 3:
+                            continue
+                        case 4:
+                            break
+                    }
+                    sum = sum + i
+                }
+                return sum
+            }
+        `,
+			1+2+4+5,
+		)
+	})
+
+	t.Run("continue in switch in for", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            fun test(): Int {
+                var sum = 0
+                for i in [1, 2, 3, 4, 5] {
+                    switch i {
+                        case 3:
+                            continue
+                        case 4:
+                            break
+                    }
+                    sum = sum + i
+                }
+                return sum
+            }
+        `,
+			1+2+4+5,
+		)
+	})
+
+	t.Run("continue in switch in for with index", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            fun test(): Int {
+                var sum = 0
+                for i, x in [10, 20, 30, 40] {
+                    switch i {
+                        case 1:
+                            continue
+                    }
+                    sum = sum + x
+                }
+                return sum
+            }
+        `,
+			10+30+40,
+		)
+	})
+
+	t.Run("continue in switch in nested loops", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            fun test(): Int {
+                var sum = 0
+                var i = 0
+                while i < 3 {
+                    i = i + 1
+                    var j = 0
+                    while j < 3 {
+                        j = j + 1
+                        switch j {
+                            case 2:
+                                continue
+                        }
+                        sum = sum + (i * 10 + j)
+                    }
+                }
+                return sum
+            }
+        `,
+			(11+13)+(21+23)+(31+33),
+		)
+	})
+
+	t.Run("continue in nested switches in loop", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            fun test(): Int {
+                var sum = 0
+                for i in [1, 2, 3, 4] {
+                    switch i % 2 {
+                        case 0:
+                            switch i {
+                                case 4:
+                                    continue
+                            }
+                    }
+                    sum = sum + i
+                }
+                return sum
+            }
+        `,
+			1+2+3,
+		)
+	})
+
+	t.Run("break in switch only exits switch", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			t,
+			`
+            fun test(): Int {
+                var sum = 0
+                var i = 0
+                while i < 3 {
+                    i = i + 1
+                    switch i {
+                        case 2:
+                            break
+                    }
+                    sum = sum + i
+                }
+                return sum
+            }
+        `,
+			6,
+		)
+	})
+}
