@@ -1250,12 +1250,20 @@ func (d *Desugar) inheritedDefaultFunctions(
 		}
 
 		interfaceDecl := elaboration.InterfaceTypeDeclaration(interfaceType)
-		functions := interfaceDecl.Members.FunctionsByIdentifier()
 
-		for funcName, inheritedFunc := range functions { // nolint:maprange
+		// Iterate the functions in their declaration order (a stable slice),
+		// rather than over the identifier-keyed map, to keep the order of the
+		// generated delegator functions deterministic. A non-deterministic order
+		// would produce non-deterministic global indices, and therefore
+		// non-reproducible compiled programs.
+		functions := interfaceDecl.Members.Functions()
+
+		for _, inheritedFunc := range functions {
 			if !inheritedFunc.FunctionBlock.HasStatements() {
 				continue
 			}
+
+			funcName := inheritedFunc.Identifier.Identifier
 
 			// Pick the 'closest' default function.
 			// This is the same way how it is implemented in the interpreter.
