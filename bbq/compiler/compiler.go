@@ -1603,9 +1603,19 @@ func (c *Compiler[_, _]) VisitGuardStatement(statement *ast.GuardStatement) (_ s
 }
 
 func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
+	// Any locals declared from here on (including the ones at nested child scopes)
+	// belongs to the loop body, and its upvalue must be closed on every iteration's
+	// back-edge (see emitCloseLoopUpvalues), so that each iteration's captured locals
+	// get an independent binding.
+	firstLoopLocalIndex := c.currentFunction.localCount
+
 	testOffset := c.codeGen.Offset()
 
-	c.pushControlFlow(testOffset)
+	controlFlow := c.pushControlFlow(testOffset)
+	controlFlow.preContinue = func() {
+		c.emitCloseLoopUpvalues(firstLoopLocalIndex)
+	}
+
 	var endOffset int
 	defer func() {
 		c.popControlFlow(endOffset)
@@ -1623,8 +1633,11 @@ func (c *Compiler[_, _]) VisitWhileStatement(statement *ast.WhileStatement) (_ s
 		common.DeclarationKindUnknown,
 		nil,
 	)
-	// Repeat, jump back to the test
-	c.emitJump(testOffset)
+
+	// Repeat, jump back to the test.
+	// Use a continue so that the captured loop-body locals' upvalues are closed
+	// before jumping back (so all instructions for the next iteration are generated).
+	c.emitContinue()
 
 	// Patch the failed test to jump here
 	endOffset = c.codeGen.Offset()
@@ -1666,19 +1679,21 @@ func (c *Compiler[_, _]) VisitForStatement(statement *ast.ForStatement) (_ struc
 		statement.Identifier.Identifier,
 	)
 
+	// All locals declared from here on belong to this loop: the loop control
+	// variables (index and entry) and any local declared inside the loop body,
+	// including the ones at nested child scopes.
+	// Their upvalues must be closed on every iteration's back-edge so that each
+	// iteration's captured locals get an independent binding. The iterator local
+	// is declared *before* this point and is intentionally excluded, since its
+	// state must persist across iterations.
+	firstLoopLocalIndex := iteratorLocalIndex + 1
+
 	testOffset := c.codeGen.Offset()
 	controlFlow := c.pushControlFlow(testOffset)
 	controlFlow.preContinue = func() {
-		// If the index local (if any) or the entry local are captured,
-		// then we need to close the upvalue for them before continuing the loop.
-
-		if indexLocal != nil && indexLocal.isCaptured {
-			c.emitCloseUpvalue(indexLocal.index)
-		}
-		if entryLocal.isCaptured {
-			c.emitCloseUpvalue(entryLocal.index)
-		}
+		c.emitCloseLoopUpvalues(firstLoopLocalIndex)
 	}
+
 	var endOffset int
 	defer func() {
 		c.popControlFlow(endOffset)
@@ -4753,6 +4768,32 @@ func (c *Compiler[_, _]) emitCloseUpvalue(localIndex uint16) {
 	c.codeGen.Emit(opcode.InstructionCloseUpvalue{
 		Local: localIndex,
 	})
+}
+
+// emitCloseLoopUpvalues emits a CloseUpvalue instruction for every captured
+// local declared at or after the given local index.
+//
+// This must be emitted at a loop's back-edge (i.e. on `continue` and at the
+// natural end of the loop body, before jumping back to the loop test).
+// At runtime a loop body reuses the same local slots on every iteration, so
+// without closing the upvalues of captured locals, every closure created across
+// iterations would share a single upvalue cell and observe only the final value.
+// Closing the upvalue copies the current slot value into the closure's own cell,
+// giving each iteration's captured local an independent binding, as required by
+// the language semantics (and matching the tree-walking interpreter).
+//
+// `fromLocalIndex` selects exactly the locals that belong to the loop: the loop
+// control variables (e.g. the for-loop value and index variables) and any local
+// declared inside the loop body, while excluding locals declared before the loop
+// (such as the for-loop iterator, whose state must persist across iterations).
+func (c *Compiler[_, _]) emitCloseLoopUpvalues(fromLocalIndex uint16) {
+	// `declaredLocals` is in ascending index order, so the emitted
+	// CloseUpvalue instructions are deterministic.
+	for _, local := range c.currentFunction.declaredLocals {
+		if local.isCaptured && local.index >= fromLocalIndex {
+			c.emitCloseUpvalue(local.index)
+		}
+	}
 }
 
 func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {

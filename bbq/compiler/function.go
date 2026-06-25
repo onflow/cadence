@@ -45,6 +45,12 @@ type function[E any] struct {
 	typeIndex                  uint16
 	lineNumbers                bbq.LineNumberTable
 	activeIteratorLocalIndices []uint16
+	// declaredLocals records every named local declared in this function,
+	// in declaration order (and therefore in ascending local-index order).
+	// It is retained even after a local's block scope is popped, so that
+	// loop back-edges can close the upvalues of captured locals that were
+	// declared inside the loop body. See emitCloseLoopUpvalues.
+	declaredLocals []*local
 }
 
 func newFunction[E any](
@@ -81,6 +87,7 @@ func (f *function[E]) declareLocal(memoryGauge common.MemoryGauge, name string) 
 		index: f.generateLocalIndex(),
 	}
 	f.locals.Set(name, local)
+	f.declaredLocals = append(f.declaredLocals, local)
 	return local
 }
 
