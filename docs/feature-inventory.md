@@ -14,11 +14,12 @@ Last updated: 38729bff7536b82974ac9ab9e924345fe9f5ef14
 - Doc-strings
 
 ### 1.2 Literals
-- Boolean (`true`/`false`), `nil`
+- Nil (`nil`)
+- Boolean (`true`/`false`)
 - Integer literals: decimal, hex `0x`, binary `0b`, octal `0o`, digit grouping `_`
 - Fixed-point literals
 - String literals; escape sequences `\0 \n \r \t \" \' \\` and Unicode `\u{...}`
-- **String templates / interpolation** `"... \(expr) ..."`
+- String templates / interpolation `"... \(expr) ..."`
 - Array literals `[...]`, dictionary literals `{k: v}`
 - Path literals `/domain/identifier`
 - Void/unit `()`
