@@ -266,8 +266,8 @@ are **not** equatable (only enums among composites are).
 - **Resource built-in fields** (injected on every resource): `owner: &Account?`,
   `uuid: UInt64`
 - **Contract built-in field**: `self.account: &Account` (the account the contract is deployed to)
-- **Attachment `base`** — reference to the attached-to value inside attachment members
-  (`BaseIdentifier`); plus `self` referring to the attachment
+- **Attachment `base`** — reference to the attached-to value inside attachment members;
+  `self` referring to the attachment
 - **`result`** variable in post-conditions; **`before(expr)`** in post-conditions
 - **Enum implicit members** — every enum exposes a `rawValue` field, and an implicit
   lookup constructor `MyEnum(rawValue:): MyEnum?`
@@ -279,7 +279,7 @@ are **not** equatable (only enums among composites are).
   references; enforced on transaction/script parameters
 - **Exportable** (can cross the runtime boundary as a return/result value)
 - **Hashable** (valid dictionary key types): numbers, `Address`, `Bool`, `Character`,
-  `String`, `Type`, paths, enums, `HashableStruct` (`IsHashableStructType`)
+  `String`, `Type`, paths, enums, `HashableStruct`
 - **Equatable** / **Comparable**
 
 ---
@@ -518,7 +518,7 @@ are **not** equatable (only enums among composites are).
   `stdlib/contracts/test.cdc`)
 - `Matcher` type — field/fn `test`; **combinators** `and`, `or` (and `Test.not`);
   custom matchers via `Test.newMatcher`
-- Test value/result types (`stdlib/contracts/test.cdc`):
+- Test value/result types:
   - `Result` interface (field `status`); `ResultStatus` enum (`succeeded`/`failed`)
   - `ScriptResult` — `status`, `returnValue`, `error`
   - `TransactionResult` — `status`, `error`, `computationUsed`
@@ -542,8 +542,8 @@ are **not** equatable (only enums among composites are).
 - Script execution: single entry function, exportable return value
 - Argument decoding / import & static-type validation
 - Value & type import/export across host boundary
-- Program recovery: a contract program that fails to check can be recovered by the
-  host (`RecoverProgram`, parsed via the old parser); recovered programs are flagged and
+- Program recovery: certain contracts that fails to check can be recovered
+  (`RecoverProgram`, parsed via the old parser); recovered programs are flagged and
   surfaced through `Type.isRecovered`
 
 ### 12.2 Value semantics
