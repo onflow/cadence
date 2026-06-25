@@ -5381,6 +5381,7 @@ type CompositeType struct {
 	memberResolvers       atomic.Pointer[map[string]MemberResolver]
 	Identifier            string
 	Fields                []string
+	EnumCases             []string
 	ConstructorParameters []Parameter
 	// an internal set of field `effectiveInterfaceConformances`
 	effectiveInterfaceConformanceSet atomic.Pointer[InterfaceSet]

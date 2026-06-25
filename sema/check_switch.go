@@ -20,9 +20,15 @@ package sema
 
 import (
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/common"
 )
 
 func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
+	checker.checkSwitchStatement(statement, false)
+	return
+}
+
+func (checker *Checker) checkSwitchStatement(statement *ast.SwitchStatement, isExhaustive bool) {
 
 	testType := checker.VisitExpression(statement.Expression, statement, nil)
 
@@ -39,6 +45,12 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ 
 		)
 	}
 
+	// If the #exhaustive pragma was set, verify exhaustiveness.
+
+	if isExhaustive {
+		isExhaustive = checker.checkSwitchExhaustiveOverEnum(statement, testType)
+	}
+
 	// Check all cases
 
 	checker.functionActivations.Current().WithSwitch(func() {
@@ -47,10 +59,101 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ 
 			statement.Cases,
 			testType,
 			testTypeIsValid,
+			isExhaustive,
 		)
 	})
+}
 
-	return
+// checkSwitchExhaustiveOverEnum checks whether a switch statement on an enum type
+// covers all enum cases. Reports errors if the test type is not an enum
+// or if not all enum cases are covered. Returns true if the switch is exhaustive.
+func (checker *Checker) checkSwitchExhaustiveOverEnum(
+	statement *ast.SwitchStatement,
+	testType Type,
+) bool {
+	compositeType, ok := testType.(*CompositeType)
+	if !ok || compositeType.Kind != common.CompositeKindEnum {
+		checker.report(
+			&InvalidPragmaError{
+				Message: "the #exhaustive pragma can only be used with enum types",
+				Range:   ast.NewRangeFromPositioned(checker.memoryGauge, statement.Expression),
+			},
+		)
+		return false
+	}
+
+	enumCases := compositeType.EnumCases
+	if len(enumCases) == 0 {
+		return true
+	}
+
+	// Build a set of enum case names for quick lookup
+	enumCaseSet := make(map[string]struct{}, len(enumCases))
+	for _, name := range enumCases {
+		enumCaseSet[name] = struct{}{}
+	}
+
+	// Track which enum cases are covered by switch cases
+	coveredCases := make(map[string]struct{})
+
+	for _, switchCase := range statement.Cases {
+		if switchCase.Expression == nil {
+			// Default case — skip
+			continue
+		}
+
+		memberExpr, ok := switchCase.Expression.(*ast.MemberExpression)
+		if !ok {
+			continue
+		}
+
+		identExpr, ok := memberExpr.Expression.(*ast.IdentifierExpression)
+		if !ok {
+			continue
+		}
+
+		// Look up the identifier in scope to verify it refers to the enum type
+		variable := checker.valueActivations.Find(identExpr.Identifier.Identifier)
+		if variable == nil {
+			continue
+		}
+
+		funcType, ok := variable.Type.(*FunctionType)
+		if !ok {
+			continue
+		}
+
+		if funcType.TypeFunctionType != compositeType {
+			continue
+		}
+
+		// The member name is an enum case reference
+		memberName := memberExpr.Identifier.Identifier
+		if _, isEnumCase := enumCaseSet[memberName]; isEnumCase {
+			coveredCases[memberName] = struct{}{}
+		}
+	}
+
+	if len(coveredCases) == len(enumCases) {
+		return true
+	}
+
+	// Report which enum cases are missing
+	missingCases := make([]string, 0, len(enumCases)-len(coveredCases))
+	for _, name := range enumCases {
+		if _, covered := coveredCases[name]; !covered {
+			missingCases = append(missingCases, name)
+		}
+	}
+
+	checker.report(
+		&MissingSwitchCasesError{
+			MissingCases: missingCases,
+			Range:        ast.NewRangeFromPositioned(checker.memoryGauge, statement),
+		},
+	)
+
+	return false
 }
 
 func (checker *Checker) checkSwitchCaseExpression(
@@ -94,6 +197,7 @@ func (checker *Checker) checkSwitchCasesStatements(
 	remainingCases []*ast.SwitchCase,
 	testType Type,
 	testTypeIsValid bool,
+	isExhaustive bool,
 ) {
 	remainingCaseCount := len(remainingCases)
 	if remainingCaseCount == 0 {
@@ -106,6 +210,9 @@ func (checker *Checker) checkSwitchCasesStatements(
 	// However, the default case's block must be checked directly as the "else",
 	// because if a default case exists, the whole switch statement
 	// will definitely have one case which will be taken.
+	//
+	// Similarly, if the switch is exhaustive over an enum type
+	// (via the #exhaustive pragma), the last case is treated like a default case.
 
 	switchCase := remainingCases[0]
 
@@ -137,6 +244,16 @@ func (checker *Checker) checkSwitchCasesStatements(
 		testTypeIsValid,
 	)
 
+	// If this is the last case and the switch is exhaustive over an enum,
+	// treat this case like a default: it is guaranteed to be taken
+	// if none of the previous cases matched.
+	if remainingCaseCount == 1 && isExhaustive {
+		currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
+			checker.checkSwitchCaseStatements(switchCase)
+		})
+		return
+	}
+
 	_, _ = checker.checkConditionalBranches(
 		func() Type {
 
@@ -153,6 +270,7 @@ func (checker *Checker) checkSwitchCasesStatements(
 				remainingCases[1:],
 				testType,
 				testTypeIsValid,
+				isExhaustive,
 			)
 
 			// ignored

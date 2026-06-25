@@ -38,13 +38,13 @@ type StatementDeclarationVisitor[T any] interface {
 	VisitEntitlementDeclaration(*EntitlementDeclaration) T
 	VisitEntitlementMappingDeclaration(*EntitlementMappingDeclaration) T
 	VisitTransactionDeclaration(*TransactionDeclaration) T
+	VisitPragmaDeclaration(*PragmaDeclaration) T
 }
 
 type DeclarationVisitor[T any] interface {
 	StatementDeclarationVisitor[T]
 	VisitFieldDeclaration(*FieldDeclaration) T
 	VisitEnumCaseDeclaration(*EnumCaseDeclaration) T
-	VisitPragmaDeclaration(*PragmaDeclaration) T
 	VisitImportDeclaration(*ImportDeclaration) T
 }
 
@@ -177,6 +177,9 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 
 	case ElementTypeRemoveStatement:
 		return visitor.VisitRemoveStatement(statement.(*RemoveStatement))
+
+	case ElementTypePragmaDeclaration:
+		return visitor.VisitPragmaDeclaration(statement.(*PragmaDeclaration))
 	}
 
 	panic(errors.NewUnreachableError())

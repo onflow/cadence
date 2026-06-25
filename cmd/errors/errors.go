@@ -1490,6 +1490,12 @@ func generateErrors() []namedError {
 				Pos: placeholderPosition,
 			},
 		},
+		{"sema.MissingSwitchCasesError",
+			&sema.MissingSwitchCasesError{
+				MissingCases: placeholderStrings,
+				Range:        placeholderRange,
+			},
+		},
 		{"sema.MissingTypeArgumentError",
 			&sema.MissingTypeArgumentError{
 				TypeParameterName: placeholderString,
