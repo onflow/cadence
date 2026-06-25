@@ -71,13 +71,13 @@ const variableName = "Version"
 
 func main() {
 	fileVersion := getFileVersion()
-
 	gitVersion := getLastGitTag()
 
-	version := fileVersion
+	fileSemver := semver.Canonical("v" + fileVersion)
 
-	if semver.Compare(gitVersion, fileVersion) > 0 {
-		version = gitVersion
+	version := gitVersion
+	if semver.Compare(gitVersion, fileSemver) <= 0 {
+		version = "v" + fileVersion
 	}
 
 	f, err := os.Create(target)
