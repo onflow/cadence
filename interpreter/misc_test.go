@@ -1616,12 +1616,12 @@ func TestInterpretConditionalOperatorLazyEvaluation(t *testing.T) {
 	// `mark` records each invocation, so exactly one entry must be logged.
 	inter := parseCheckAndPrepare(t, `
        struct Recorder {
-           var log: [Int]
+           var count: Int
            init() {
-               self.log = []
+               self.count = 0
            }
            fun mark(_ n: Int): Int {
-               self.log.append(n)
+               self.count = self.count + 1
                return n
            }
        }
@@ -1630,7 +1630,7 @@ func TestInterpretConditionalOperatorLazyEvaluation(t *testing.T) {
            let r = Recorder()
            let chosen = c ? r.mark(1) : r.mark(2)
            // [chosen value, number of branches actually evaluated]
-           return [chosen, r.log.length]
+           return [chosen, r.count]
        }
     `)
 
