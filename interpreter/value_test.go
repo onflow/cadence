@@ -1058,6 +1058,97 @@ func TestClearAllCanonicalAtreeContainers(t *testing.T) {
 	assert.Nil(t, inter.CanonicalAtreeContainer(composite.ValueID()))
 }
 
+func TestMustConvertStoredContainerElementCanonicalizesSomeInnerContainer(t *testing.T) {
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	innerType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeInt,
+	}
+	outerType := &VariableSizedStaticType{
+		Type: &OptionalStaticType{
+			Type: innerType,
+		},
+	}
+
+	inner := NewArrayValue(
+		inter,
+		innerType,
+		common.ZeroAddress,
+		NewUnmeteredIntValueFromInt64(1),
+	)
+	outer := NewArrayValue(
+		inter,
+		outerType,
+		common.ZeroAddress,
+		NewSomeValueNonCopying(inter, inner),
+	)
+
+	firstSome := outer.Get(inter, 0).(*SomeValue)
+	firstInner := firstSome.InnerValue().(*ArrayValue)
+	valueID := firstInner.ValueID()
+
+	cached := inter.CanonicalAtreeContainer(valueID)
+	require.NotNil(t, cached)
+	require.Same(t, firstInner, cached)
+
+	secondSome := outer.Get(inter, 0).(*SomeValue)
+	secondInner := secondSome.InnerValue().(*ArrayValue)
+
+	assert.Same(t, firstInner, secondInner)
+	assert.Same(t, firstInner, inter.CanonicalAtreeContainer(valueID))
+}
+
+func TestMustConvertStoredContainerElementCanonicalizesNestedSomeInnerContainer(t *testing.T) {
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	innerType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeInt,
+	}
+	outerType := &VariableSizedStaticType{
+		Type: &OptionalStaticType{
+			Type: &OptionalStaticType{
+				Type: innerType,
+			},
+		},
+	}
+
+	inner := NewArrayValue(
+		inter,
+		innerType,
+		common.ZeroAddress,
+		NewUnmeteredIntValueFromInt64(1),
+	)
+	outer := NewArrayValue(
+		inter,
+		outerType,
+		common.ZeroAddress,
+		NewSomeValueNonCopying(
+			inter,
+			NewSomeValueNonCopying(inter, inner),
+		),
+	)
+
+	firstOuterSome := outer.Get(inter, 0).(*SomeValue)
+	firstInnerSome := firstOuterSome.InnerValue().(*SomeValue)
+	firstInner := firstInnerSome.InnerValue().(*ArrayValue)
+	valueID := firstInner.ValueID()
+
+	cached := inter.CanonicalAtreeContainer(valueID)
+	require.NotNil(t, cached)
+	require.Same(t, firstInner, cached)
+
+	secondOuterSome := outer.Get(inter, 0).(*SomeValue)
+	secondInnerSome := secondOuterSome.InnerValue().(*SomeValue)
+	secondInner := secondInnerSome.InnerValue().(*ArrayValue)
+
+	assert.Same(t, firstInner, secondInner)
+	assert.Same(t, firstInner, inter.CanonicalAtreeContainer(valueID))
+}
+
 // TestDictionaryValueTransferNoRemoveKeepsCanonicalCache asserts that a
 // non-resource Transfer without `remove` leaves the source wrapper valid
 // (`v.dictionary` stays set, slabs untouched), so the cache entry must NOT
