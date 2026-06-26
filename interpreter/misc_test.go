@@ -1608,6 +1608,148 @@ func TestInterpretConditionalOperator(t *testing.T) {
 	)
 }
 
+func TestInterpretConditionalOperatorLazyEvaluation(t *testing.T) {
+
+	t.Parallel()
+
+	// The conditional operator must evaluate only the selected branch.
+	// `mark` records each invocation, so exactly one entry must be logged.
+	inter := parseCheckAndPrepare(t, `
+       struct Recorder {
+           var log: [Int]
+           init() {
+               self.log = []
+           }
+           fun mark(_ n: Int): Int {
+               self.log.append(n)
+               return n
+           }
+       }
+
+       fun test(_ c: Bool): [Int] {
+           let r = Recorder()
+           let chosen = c ? r.mark(1) : r.mark(2)
+           // [chosen value, number of branches actually evaluated]
+           return [chosen, r.log.length]
+       }
+    `)
+
+	t.Run("true selects first branch only", func(t *testing.T) {
+		value, err := inter.Invoke("test", interpreter.TrueValue)
+		require.NoError(t, err)
+
+		AssertValueSlicesEqual(
+			t,
+			inter,
+			[]interpreter.Value{
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			},
+			ArrayElements(inter, value.(*interpreter.ArrayValue)),
+		)
+	})
+
+	t.Run("false selects second branch only", func(t *testing.T) {
+		value, err := inter.Invoke("test", interpreter.FalseValue)
+		require.NoError(t, err)
+
+		AssertValueSlicesEqual(
+			t,
+			inter,
+			[]interpreter.Value{
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			},
+			ArrayElements(inter, value.(*interpreter.ArrayValue)),
+		)
+	})
+}
+
+func TestInterpretConditionalOperatorRuntimeConditionAndNesting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("runtime condition", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           fun test(_ a: Int, _ b: Int): Int {
+               return a > b ? a : b
+           }
+        `)
+
+		value, err := inter.Invoke(
+			"test",
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			interpreter.NewUnmeteredIntValueFromInt64(7),
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(7),
+			value,
+		)
+	})
+
+	t.Run("nested in branches", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           fun test(_ x: Int): String {
+               return x > 0
+                   ? (x > 10 ? "big" : "small")
+                   : (x < -10 ? "very negative" : "negative")
+           }
+        `)
+
+		for argument, expected := range map[interpreter.Value]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(50):  interpreter.NewUnmeteredStringValue("big"),
+			interpreter.NewUnmeteredIntValueFromInt64(5):   interpreter.NewUnmeteredStringValue("small"),
+			interpreter.NewUnmeteredIntValueFromInt64(-5):  interpreter.NewUnmeteredStringValue("negative"),
+			interpreter.NewUnmeteredIntValueFromInt64(-50): interpreter.NewUnmeteredStringValue("very negative"),
+		} {
+			actual, err := inter.Invoke("test", argument)
+			require.NoError(t, err)
+
+			AssertValuesEqual(t, inter, expected, actual)
+		}
+	})
+
+	t.Run("nested in condition", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+           fun test(_ a: Bool, _ b: Bool): Int {
+               return (a ? b : false) ? 1 : 2
+           }
+        `)
+
+		type testCase struct {
+			a, b     interpreter.BoolValue
+			expected int64
+		}
+
+		for _, tc := range []testCase{
+			{interpreter.TrueValue, interpreter.TrueValue, 1},
+			{interpreter.TrueValue, interpreter.FalseValue, 2},
+			{interpreter.FalseValue, interpreter.TrueValue, 2},
+			{interpreter.FalseValue, interpreter.FalseValue, 2},
+		} {
+			actual, err := inter.Invoke("test", tc.a, tc.b)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(tc.expected),
+				actual,
+			)
+		}
+	})
+}
+
 func TestInterpretFunctionBindingInFunction(t *testing.T) {
 
 	t.Parallel()

@@ -172,6 +172,79 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		}
 	})
 
+	t.Run("String", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Switch case matching uses `==`. For a String subject this exercises
+		// string equality, a distinct code path from integer equality.
+		inter := parseCheckAndPrepare(t, `
+          fun test(_ x: String): Int {
+              switch x {
+              case "one":
+                  return 1
+              case "two":
+                  return 2
+              default:
+                  return 3
+              }
+          }
+        `)
+
+		for argument, expected := range map[interpreter.Value]interpreter.Value{
+			interpreter.NewUnmeteredStringValue("one"):   interpreter.NewUnmeteredIntValueFromInt64(1),
+			interpreter.NewUnmeteredStringValue("two"):   interpreter.NewUnmeteredIntValueFromInt64(2),
+			interpreter.NewUnmeteredStringValue("three"): interpreter.NewUnmeteredIntValueFromInt64(3),
+			interpreter.NewUnmeteredStringValue(""):      interpreter.NewUnmeteredIntValueFromInt64(3),
+		} {
+
+			actual, err := inter.Invoke("test", argument)
+			require.NoError(t, err)
+
+			AssertValuesEqual(t, inter, expected, actual)
+		}
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Switch over an enum subject matches cases by enum equality.
+		inter := parseCheckAndPrepare(t, `
+          enum Color: UInt8 {
+              case red
+              case green
+              case blue
+          }
+
+          fun test(_ raw: UInt8): Int {
+              let c = Color(rawValue: raw)!
+              switch c {
+              case Color.red:
+                  return 10
+              case Color.green:
+                  return 20
+              case Color.blue:
+                  return 30
+              default:
+                  return 0
+              }
+          }
+        `)
+
+		for argument, expected := range map[interpreter.Value]interpreter.Value{
+			interpreter.NewUnmeteredUInt8Value(0): interpreter.NewUnmeteredIntValueFromInt64(10),
+			interpreter.NewUnmeteredUInt8Value(1): interpreter.NewUnmeteredIntValueFromInt64(20),
+			interpreter.NewUnmeteredUInt8Value(2): interpreter.NewUnmeteredIntValueFromInt64(30),
+		} {
+
+			actual, err := inter.Invoke("test", argument)
+			require.NoError(t, err)
+
+			AssertValuesEqual(t, inter, expected, actual)
+		}
+	})
+
 	t.Run("optional", func(t *testing.T) {
 
 		t.Parallel()
