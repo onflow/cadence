@@ -3556,6 +3556,149 @@ func TestInterpretNilCoalescingBothOptionalLeftNil(t *testing.T) {
 	)
 }
 
+func TestInterpretNilCoalescingChained(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("value selection", func(t *testing.T) {
+		t.Parallel()
+
+		// `a ?? b ?? c` is right-associative: `a ?? (b ?? c)`.
+		// The first non-nil operand (left to right) wins.
+		inter := parseCheckAndPrepare(t, `
+          fun test(_ a: Int?, _ b: Int?, _ c: Int): Int {
+              return a ?? b ?? c
+          }
+        `)
+
+		type testCase struct {
+			a, b     interpreter.Value
+			expected int64
+		}
+
+		some := func(n int64) interpreter.Value {
+			return interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(n),
+			)
+		}
+
+		for _, tc := range []testCase{
+			{some(1), some(2), 1},
+			{interpreter.Nil, some(2), 2},
+			{interpreter.Nil, interpreter.Nil, 3},
+			{some(1), interpreter.Nil, 1},
+		} {
+			actual, err := inter.Invoke(
+				"test",
+				tc.a,
+				tc.b,
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+			)
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(tc.expected),
+				actual,
+			)
+		}
+	})
+
+	t.Run("short-circuits later operands", func(t *testing.T) {
+		t.Parallel()
+
+		// In `a ?? b() ?? c()`, when `a` is non-nil neither `b` nor `c`
+		// must be evaluated; when `a` is nil but `b()` is non-nil, `c`
+		// must not be evaluated. `calls` records each invocation.
+		inter := parseCheckAndPrepare(t, `
+          struct Recorder {
+              var calls: [Int]
+              init() {
+                  self.calls = []
+              }
+              fun produce(_ tag: Int, _ value: Int?): Int? {
+                  self.calls.append(tag)
+                  return value
+              }
+          }
+
+          fun test(_ a: Int?, _ bValue: Int?, _ cValue: Int?): [Int] {
+              let r = Recorder()
+              let result = a ?? r.produce(1, bValue) ?? r.produce(2, cValue)
+              // [result (-999 if nil), number of produce() calls]
+              return [result ?? -999, r.calls.length]
+          }
+        `)
+
+		some := func(n int64) interpreter.Value {
+			return interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(n),
+			)
+		}
+
+		t.Run("a non-nil: no calls", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"test",
+				some(99),
+				interpreter.Nil,
+				some(7),
+			)
+			require.NoError(t, err)
+
+			AssertValueSlicesEqual(
+				t,
+				inter,
+				[]interpreter.Value{
+					interpreter.NewUnmeteredIntValueFromInt64(99),
+					interpreter.NewUnmeteredIntValueFromInt64(0),
+				},
+				ArrayElements(inter, value.(*interpreter.ArrayValue)),
+			)
+		})
+
+		t.Run("a nil, b non-nil: one call", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"test",
+				interpreter.Nil,
+				some(50),
+				some(7),
+			)
+			require.NoError(t, err)
+
+			AssertValueSlicesEqual(
+				t,
+				inter,
+				[]interpreter.Value{
+					interpreter.NewUnmeteredIntValueFromInt64(50),
+					interpreter.NewUnmeteredIntValueFromInt64(1),
+				},
+				ArrayElements(inter, value.(*interpreter.ArrayValue)),
+			)
+		})
+
+		t.Run("a nil, b nil: two calls", func(t *testing.T) {
+			value, err := inter.Invoke(
+				"test",
+				interpreter.Nil,
+				interpreter.Nil,
+				some(7),
+			)
+			require.NoError(t, err)
+
+			AssertValueSlicesEqual(
+				t,
+				inter,
+				[]interpreter.Value{
+					interpreter.NewUnmeteredIntValueFromInt64(7),
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+				},
+				ArrayElements(inter, value.(*interpreter.ArrayValue)),
+			)
+		})
+	})
+}
+
 func TestInterpretNilsComparison(t *testing.T) {
 
 	t.Parallel()

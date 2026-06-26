@@ -172,6 +172,39 @@ func TestInterpretSwitchStatement(t *testing.T) {
 		}
 	})
 
+	t.Run("no default, no match falls through", func(t *testing.T) {
+
+		t.Parallel()
+
+		// A switch without a `default` case where no case matches must
+		// continue execution after the switch, leaving `result` unchanged.
+		inter := parseCheckAndPrepare(t, `
+          fun test(_ x: Int): Int {
+              var result = 0
+              switch x {
+              case 1:
+                  result = 10
+              case 2:
+                  result = 20
+              }
+              return result
+          }
+        `)
+
+		for argument, expected := range map[interpreter.Value]interpreter.Value{
+			interpreter.NewUnmeteredIntValueFromInt64(1): interpreter.NewUnmeteredIntValueFromInt64(10),
+			interpreter.NewUnmeteredIntValueFromInt64(2): interpreter.NewUnmeteredIntValueFromInt64(20),
+			interpreter.NewUnmeteredIntValueFromInt64(3): interpreter.NewUnmeteredIntValueFromInt64(0),
+			interpreter.NewUnmeteredIntValueFromInt64(0): interpreter.NewUnmeteredIntValueFromInt64(0),
+		} {
+
+			actual, err := inter.Invoke("test", argument)
+			require.NoError(t, err)
+
+			AssertValuesEqual(t, inter, expected, actual)
+		}
+	})
+
 	t.Run("String", func(t *testing.T) {
 
 		t.Parallel()
