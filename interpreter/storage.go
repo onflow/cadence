@@ -133,6 +133,15 @@ var _ atreeContainer = &atree.OrderedMap{}
 // This means `MustConvertStoredContainerElement` is safe to call on any path —
 // it acts as canonicalize-or-passthrough based on the wrapper's actual state.
 func canonicalizeContainerElement(cache AtreeContainerCache, fresh Value) Value {
+	if someValue, ok := fresh.(*SomeValue); ok {
+		innerValue := someValue.InnerValue()
+		if innerValue == nil {
+			return fresh
+		}
+		someValue.value = canonicalizeContainerElement(cache, innerValue)
+		return someValue
+	}
+
 	freshCacheable, ok := fresh.(canonicalizableContainer)
 	if !ok {
 		return fresh

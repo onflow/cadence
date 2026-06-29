@@ -985,6 +985,100 @@ func TestInterpretOptionalContainerAliasingViaArrayIndex(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestInterpretOptionalContainerReferenceUsesCanonicalInnerWrapper(t *testing.T) {
+	t.Parallel()
+
+	sameWrapperFunction := stdlib.NewInterpreterStandardLibraryStaticFunction(
+		"sameWrapper",
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			[]sema.Parameter{
+				{
+					Label:      sema.ArgumentLabelNotRequired,
+					Identifier: "first",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.ReferenceType{
+							Type:          sema.AnyResourceType,
+							Authorization: sema.UnauthorizedAccess,
+						},
+					),
+				},
+				{
+					Label:      sema.ArgumentLabelNotRequired,
+					Identifier: "second",
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.ReferenceType{
+							Type:          sema.AnyResourceType,
+							Authorization: sema.UnauthorizedAccess,
+						},
+					),
+				},
+			},
+			sema.BoolTypeAnnotation,
+		),
+		"",
+		func(
+			_ interpreter.NativeFunctionContext,
+			_ interpreter.TypeArgumentsIterator,
+			_ interpreter.ArgumentTypesIterator,
+			_ interpreter.Value,
+			args []interpreter.Value,
+		) interpreter.Value {
+			first := args[0].(*interpreter.EphemeralReferenceValue)
+			second := args[1].(*interpreter.EphemeralReferenceValue)
+			return interpreter.BoolValue(first.Value == second.Value)
+		},
+	)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(sameWrapperFunction)
+	baseValueActivation.DeclareValue(stdlib.InterpreterAssertFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, sameWrapperFunction)
+	interpreter.Declare(baseActivation, stdlib.InterpreterAssertFunction)
+
+	inter, err := parseCheckAndPrepareWithAtreeValidationsDisabled(
+		t,
+		`
+    access(all) resource Vault {
+        access(all) var balance: UFix64
+        init(balance: UFix64) { self.balance = balance }
+    }
+
+    access(all) fun main() {
+        let outer: @[[Vault]?] <- [<-[<-create Vault(balance: 0.0)]]
+
+        let ref = (&outer[0] as &[Vault]?)!
+        let ref2 = (&outer[0] as &[Vault]?)!
+
+        assert(sameWrapper(ref, ref2),
+               message: "optional container references must share the canonical inner wrapper")
+
+        destroy outer
+    }
+        `,
+		ParseCheckAndInterpretOptions{
+			ParseAndCheckOptions: &ParseAndCheckOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+			InterpreterConfig: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *activations.Activation[interpreter.Variable] {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.NoError(t, err)
+}
+
 // TestInterpretOptionalContainerAliasingViaDictionaryLookup exercises
 // the SomeStorable path through dictionary lookup: when a dict's value
 // type is an optional container, DictionaryValue.Get retrieves a
