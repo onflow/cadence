@@ -66,6 +66,7 @@ jobs:
       chain: mainnet
     secrets:
       FIND_API_AUTH: ${{ secrets.FIND_API_AUTH }}
+      ATREE_DEPLOY_KEY: ${{ secrets.ATREE_DEPLOY_KEY }}
 
   testnet:
     needs: setup
@@ -77,3 +78,4 @@ jobs:
       chain: testnet
     secrets:
       FIND_API_AUTH: ${{ secrets.FIND_API_AUTH }}
+      ATREE_DEPLOY_KEY: ${{ secrets.ATREE_DEPLOY_KEY }}

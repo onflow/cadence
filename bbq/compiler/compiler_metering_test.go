@@ -259,7 +259,7 @@ func TestCompilerMemoryMetering(t *testing.T) {
 			common.MemoryKindCompilerLocal:       4,
 			common.MemoryKindCompilerConstant:    1,
 			common.MemoryKindCompilerFunction:    6,
-			common.MemoryKindCompilerInstruction: 24,
+			common.MemoryKindCompilerInstruction: 26,
 
 			common.MemoryKindCompilerBBQProgram:  1,
 			common.MemoryKindCompilerBBQConstant: 1,

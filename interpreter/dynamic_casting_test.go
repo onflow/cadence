@@ -4511,6 +4511,11 @@ func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
 		test(t, "AnyStruct", noError)
 	})
 
+	t.Run("to AnyStruct?", func(t *testing.T) {
+		t.Parallel()
+		test(t, "AnyStruct?", noError)
+	})
+
 	t.Run("nested in Array", func(t *testing.T) {
 		t.Parallel()
 
@@ -4564,5 +4569,192 @@ func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
 
 		assert.Equal(t, common.TypeID("[Capability<auth(S.test.E1,S.test.E2)&Int>]"), forceCastTypeMismatchError.ExpectedType.ID())
 		assert.Equal(t, common.TypeID("[Capability<&Int>]"), forceCastTypeMismatchError.ActualType.ID())
+	})
+
+	t.Run("nested in [[AnyStruct]]", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun test(cap: Capability<auth(E1, E2) &Int>) {
+                let capArray: [[Capability<auth(E1, E2) &Int>]] = [[cap]]
+                let upcastedCapArray: [[AnyStruct]] = capArray
+                let downcastedCapArray = upcastedCapArray as! [[Capability<auth(E1, E2) &Int>]]
+            }
+        `
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+		borrowType := typeValue.Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		_, err = inter.Invoke("test", capabilityValue)
+
+		// Similar to how assigning to `AnyStruct` doesn't strip entitlements,
+		// assigning to an array `[AnyStruct]` (or any nested `AnyStruct`)
+		// shouldn't also strip entitlements.
+		// This is mostly for consistency.
+		require.NoError(t, err)
+	})
+
+	// testNestedPreservation tests that upcasting a value
+	// which contains an entitled capability nested inside a container type
+	// to a container type with `AnyStruct` (or another supertype) at the capability's position
+	// does not strip the capability's entitlements:
+	// casting the upcast value back to its original type must succeed.
+	testNestedPreservation := func(
+		t *testing.T,
+		valueType string,
+		valueExpr string,
+		targetType string,
+	) {
+		code := fmt.Sprintf(
+			`
+                entitlement E1
+                entitlement E2
+
+                fun getBorrowType(): Type {
+                    return Type<auth(E1, E2) &Int>()
+                }
+
+                fun test(cap: Capability<auth(E1, E2) &Int>) {
+                    let original: %[1]s = %[2]s
+                    let upcasted: %[3]s = original
+                    let downcasted = upcasted as! %[1]s
+                }`,
+			valueType,
+			valueExpr,
+			targetType,
+		)
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+		borrowType := typeValue.Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		_, err = inter.Invoke("test", capabilityValue)
+		require.NoError(t, err)
+	}
+
+	t.Run("nested in [AnyStruct]", func(t *testing.T) {
+		t.Parallel()
+
+		testNestedPreservation(t,
+			"[Capability<auth(E1, E2) &Int>]",
+			"[cap]",
+			"[AnyStruct]",
+		)
+	})
+
+	t.Run("nested in {String: AnyStruct}", func(t *testing.T) {
+		t.Parallel()
+
+		testNestedPreservation(t,
+			"{String: Capability<auth(E1, E2) &Int>}",
+			`{"a": cap}`,
+			"{String: AnyStruct}",
+		)
+	})
+
+	t.Run("nested in [AnyStruct?]", func(t *testing.T) {
+		t.Parallel()
+
+		testNestedPreservation(t,
+			"[Capability<auth(E1, E2) &Int>?]",
+			"[cap]",
+			"[AnyStruct?]",
+		)
+	})
+
+	t.Run("nested in [AnyStruct; 1]", func(t *testing.T) {
+		t.Parallel()
+
+		testNestedPreservation(t,
+			"[Capability<auth(E1, E2) &Int>; 1]",
+			"[cap]",
+			"[AnyStruct; 1]",
+		)
+	})
+
+	t.Run("nested in function return type", func(t *testing.T) {
+		t.Parallel()
+
+		testNestedPreservation(t,
+			"fun(): Capability<auth(E1, E2) &Int>",
+			"fun(): Capability<auth(E1, E2) &Int> { return cap }",
+			"fun(): AnyStruct",
+		)
+	})
+
+	t.Run("getType preserves entitlements after upcast to [AnyStruct]", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun test(cap: Capability<auth(E1, E2) &Int>): Type {
+                let capArray: [Capability<auth(E1, E2) &Int>] = [cap]
+                let upcastedCapArray: [AnyStruct] = capArray
+                return upcastedCapArray[0].getType()
+            }
+        `
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		typeValue := result.(interpreter.TypeValue)
+		borrowType := typeValue.Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		result, err = inter.Invoke("test", capabilityValue)
+		require.NoError(t, err)
+
+		// The runtime type of the capability must still include the entitlements,
+		// even after the containing array was assigned to `[AnyStruct]`
+		require.IsType(t, interpreter.TypeValue{}, result)
+		resultType := result.(interpreter.TypeValue).Type
+		assert.Equal(t,
+			common.TypeID("Capability<auth(S.test.E1,S.test.E2)&Int>"),
+			resultType.ID(),
+		)
 	})
 }

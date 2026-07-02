@@ -189,7 +189,6 @@ func (executor *transactionExecutor) preprocess() (err error) {
 
 	executor.authorizerValues = func(context interpreter.AccountCreationContext) []interpreter.Value {
 		return authorizerValues(
-			executor.environment,
 			context,
 			authorizerAddresses,
 			prepareParameters,

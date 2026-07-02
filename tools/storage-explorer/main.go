@@ -241,7 +241,7 @@ func NewAccountStorageMapValueHandler(
 
 		var preparedValue Value
 
-		value := storageMap.ReadValue(nil, key)
+		value := storageMap.ReadValue(inter, key)
 
 		var nested []any
 		err = json.NewDecoder(r.Body).Decode(&nested)

@@ -39,6 +39,15 @@ type DictionaryValue struct {
 	dictionary       *atree.OrderedMap
 	isDestroyed      bool
 	elementSize      uint
+
+	// valueID is the atree value ID captured at construction time.
+	// With atree's shared-state design + Cadence's canonical wrapper cache,
+	// the value ID returned by `v.dictionary.ValueID()` is stable for the lifetime
+	// of the wrapper, so the cached value matches the live one.
+	// The cache is used by `isStaleAtreeView` as a defensive invariant check
+	// to catch unexpected divergence (and a stable identifier when
+	// `v.dictionary` has been nilled out by Destroy/Transfer).
+	valueID atree.ValueID
 }
 
 func NewDictionaryValue(
@@ -293,6 +302,7 @@ func newDictionaryValueFromAtreeMap(
 	return &DictionaryValue{
 		Type:        staticType,
 		dictionary:  atreeOrderedMap,
+		valueID:     atreeOrderedMap.ValueID(),
 		elementSize: elementSize,
 	}
 }
@@ -304,12 +314,11 @@ var _ EquatableValue = &DictionaryValue{}
 var _ ValueIndexableValue = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
-var _ atreeContainerBackedValue = &DictionaryValue{}
+var _ AtreeBackedValue = &DictionaryValue{}
 var _ IterableValue = &DictionaryValue{}
+var _ canonicalizableContainer = &DictionaryValue{}
 
 func (*DictionaryValue) IsValue() {}
-
-func (*DictionaryValue) isAtreeContainerBackedValue() {}
 
 func (v *DictionaryValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitDictionaryValue(context, v)
@@ -363,9 +372,17 @@ func (v *DictionaryValue) iterateKeys(
 			)
 
 			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
+			// convert to high-level interpreter.Value. When the element
+			// will be passed to `f` without transfer, canonicalize so
+			// aliased references see a shared wrapper; when it will be
+			// Transfer'd, leave it as a transient fresh wrapper.
 
-			keyValue := MustConvertStoredValue(interpreter, key)
+			var keyValue Value
+			if transferElements {
+				keyValue = MustConvertStoredValue(interpreter, key)
+			} else {
+				keyValue = MustConvertStoredContainerElement(interpreter, key)
+			}
 
 			// Handle transfer if requested
 			if transferElements {
@@ -446,13 +463,16 @@ func (v *DictionaryValue) iterate(
 			)
 
 			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
+			// convert to high-level interpreter.Value.
+			// canonicalizeContainerElement self-filters based on the wrapper's
+			// parent-callback state, so passing wrappers from read-only iterators
+			// (`IterateReadOnly`, `IterateReadOnlyLoadedValues`) through is safe —
+			// they will be returned as-is rather than cached.
+			keyValue := MustConvertStoredContainerElement(context, key)
+			valueValue := MustConvertStoredContainerElement(context, value)
 
-			keyValue := MustConvertStoredValue(context, key)
-			valueValue := MustConvertStoredValue(context, value)
-
-			CheckInvalidatedResourceOrResourceReference(keyValue, context)
-			CheckInvalidatedResourceOrResourceReference(valueValue, context)
+			CheckInvalidatedValueOrValueReference(keyValue, context)
+			CheckInvalidatedValueOrValueReference(valueValue, context)
 
 			resume = f(
 				keyValue,
@@ -522,6 +542,19 @@ func (v *DictionaryValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
+// canonicalAtreeContainer reports the underlying atree map for canonical
+// wrapper-cache bookkeeping, or nil if the wrapper is invalidated (destroyed
+// or its backing nilled out by Transfer). The cache uses the returned
+// container's `ValueID`, `HasParentUpdater`, and `HasReadOnlyMutationCallback`
+// predicates to decide whether to install / replace the wrapper as canonical;
+// a nil return tells the cache to skip canonicalization for this wrapper.
+func (v *DictionaryValue) canonicalAtreeContainer() atreeContainer {
+	if v.dictionary == nil || v.isDestroyed {
+		return nil
+	}
+	return v.dictionary
+}
+
 func (v *DictionaryValue) isInvalidatedResource(context ValueStaticTypeContext) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(context))
 }
@@ -577,14 +610,23 @@ func (v *DictionaryValue) Destroy(context ResourceDestructionContext) {
 
 	InvalidateReferencedResources(context, v)
 
+	context.ClearCanonicalAtreeContainer(valueID)
+
 	v.dictionary = nil
 }
 
 func (v *DictionaryValue) ForEachKey(
 	context InvocationContext,
 	procedure FunctionValue,
+	accessedType sema.Type,
 ) {
+	// Cascade outer authorization into the callback's key parameter type,
+	// matching sema's DictionaryForEachKeyFunctionType. In practice no
+	// built-in Hashable type has ContainFieldsOrElements=true, so the wrap
+	// doesn't trigger today, but the symmetry with filter/map keeps the
+	// runtime aligned with sema if that ever changes.
 	keyType := v.SemaType(context).KeyType
+	keyType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, keyType, false)
 
 	argumentTypes := []sema.Type{keyType}
 
@@ -604,7 +646,23 @@ func (v *DictionaryValue) ForEachKey(
 					},
 				)
 
+				// Keys are intentionally NOT canonicalized
+				// (the read-only key iterator yields trap-bearing wrappers,
+				// which the canonical wrapper cache rejects anyway):
+				// dictionary keys must be hashable,
+				// and the only container-backed hashable type is enum
+				// (see sema.IsHashableStructType),
+				// which is immutable —
+				// so a non-canonical key wrapper cannot cause mutation divergence.
+				// Canonicalization is also not achievable by switching iterators:
+				// atree installs parent-updaters only on values, never on keys,
+				// even in mutable iterators,
+				// so the cache's safety filter would always reject key wrappers.
 				key := MustConvertStoredValue(context, item)
+
+				if asReference {
+					key = getReferenceValue(context, key, keyType)
+				}
 
 				result := invokeFunctionValue(
 					context,
@@ -689,9 +747,7 @@ func (v *DictionaryValue) Get(
 		panic(errors.NewExternalError(err))
 	}
 
-	result := MustConvertStoredValue(context, storedValue)
-
-	return result, true
+	return MustConvertStoredContainerElement(context, storedValue), true
 }
 
 func (v *DictionaryValue) GetKey(context ContainerReadContext, keyValue Value) Value {
@@ -922,6 +978,16 @@ func (v *DictionaryValue) GetMethod(
 	name string,
 	accessedReference ReferenceValue,
 ) FunctionValue {
+
+	dictionaryType := v.SemaType(context)
+
+	var accessedType sema.Type
+	if accessedReference != nil {
+		accessedType = MustSemaTypeOfValue(accessedReference, context)
+	} else {
+		accessedType = dictionaryType
+	}
+
 	switch name {
 	case sema.DictionaryTypeRemoveFunctionName:
 		return NewBoundHostFunctionValue(
@@ -929,10 +995,22 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryRemoveFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryRemoveFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via dictionaryValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.DictionaryRemoveFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
+			WithDereferenceReceiver(false)
 
 	case sema.DictionaryTypeInsertFunctionName:
 		return NewBoundHostFunctionValue(
@@ -940,10 +1018,22 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryInsertFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryInsertFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via dictionaryValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.DictionaryInsertFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
+			WithDereferenceReceiver(false)
 
 	case sema.DictionaryTypeContainsKeyFunctionName:
 		return NewBoundHostFunctionValue(
@@ -951,7 +1041,7 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryContainsKeyFunctionType(
-				v.SemaType(context),
+				dictionaryType,
 			),
 			NativeDictionaryContainsKeyFunction,
 		)
@@ -962,10 +1052,18 @@ func (v *DictionaryValue) GetMethod(
 			v,
 			accessedReference,
 			sema.DictionaryForEachKeyFunctionType(
-				v.SemaType(context),
+				context,
+				accessedType,
+				dictionaryType,
 			),
 			NativeDictionaryForEachKeyFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function can read accessedType from it and cascade the
+			// outer reference's authorization into the callback's key
+			// parameter type, matching
+			// sema.DictionaryForEachKeyFunctionType.
+			WithDereferenceReceiver(false)
 	}
 
 	return nil
@@ -1636,6 +1734,21 @@ func (v *DictionaryValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
+		context.ClearCanonicalAtreeContainer(v.valueID)
+
+		v.dictionary = nil
+	} else if remove {
+		// Non-resource Transfer with remove: the source's slabs were just
+		// deleted by the PopIterate above. Evict the cached canonical wrapper
+		// (otherwise its entry would leak referencing gone slabs) and nil
+		// `v.dictionary` so any subsequent use of the source wrapper fails
+		// cleanly via `isStaleAtreeView` / `InvalidatedContainerViewError`
+		// rather than crashing inside atree on a missing slab.
+		//
+		// Callers that need to use the source value after this point must
+		// Transfer it onto the stack (`remove=false`) first to obtain a fresh
+		// wrapper at a new SlabID.
+		context.ClearCanonicalAtreeContainer(v.valueID)
 		v.dictionary = nil
 	}
 
@@ -1724,6 +1837,11 @@ func (v *DictionaryValue) DeepRemove(context ValueRemoveContext, hasNoParentCont
 		}()
 	}
 
+	// Evict any canonical wrapper for this value: its slabs are about to be
+	// torn down. Done here (rather than at each call site) so that the
+	// recursive `value.DeepRemove(...)` below also covers nested wrappers.
+	context.ClearCanonicalAtreeContainer(v.valueID)
+
 	// Remove nested values and storables
 
 	storage := v.dictionary.Storage
@@ -1769,7 +1887,40 @@ func (v *DictionaryValue) StorageAddress() atree.Address {
 }
 
 func (v *DictionaryValue) ValueID() atree.ValueID {
+	return v.valueID
+}
+
+// isStaleAtreeView reports whether this wrapper's underlying atree array has
+// been invalidated (nilled out by Destroy/Transfer) or its live value ID has
+// diverged from the cached one captured at construction.
+// With atree's shared-state design and Cadence's canonical wrapper cache,
+// neither condition should be observable in practice;
+// this is a defensive invariant check used by
+// `CheckInvalidatedValueOrValueReference`.
+func (v *DictionaryValue) isStaleAtreeView() bool {
+	if v.dictionary == nil {
+		return true
+	}
+	return v.dictionary.ValueID() != v.valueID
+}
+
+// LiveValueID returns the underlying atree map's current value ID.
+// In contrast to ValueID, which returns a stable value ID cached at
+// construction, LiveValueID reflects mutations to the atree map's root,
+// including slab ID reassignments caused by splits triggered through other
+// DictionaryValue instances wrapping the same underlying atree map.
+// Intended for testing only; production code must use ValueID for resource
+// tracking and invalidation.
+func (v *DictionaryValue) LiveValueID() atree.ValueID {
 	return v.dictionary.ValueID()
+}
+
+// LiveInlined reports whether the underlying atree map is currently stored
+// inlined inside its parent container's slab, as opposed to as a standalone
+// slab. See ArrayValue.LiveInlined for context.
+// Intended for testing only.
+func (v *DictionaryValue) LiveInlined() bool {
+	return v.dictionary.Inlined()
 }
 
 func (v *DictionaryValue) SemaType(typeConverter TypeConverter) *sema.DictionaryType {
@@ -1823,7 +1974,7 @@ var NativeDictionaryRemoveFunction = NativeFunction(
 		args []Value,
 	) Value {
 		keyValue := args[0]
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
 		return dictionary.Remove(context, keyValue)
 	},
 )
@@ -1838,7 +1989,7 @@ var NativeDictionaryInsertFunction = NativeFunction(
 	) Value {
 		keyValue := args[0]
 		newValue := args[1]
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
 		return dictionary.Insert(context, keyValue, newValue)
 	},
 )
@@ -1866,11 +2017,30 @@ var NativeDictionaryForEachKeyFunction = NativeFunction(
 		args []Value,
 	) Value {
 		funcArgument := AssertValueOfType[FunctionValue](args[0])
-		dictionary := AssertValueOfType[*DictionaryValue](receiver)
-		dictionary.ForEachKey(context, funcArgument)
+		dictionary := dictionaryValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
+		dictionary.ForEachKey(context, funcArgument, accessedType)
 		return Void
 	},
 )
+
+func dictionaryValueFromReceiver(context ValueStaticTypeContext, receiver Value) *DictionaryValue {
+	switch receiver := receiver.(type) {
+	case *DictionaryValue:
+		return receiver
+
+	case *StorageReferenceValue:
+		referencedValue := receiver.MustReferencedValue(context)
+		return AssertValueOfType[*DictionaryValue](referencedValue)
+
+	case *EphemeralReferenceValue:
+		referencedValue := receiver.Value
+		return AssertValueOfType[*DictionaryValue](referencedValue)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
 
 // DictionaryKeyIterator
 
@@ -1957,8 +2127,22 @@ func (i *DictionaryKeyIterator) Next(context ValueIteratorContext) Value {
 	}
 
 	// atree.Map iterator returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	return MustConvertStoredValue(context, atreeKeyValue)
+	// convert to high-level interpreter.Value.
+	// Although DictionaryKeyIterator is backed by atree's read-only iterator
+	// (which wires a trap callback on returned elements),
+	// canonicalizeContainerElement self-filters trap-bearing wrappers
+	// and returns them as-is, so this is safe.
+	// Handing out non-canonical key wrappers here is also harmless:
+	// dictionary keys must be hashable,
+	// and the only container-backed hashable type is enum
+	// (see sema.IsHashableStructType),
+	// which is immutable —
+	// so a non-canonical key wrapper cannot cause mutation divergence.
+	// Canonicalization is also not achievable by switching iterators:
+	// atree installs parent-updaters only on values, never on keys,
+	// even in mutable iterators,
+	// so the cache's safety filter would always reject key wrappers.
+	return MustConvertStoredContainerElement(context, atreeKeyValue)
 }
 
 func (i *DictionaryKeyIterator) ValueID() (atree.ValueID, bool) {

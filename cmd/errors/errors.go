@@ -1241,6 +1241,12 @@ func generateErrors() []namedError {
 				Range:                    placeholderRange,
 			},
 		},
+		{"sema.InvalidNonFieldMappingAccessError",
+			&sema.InvalidNonFieldMappingAccessError{
+				DeclarationKind: placeholderDeclarationKind,
+				Pos:             placeholderPosition,
+			},
+		},
 		{"sema.InvalidNonIdentifierFailableResourceDowncast",
 			&sema.InvalidNonIdentifierFailableResourceDowncast{
 				Range: placeholderRange,

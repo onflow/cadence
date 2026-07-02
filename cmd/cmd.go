@@ -389,7 +389,7 @@ func (*StandardLibraryHandler) RecordContractRemoval(_ common.AddressLocation) {
 	// NO-OP
 }
 
-func (*StandardLibraryHandler) CreateAccount(_ common.Address) (address common.Address, err error) {
+func (*StandardLibraryHandler) CreateAccount(_ common.Address, _ interpreter.InvocationContext) (address common.Address, err error) {
 	return common.ZeroAddress, goerrors.New("accounts are not available in this environment")
 }
 

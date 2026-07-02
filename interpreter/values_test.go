@@ -91,6 +91,11 @@ func newRandomValueTestInterpreter(t *testing.T) (inter *interpreter.Interpreter
 			nil,
 			runtime.StorageConfig{},
 		)
+		// Swapping the storage invalidates any canonical wrapper still cached
+		// against the previous one — their `*atree.Array`/`*atree.OrderedMap`
+		// pointers reference slabs in the now-discarded atree state.
+		// Drop the cache so post-reset loads canonicalize against fresh wrappers.
+		inter.ClearAllCanonicalAtreeContainers()
 	}
 
 	resetStorage()

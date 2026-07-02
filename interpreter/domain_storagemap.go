@@ -164,10 +164,12 @@ func (s *DomainStorageMap) ValueExists(gauge common.ComputationGauge, key Storag
 
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
-func (s *DomainStorageMap) ReadValue(gauge common.Gauge, key StorageMapKey) Value {
+// `context` must be non-nil: every read must canonicalize so two reads of the
+// same path yield the same Cadence-level wrapper.
+func (s *DomainStorageMap) ReadValue(context ContainerElementContext, key StorageMapKey) Value {
 
 	common.UseComputation(
-		gauge,
+		context,
 		common.ComputationUsage{
 			Kind:      common.ComputationKindAtreeMapGet,
 			Intensity: 1,
@@ -187,7 +189,12 @@ func (s *DomainStorageMap) ReadValue(gauge common.Gauge, key StorageMapKey) Valu
 		panic(errors.NewExternalError(err))
 	}
 
-	return MustConvertStoredValue(gauge, storedValue)
+	// s.orderedMap.Get wires a real parent updater on the returned value.
+	// The wrapper is exposed to user code
+	// (e.g. as the target of `account.storage.borrow<&T>`),
+	// so two reads of the same path must yield the same canonical wrapper
+	// for reference identity and per-wrapper state alignment.
+	return MustConvertStoredContainerElement(context, storedValue)
 }
 
 // WriteValue sets or removes a value in the storage map.
@@ -229,6 +236,9 @@ func (s *DomainStorageMap) SetValue(context ValueTransferContext, key StorageMap
 	existed = existingStorable != nil
 	if existed {
 		existingValue := StoredValue(context, existingStorable, context.Storage())
+		// DeepRemove also evicts the cached canonical wrapper (if any) for
+		// `existingValue` and recursively for every nested container,
+		// so we don't need a separate ClearCanonicalAtreeContainer here.
 		existingValue.DeepRemove(context, true) // existingValue is standalone because it was overwritten in parent container.
 		RemoveReferencedSlab(context, existingStorable)
 	}
@@ -281,6 +291,9 @@ func (s *DomainStorageMap) RemoveValue(context ValueRemoveContext, key StorageMa
 	existed = existingValueStorable != nil
 	if existed {
 		existingValue := StoredValue(context, existingValueStorable, context.Storage())
+		// DeepRemove also evicts the cached canonical wrapper (if any) for
+		// `existingValue` and recursively for every nested container,
+		// so we don't need a separate ClearCanonicalAtreeContainer here.
 		existingValue.DeepRemove(context, true) // existingValue is standalone because it was removed from parent container.
 		RemoveReferencedSlab(context, existingValueStorable)
 	}

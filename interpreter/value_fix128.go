@@ -707,6 +707,8 @@ func fix128SaturationArithmaticResult(
 		return fix.Fix128Min
 	case fix.UnderflowError:
 		return fix.Fix128Zero
+	case fix.DivisionByZeroError:
+		panic(&DivisionByZeroError{})
 	default:
 		panic(err)
 	}

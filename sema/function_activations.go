@@ -61,22 +61,44 @@ func (a *FunctionActivation) popControl() {
 	a.ControlStack = a.ControlStack[:lastIndex]
 }
 
+// WithLoop runs f within a new loop scope. `MaybeJumpedLoop` is
+// save/restored — break/continue targeting this loop are consumed by it
+// and must not leak. If any path jumped, the body's DR/DH/DE are
+// cleared (they over-claim — the jumping path didn't terminate the
+// function).
 func (a *FunctionActivation) WithLoop(f func()) {
 	a.pushControl(ControlKindLoop)
-	a.ReturnInfo.WithNewJumpTarget(f)
+	savedMaybeJumpedLoop := a.ReturnInfo.MaybeJumpedLoop
+	a.ReturnInfo.WithNewLoopJumpTarget(f)
+	if a.ReturnInfo.MaybeJumpedLoop {
+		a.ReturnInfo.clearDefiniteExits()
+	}
+	a.ReturnInfo.MaybeJumpedLoop = savedMaybeJumpedLoop
 	a.popControl()
 }
 
+// WithSwitch runs f within a new switch scope. Mirrors `WithLoop`:
+// `MaybeJumpedSwitch` is save/restored (break targeting this switch is
+// consumed by it; continue targets the enclosing loop and propagates
+// past via `MaybeJumpedLoop`). If any case body broke, clear DR/DH/DE
+// — the break path falls past the switch without terminating the
+// function, so the merged "every case definitely terminated" claim
+// would over-promise.
 func (a *FunctionActivation) WithSwitch(f func()) {
-	// NOTE: new jump-offsets child-set for each case instead of whole switch
+	// The switch jump-offset set is scoped to the whole switch:
+	// breaks targeting the switch are consumed by it.
+	// Isolation between sibling cases is provided by `ReturnInfo.Clone`
+	// in `checkConditionalBranches` (each case is a branch with its own
+	// cloned jump-offset sets). Loop jump offsets (`continue`) are NOT
+	// scoped here — they target the enclosing loop and must survive
+	// past the switch (see `WithNewSwitchJumpTarget`).
 	a.pushControl(ControlKindSwitch)
-	// A `break` inside a switch only targets the switch, not any enclosing loop.
-	// DefinitelyJumpedSwitch is scoped to the switch: save on entry, restore on exit.
-	// `continue` always targets the enclosing loop, so it sets DefinitelyJumped
-	// (not DefinitelyJumpedSwitch) and therefore propagates past the switch.
-	savedDefinitelyJumpedSwitch := a.ReturnInfo.DefinitelyJumpedSwitch
-	f()
-	a.ReturnInfo.DefinitelyJumpedSwitch = savedDefinitelyJumpedSwitch
+	savedMaybeJumpedSwitch := a.ReturnInfo.MaybeJumpedSwitch
+	a.ReturnInfo.WithNewSwitchJumpTarget(f)
+	if a.ReturnInfo.MaybeJumpedSwitch {
+		a.ReturnInfo.clearDefiniteExits()
+	}
+	a.ReturnInfo.MaybeJumpedSwitch = savedMaybeJumpedSwitch
 	a.popControl()
 }
 

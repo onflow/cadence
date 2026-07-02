@@ -1127,6 +1127,9 @@ func TestCompileIfLet(t *testing.T) {
 			},
 			opcode.PrettyInstructionReturnValue{},
 
+			// Defensive unreachable after the exhaustive if-statement
+			opcode.PrettyInstructionUnreachable{},
+
 			opcode.PrettyInstructionReturn{},
 		},
 		prettyInstructions(functions[0].Code, program),
@@ -4423,7 +4426,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4444,6 +4447,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -4544,7 +4551,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 21},
+				opcode.PrettyInstructionJumpIfFalse{Target: 22},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4565,6 +4572,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -4659,7 +4670,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 23},
+				opcode.PrettyInstructionJumpIfFalse{Target: 24},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4680,6 +4691,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -4807,7 +4822,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4828,6 +4843,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -4851,7 +4870,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.PrettyInstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.PrettyInstructionJump{Target: 18},
+				opcode.PrettyInstructionJump{Target: 19},
 
 				// let result $noTransfer $_result
 				opcode.PrettyInstructionStatement{},
@@ -4875,7 +4894,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 33},
+				opcode.PrettyInstructionJumpIfFalse{Target: 35},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -4895,6 +4914,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 						interpreter.PrimitiveStaticTypeString,
 					}, ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -5052,7 +5075,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 25},
+				opcode.PrettyInstructionJumpIfFalse{Target: 26},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -5073,6 +5096,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -5291,7 +5318,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 13},
+				opcode.PrettyInstructionJumpIfFalse{Target: 14},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -5312,6 +5339,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -5445,7 +5476,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				},
 				opcode.PrettyInstructionGreater{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 16},
+				opcode.PrettyInstructionJumpIfFalse{Target: 17},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -5465,6 +5496,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 						interpreter.PrimitiveStaticTypeString,
 					}, ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// Function body
@@ -5485,7 +5521,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.PrettyInstructionSetLocal{Local: tempResultIndex},
 
 				// jump to post conditions
-				opcode.PrettyInstructionJump{Target: 22},
+				opcode.PrettyInstructionJump{Target: 23},
 
 				// let result $noTransfer $_result
 				opcode.PrettyInstructionStatement{},
@@ -5501,7 +5537,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 				opcode.PrettyInstructionGetLocal{Local: xIndex},
 				opcode.PrettyInstructionLess{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 37},
+				opcode.PrettyInstructionJumpIfFalse{Target: 39},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -5522,6 +5558,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// return $_result
@@ -5562,6 +5603,10 @@ func TestForLoop(t *testing.T) {
 			elementVarIndex
 		)
 
+		intArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 				opcode.PrettyInstructionStatement{},
@@ -5569,7 +5614,7 @@ func TestForLoop(t *testing.T) {
 				// Get the iterator and store in local var.
 				// `var <iterator> = array.Iterator`
 				opcode.PrettyInstructionGetLocal{Local: arrayValueIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iteratorVarIndex},
 
 				// Loop condition: Check whether `iterator.hasNext()`
@@ -5631,13 +5676,17 @@ func TestForLoop(t *testing.T) {
 			elementVarIndex
 		)
 
+		intArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 				// Get the iterator and store in local var.
 				// `var <iterator> = array.Iterator`
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: arrayValueIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iteratorVarIndex},
 
 				// Initialize index.
@@ -5741,6 +5790,10 @@ func TestForLoop(t *testing.T) {
 			x2Index
 		)
 
+		intArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 
@@ -5762,7 +5815,7 @@ func TestForLoop(t *testing.T) {
 				// `var <iterator> = array.Iterator`
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: arrayValueIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iteratorVarIndex},
 
 				// Loop condition: Check whether `iterator.hasNext()`
@@ -5854,6 +5907,10 @@ func TestForLoop(t *testing.T) {
 			yIndex
 		)
 
+		intArrayType := &interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+
 		assert.Equal(t,
 			[]opcode.PrettyInstruction{
 
@@ -5861,7 +5918,7 @@ func TestForLoop(t *testing.T) {
 				// `var <iterator> = a.Iterator`
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: aIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iter1Index},
 
 				// Loop condition: Check whether `iterator.hasNext()`
@@ -5887,7 +5944,7 @@ func TestForLoop(t *testing.T) {
 				// `var <iterator> = b.Iterator`
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetLocal{Local: bIndex},
-				opcode.PrettyInstructionIterator{},
+				opcode.PrettyInstructionIterator{IndexedType: intArrayType},
 				opcode.PrettyInstructionSetLocal{Local: iter2Index},
 
 				// Loop condition: Check whether `iterator.hasNext()`
@@ -6516,7 +6573,7 @@ func TestCompileTransaction(t *testing.T) {
 
 			// if !<condition>
 			opcode.PrettyInstructionNot{},
-			opcode.PrettyInstructionJumpIfFalse{Target: 15},
+			opcode.PrettyInstructionJumpIfFalse{Target: 16},
 
 			// $failPreCondition("pre failed")
 			opcode.PrettyInstructionStatement{},
@@ -6537,6 +6594,10 @@ func TestCompileTransaction(t *testing.T) {
 				},
 				ReturnType: interpreter.PrimitiveStaticTypeNever,
 			},
+
+			// Defensive unreachable after the invocation of $failPreCondition,
+			// which has return type Never
+			opcode.PrettyInstructionUnreachable{},
 
 			// Drop since it's a statement-expression
 			opcode.PrettyInstructionDrop{},
@@ -6587,7 +6648,7 @@ func TestCompileTransaction(t *testing.T) {
 
 			// if !<condition>
 			opcode.PrettyInstructionNot{},
-			opcode.PrettyInstructionJumpIfFalse{Target: 37},
+			opcode.PrettyInstructionJumpIfFalse{Target: 39},
 
 			// $failPostCondition("post failed")
 			opcode.PrettyInstructionStatement{},
@@ -6608,6 +6669,10 @@ func TestCompileTransaction(t *testing.T) {
 				},
 				ReturnType: interpreter.PrimitiveStaticTypeNever,
 			},
+
+			// Defensive unreachable after the invocation of $failPostCondition,
+			// which has return type Never
+			opcode.PrettyInstructionUnreachable{},
 
 			// Drop since it's a statement-expression
 			opcode.PrettyInstructionDrop{},
@@ -6858,7 +6923,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionTrue{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: 1},
@@ -6878,6 +6943,11 @@ func TestCompileReturns(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// return
@@ -6954,7 +7024,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionTrue{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 23},
+				opcode.PrettyInstructionJumpIfFalse{Target: 24},
 
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: 1},
@@ -6974,6 +7044,11 @@ func TestCompileReturns(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// return $_result
@@ -7026,7 +7101,7 @@ func TestCompileReturns(t *testing.T) {
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionTrue{},
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 15},
+				opcode.PrettyInstructionJumpIfFalse{Target: 16},
 
 				opcode.PrettyInstructionStatement{},
 				opcode.PrettyInstructionGetGlobal{Global: 2},
@@ -7046,6 +7121,11 @@ func TestCompileReturns(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
+
 				opcode.PrettyInstructionDrop{},
 
 				// return $_result
@@ -9459,6 +9539,7 @@ func TestCompileSecondValueAssignment(t *testing.T) {
 						Data: "bar",
 						Kind: constant.RawString,
 					},
+					AccessedType: fooType,
 				},
 				opcode.PrettyInstructionTransferAndConvert{
 					ValueType:  barType,
@@ -10566,9 +10647,9 @@ func TestCompileSwapMembers(t *testing.T) {
 				IsTempVar: true,
 			},
 
-			// get left (s.x)
+			// get left (s.x) via extract-then-write: RemoveField
 			opcode.PrettyInstructionGetLocal{Local: tempIndex1},
-			opcode.PrettyInstructionGetField{
+			opcode.PrettyInstructionRemoveField{
 				FieldName: constant.DecodedConstant{
 					Data: "x",
 					Kind: constant.RawString,
@@ -10580,9 +10661,9 @@ func TestCompileSwapMembers(t *testing.T) {
 				IsTempVar: true,
 			},
 
-			// get right (s.y)
+			// get right (s.y) via extract-then-write: RemoveField
 			opcode.PrettyInstructionGetLocal{Local: tempIndex2},
-			opcode.PrettyInstructionGetField{
+			opcode.PrettyInstructionRemoveField{
 				FieldName: constant.DecodedConstant{
 					Data: "y",
 					Kind: constant.RawString,
@@ -10684,12 +10765,13 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 
 	const (
 		charsIndex = iota
-		tempIndex1
-		tempIndex2
-		tempIndex3
-		tempIndex4
-		tempIndex5
-		tempIndex6
+		leftTargetIndex
+		leftIndexIndex
+		rightTargetIndex
+		rightIndexIndex
+		leftInsertedPlaceholderIndex
+		leftValueIndex
+		rightValueIndex
 	)
 
 	arrayType := &interpreter.VariableSizedStaticType{
@@ -10732,7 +10814,7 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 
 			opcode.PrettyInstructionGetLocal{Local: charsIndex},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex1,
+				Local:     leftTargetIndex,
 				IsTempVar: true,
 			},
 
@@ -10747,13 +10829,13 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 				TargetType: interpreter.PrimitiveStaticTypeInteger,
 			},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex2,
+				Local:     leftIndexIndex,
 				IsTempVar: true,
 			},
 
 			opcode.PrettyInstructionGetLocal{Local: charsIndex},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex3,
+				Local:     rightTargetIndex,
 				IsTempVar: true,
 			},
 
@@ -10768,70 +10850,82 @@ func TestCompileSwapIndexInStructs(t *testing.T) {
 				TargetType: interpreter.PrimitiveStaticTypeInteger,
 			},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex4,
+				Local:     rightIndexIndex,
 				IsTempVar: true,
 			},
 
-			// get left value
-			opcode.PrettyInstructionGetLocal{Local: tempIndex1},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex2},
-			opcode.PrettyInstructionGetIndex{
-				IndexedType: &interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
+			// get left value via extract-then-write: RemoveIndex with placeholder.
+			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
+			opcode.PrettyInstructionRemoveIndex{
+				IndexedType:     arrayType,
+				PushPlaceholder: true,
 			},
+			opcode.PrettyInstructionSetLocal{Local: leftInsertedPlaceholderIndex},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex5,
+				Local:     leftValueIndex,
 				IsTempVar: true,
 			},
 
-			// get right value
-			opcode.PrettyInstructionGetLocal{Local: tempIndex3},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex4},
-			opcode.PrettyInstructionGetIndex{
-				IndexedType: &interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
+			// get right value via extract: RemoveIndex (no placeholder needed).
+			opcode.PrettyInstructionGetLocal{Local: rightTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: rightIndexIndex},
+			opcode.PrettyInstructionRemoveIndex{
+				IndexedType:     arrayType,
+				PushPlaceholder: false,
 			},
 			opcode.PrettyInstructionSetLocal{
-				Local:     tempIndex6,
+				Local:     rightValueIndex,
 				IsTempVar: true,
 			},
+
+			// compare right value and left inserted placeholder
+			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftInsertedPlaceholderIndex},
+			opcode.PrettyInstructionSame{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 37},
+
+			// set left index back with left value (swap-with-itself short-circuit)
+			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: arrayType,
+			},
+
+			// jump to the end
+			opcode.PrettyInstructionJump{Target: 51},
 
 			// convert right value to left type
-			opcode.PrettyInstructionGetLocal{Local: tempIndex6},
+			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
 			opcode.PrettyInstructionTransferAndConvert{
 				ValueType:  interpreter.PrimitiveStaticTypeString,
 				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
-			opcode.PrettyInstructionSetLocal{Local: tempIndex6},
+			opcode.PrettyInstructionSetLocal{Local: rightValueIndex},
 
 			// convert left value to right type
-			opcode.PrettyInstructionGetLocal{Local: tempIndex5},
+			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
 			opcode.PrettyInstructionTransferAndConvert{
 				ValueType:  interpreter.PrimitiveStaticTypeString,
 				TargetType: interpreter.PrimitiveStaticTypeString,
 			},
-			opcode.PrettyInstructionSetLocal{Local: tempIndex5},
-
-			// set right index with left value
-			opcode.PrettyInstructionGetLocal{Local: tempIndex1},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex2},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex6},
-			opcode.PrettyInstructionSetIndex{
-				IndexedType: &interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
-			},
+			opcode.PrettyInstructionSetLocal{Local: leftValueIndex},
 
 			// set left index with right value
-			opcode.PrettyInstructionGetLocal{Local: tempIndex3},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex4},
-			opcode.PrettyInstructionGetLocal{Local: tempIndex5},
+			opcode.PrettyInstructionGetLocal{Local: leftTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftIndexIndex},
+			opcode.PrettyInstructionGetLocal{Local: rightValueIndex},
 			opcode.PrettyInstructionSetIndex{
-				IndexedType: &interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
+				IndexedType: arrayType,
+			},
+
+			// set right index with left value
+			opcode.PrettyInstructionGetLocal{Local: rightTargetIndex},
+			opcode.PrettyInstructionGetLocal{Local: rightIndexIndex},
+			opcode.PrettyInstructionGetLocal{Local: leftValueIndex},
+			opcode.PrettyInstructionSetIndex{
+				IndexedType: arrayType,
 			},
 
 			// Return
@@ -11390,7 +11484,7 @@ func TestForStatementCapturing(t *testing.T) {
 			},
 
 			// get iterator
-			opcode.PrettyInstructionIterator{},
+			opcode.PrettyInstructionIterator{IndexedType: arrayType},
 			opcode.PrettyInstructionSetLocal{Local: iterIndex},
 
 			// set i = -1
@@ -11588,7 +11682,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -11609,6 +11703,10 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -11738,7 +11836,7 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 21},
+				opcode.PrettyInstructionJumpIfFalse{Target: 22},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -11759,6 +11857,10 @@ func TestCompileFunctionExpressionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -11844,7 +11946,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -11865,6 +11967,10 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -11984,7 +12090,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 21},
+				opcode.PrettyInstructionJumpIfFalse{Target: 22},
 
 				// $failPostCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -12005,6 +12111,10 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPostCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -12095,7 +12205,7 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 
 				// if !<condition>
 				opcode.PrettyInstructionNot{},
-				opcode.PrettyInstructionJumpIfFalse{Target: 12},
+				opcode.PrettyInstructionJumpIfFalse{Target: 13},
 
 				// $failPreCondition("")
 				opcode.PrettyInstructionStatement{},
@@ -12116,6 +12226,10 @@ func TestCompileInnerFunctionConditions(t *testing.T) {
 					},
 					ReturnType: interpreter.PrimitiveStaticTypeNever,
 				},
+
+				// Defensive unreachable after the invocation of $failPreCondition,
+				// which has return type Never
+				opcode.PrettyInstructionUnreachable{},
 
 				// Drop since it's a statement-expression
 				opcode.PrettyInstructionDrop{},
@@ -12820,7 +12934,7 @@ func TestNestedLoops(t *testing.T) {
 				Type: arrayType,
 				Size: 2,
 			},
-			opcode.PrettyInstructionIterator{},
+			opcode.PrettyInstructionIterator{IndexedType: arrayType},
 			opcode.PrettyInstructionSetLocal{Local: outerIterIndex},
 			opcode.PrettyInstructionGetLocal{Local: outerIterIndex},
 			opcode.PrettyInstructionIteratorHasNext{},
@@ -12851,7 +12965,7 @@ func TestNestedLoops(t *testing.T) {
 				Type: arrayType,
 				Size: 1,
 			},
-			opcode.PrettyInstructionIterator{},
+			opcode.PrettyInstructionIterator{IndexedType: arrayType},
 			opcode.PrettyInstructionSetLocal{Local: innerIterIndex},
 			opcode.PrettyInstructionGetLocal{Local: innerIterIndex},
 			opcode.PrettyInstructionIteratorHasNext{},
@@ -14089,5 +14203,318 @@ func TestCompileReferenceMethod(t *testing.T) {
 			},
 		},
 		program.Globals,
+	)
+}
+
+func TestCompileExhaustiveIfNoFollowingStatement(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun test(): Int {
+          if true { return 1 } else { return 2 }
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// if true
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionTrue{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 8},
+
+			// return 1 (then branch)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(1),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
+
+			opcode.PrettyInstructionJump{Target: 12},
+
+			// return 2 (else branch)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetConstant{
+				Constant: constant.DecodedConstant{
+					Data: interpreter.NewUnmeteredIntValueFromInt64(2),
+					Kind: constant.Int,
+				},
+			},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionReturnValue{},
+
+			// Defensive unreachable after the exhaustive if-statement.
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionReturn{},
+		},
+		prettyInstructions(functions[0].Code, program),
+	)
+}
+
+func TestCompileUnreachableStatementAfterExhaustiveIf(t *testing.T) {
+
+	t.Parallel()
+
+	// The checker reports an UnreachableStatementError for the trailing `return`,
+	// but the compiler still walks and emits bytecode for it. The defensive
+	// InstructionUnreachable emitted after the exhaustive if-statement guarantees
+	// that the unreachable return is never reached at runtime.
+	checker, err := ParseAndCheck(t, `
+      fun test() {
+          if true { return } else { return }
+          return
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+	require.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 1)
+
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// if true
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionTrue{},
+			opcode.PrettyInstructionJumpIfFalse{Target: 6},
+
+			// return (then branch)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionReturn{},
+
+			opcode.PrettyInstructionJump{Target: 8},
+
+			// return (else branch)
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionReturn{},
+
+			// Defensive unreachable after the exhaustive if-statement.
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionReturn{},
+		},
+		prettyInstructions(functions[0].Code, program),
+	)
+}
+
+// TestCompileInheritedStatementEndingControlFlow tests that the defensive
+// unreachable instruction is also emitted after an *inherited* statement
+// which the checker determined to end control flow.
+// The statement (here: a before-statement of an inherited post-condition)
+// is declared in another program, so the compiler must consult
+// the declaring program's elaboration, not the current elaboration
+// (see compilePotentiallyInheritedCode).
+//
+// An inherited statement which ends control flow cannot currently be produced
+// from source code, so simulate a checker bug by marking the interface's
+// before-statement, which completes normally.
+func TestCompileInheritedStatementEndingControlFlow(t *testing.T) {
+
+	t.Parallel()
+
+	programs := CompiledPrograms{}
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	aLocation := common.NewAddressLocation(nil, contractsAddress, "A")
+	bLocation := common.NewAddressLocation(nil, contractsAddress, "B")
+
+	// Deploy interface contract
+
+	aContract := `
+      contract A {
+          struct interface SI {
+              fun test(x: Int): Int {
+                  post { before(x) < x }
+              }
+          }
+      }
+    `
+
+	// Only need to compile
+	ParseCheckAndCompileCodeWithOptions(
+		t,
+		aContract,
+		aLocation,
+		ParseCheckAndCompileOptions{
+			CheckerHandler: func(checker *sema.Checker) {
+				// Mark the before-statement of the post-condition
+				// (`let $before_0 = x`) as ending control flow
+				contractDeclaration := checker.Program.CompositeDeclarations()[0]
+				interfaceDeclaration := contractDeclaration.Members.Interfaces()[0]
+				functionDeclaration := interfaceDeclaration.Members.Functions()[0]
+				postConditions := functionDeclaration.FunctionBlock.PostConditions
+				rewrite := checker.Elaboration.PostConditionsRewrite(postConditions)
+				beforeStatement := rewrite.BeforeStatements[0]
+				checker.Elaboration.SetStatementEndsControlFlow(beforeStatement)
+			},
+		},
+		programs,
+	)
+
+	// Deploy contract with the implementation,
+	// which inherits the post-condition and its before-statement
+
+	bContract := fmt.Sprintf(
+		`
+          import A from %s
+
+          contract B {
+              struct Test: A.SI {
+                  fun test(x: Int): Int {
+                      return 42
+                  }
+              }
+          }
+        `,
+		contractsAddress.HexWithPrefix(),
+	)
+
+	program := ParseCheckAndCompile(t, bContract, bLocation, programs)
+
+	const testFunctionQualifiedName = "B.Test.test"
+	var testFunction *bbq.Function[opcode.Instruction]
+	for i, function := range program.Functions {
+		if function.QualifiedName == testFunctionQualifiedName {
+			testFunction = &program.Functions[i]
+			break
+		}
+	}
+	require.NotNil(t, testFunction, "missing function %s", testFunctionQualifiedName)
+
+	// local var indexes
+	const (
+		// Since the function is an object-method, receiver becomes the first parameter.
+		xIndex = iota + 1
+		beforeVarIndex
+	)
+
+	instructions := prettyInstructions(testFunction.Code, program)
+	require.GreaterOrEqual(t, len(instructions), 5)
+
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// Inherited before-statement:
+			// var $before_0 = x
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetLocal{Local: xIndex},
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeInt,
+				TargetType: interpreter.PrimitiveStaticTypeInt,
+			},
+			opcode.PrettyInstructionSetLocal{Local: beforeVarIndex},
+
+			// Defensive unreachable after the inherited before-statement,
+			// which was (artificially) marked as ending control flow
+			opcode.PrettyInstructionUnreachable{},
+		},
+		instructions[:5],
+	)
+}
+
+// TestCompileNeverInvocation tests that a defensive unreachable instruction
+// is emitted directly after the invocation of a function with return type Never,
+// in addition to the unreachable instruction emitted after the statement
+// which the checker determined to end control flow.
+// The invocation-level instruction aborts execution as soon as
+// a supposedly never-returning function returns (e.g. a mistyped native function),
+// before the rest of the enclosing statement is executed.
+func TestCompileNeverInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+      fun f(): Never {
+          return f()
+      }
+
+      fun test() {
+          f()
+      }
+    `)
+	require.NoError(t, err)
+
+	comp := compiler.NewInstructionCompiler(
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
+	)
+	program := comp.Compile()
+
+	functions := program.Functions
+	require.Len(t, functions, 2)
+
+	// fun f(): Never
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// return f()
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetGlobal{Global: 0},
+			opcode.PrettyInstructionInvoke{
+				ReturnType: interpreter.PrimitiveStaticTypeNever,
+			},
+
+			// Defensive unreachable after the invocation of f,
+			// which has return type Never
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionTransferAndConvert{
+				ValueType:  interpreter.PrimitiveStaticTypeNever,
+				TargetType: interpreter.PrimitiveStaticTypeNever,
+			},
+			opcode.PrettyInstructionReturnValue{},
+		},
+		prettyInstructions(functions[0].Code, program),
+	)
+
+	// fun test()
+	assert.Equal(t,
+		[]opcode.PrettyInstruction{
+			// f()
+			opcode.PrettyInstructionStatement{},
+			opcode.PrettyInstructionGetGlobal{Global: 0},
+			opcode.PrettyInstructionInvoke{
+				ReturnType: interpreter.PrimitiveStaticTypeNever,
+			},
+
+			// Defensive unreachable after the invocation of f,
+			// which has return type Never
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionDrop{},
+
+			// Defensive unreachable after the expression statement,
+			// which the checker determined to end control flow
+			opcode.PrettyInstructionUnreachable{},
+
+			opcode.PrettyInstructionReturn{},
+		},
+		prettyInstructions(functions[1].Code, program),
 	)
 }

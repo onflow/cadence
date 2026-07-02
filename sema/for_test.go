@@ -788,3 +788,808 @@ func TestCheckForDictionary(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckBreakInForLoopBodyDoesNotPreventOuterReturn(t *testing.T) {
+
+	t.Parallel()
+
+	// A `break` inside the for-loop body targets the loop, not the enclosing function.
+	// The trailing `return 1` must therefore still mark the function as definitely returning.
+
+	_, err := ParseAndCheck(t, `
+        fun test(): Int {
+            for _ in [1] {
+                break
+            }
+            return 1
+        }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckContinueInForLoopBodyDoesNotPreventOuterReturn(t *testing.T) {
+
+	t.Parallel()
+
+	// A `continue` inside the for-loop body targets the loop, not the enclosing function.
+	// The trailing `return 1` must therefore still mark the function as definitely returning.
+
+	_, err := ParseAndCheck(t, `
+        fun test(): Int {
+            for _ in [1] {
+                continue
+            }
+            return 1
+        }
+    `)
+
+	require.NoError(t, err)
+}
+
+// TestCheckForLoopBodyMixedExitVariants exercises every unique pair of distinct exit kinds
+// (return, halt, break, continue) used as the two branches of an `if-else` inside the for-loop body.
+// Every path through the if-else terminates control flow (in some way),
+// so any trailing statement must be reported as unreachable.
+func TestCheckForLoopBodyMixedExitVariants(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("break and continue", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { break } else { continue }
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("break and halt", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckWithPanic(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { break } else { panic("x") }
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("break and return", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { break } else { return }
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("continue and halt", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckWithPanic(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { continue } else { panic("x") }
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("continue and return", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { continue } else { return }
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("halt and return", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckWithPanic(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { panic("x") } else { return }
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+}
+
+// TestCheckForLoopConditionalJumpThenTermination covers the
+// "maybe-jump on one path, definite terminator on the other" pattern in
+// a for-loop body.
+//
+// For each (JUMP, TERMINATOR) combination, two assertions:
+//   - Code AFTER the loop is reachable: the jump path falls past the
+//     loop, so the loop body's `DefinitelyReturned`/`DefinitelyHalted`
+//     claim must NOT propagate to the function.
+//   - A statement AFTER the terminator inside the body is unreachable:
+//     within the body, every path through the if-else does terminate.
+func TestCheckForLoopConditionalJumpThenTermination(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("if break then return; code after loop reachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test(): Int {
+                for _ in [1] {
+                    if true { break }
+                    return 1
+                }
+                return 2
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("if break then return; statement after return is unreachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { break }
+                    return
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("if break then halt; code after loop reachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckWithPanic(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { break }
+                    panic("x")
+                }
+                let y = 1
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("if break then halt; statement after halt is unreachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckWithPanic(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { break }
+                    panic("x")
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("if continue then return; code after loop reachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test(): Int {
+                for _ in [1] {
+                    if true { continue }
+                    return 1
+                }
+                return 2
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("if continue then return; statement after return is unreachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { continue }
+                    return
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("if continue then halt; code after loop reachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckWithPanic(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { continue }
+                    panic("x")
+                }
+                let y = 1
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("if continue then halt; statement after halt is unreachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheckWithPanic(t, `
+            fun test() {
+                for _ in [1] {
+                    if true { continue }
+                    panic("x")
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+}
+
+func TestCheckNestedForLoopBreakDoesNotEscapeOuterLoop(t *testing.T) {
+
+	t.Parallel()
+
+	// A `break` inside the inner for-loop targets the inner loop only.
+	// Code after the inner loop, but still in the outer loop body,
+	// must remain reachable.
+
+	_, err := ParseAndCheck(t, `
+        fun test() {
+            for i in [1] {
+                for j in [2] {
+                    break
+                }
+                let x = 1
+            }
+        }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckNestedForLoopMaybeJumpedDoesNotEscape(t *testing.T) {
+
+	t.Parallel()
+
+	// A `MaybeJumpedLoop` set inside an inner for-loop body must not leak
+	// into the outer loop's body state — `WithLoop` save/restores
+	// `MaybeJumpedLoop`.
+	_, err := ParseAndCheck(t, `
+        fun test(): Int {
+            for i in [1] {
+                for j in [2] {
+                    if true { break }
+                    return 1
+                }
+                let x = 1
+            }
+            return 2
+        }
+    `)
+
+	require.NoError(t, err)
+}
+
+// TestCheckForLoopWithSwitchInBody verifies that a switch nested in a for-loop body
+// interacts correctly with the loop's control flow:
+// switch-targeting `break` is consumed by the switch,
+// `continue` propagates past the switch to the enclosing loop.
+func TestCheckForLoopWithSwitchInBody(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("switch break does not escape loop body", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                for _ in [1] {
+                    switch 1 {
+                    case 1:
+                        break
+                    default:
+                        break
+                    }
+                    let x = 1
+                }
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("all-cases continue makes post-switch in loop unreachable", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test() {
+                for _ in [1] {
+                    switch 1 {
+                    case 1:
+                        continue
+                    default:
+                        continue
+                    }
+                    let x = 1
+                }
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+	})
+
+	t.Run("nested switch case with maybe-break does not affect outer return", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test(): Int {
+                for _ in [1] {
+                    switch 1 {
+                    case 1:
+                        if true { break }
+                        return 1
+                    default:
+                        return 2
+                    }
+                }
+                return 3
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("nested switch case with maybe-continue does not over-claim", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            fun test(): Int {
+                for _ in [1] {
+                    switch 1 {
+                    case 1:
+                        if true { continue }
+                        return 1
+                    default:
+                        return 2
+                    }
+                }
+                return 3
+            }
+        `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckResourceInForLoopBodyMaybeBreak(t *testing.T) {
+
+	t.Parallel()
+
+	// A for-loop body whose destroy/return path is guarded by a maybe-break:
+	// on the break path, the resource is not destroyed and the loop is exited,
+	// so the resource is potentially lost.
+
+	_, err := ParseAndCheck(t, `
+        resource R {}
+        fun test(cond: Bool) {
+            let r <- create R()
+            for _ in [1] {
+                if cond { break }
+                destroy r
+                return
+            }
+        }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 2)
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+}
+
+func TestCheckGuardElseBreakInForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	// A `guard ... else { break }` inside a for-loop body
+	// must propagate the potential loop-targeting jump out of the (potentially-unevaluated) else block,
+	// so code after the loop remains reachable.
+
+	_, err := ParseAndCheck(t, `
+        fun test(): Int {
+            for _ in [1] {
+                guard let y = (nil as Int?) else { break }
+                return y
+            }
+            return 3
+        }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckGuardElseContinueInForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	// A `continue` is a valid definite exit for a guard's else block.
+	// Like `break`, the potential loop-targeting jump must propagate
+	// out of the (potentially-unevaluated) else block,
+	// so code after the loop remains reachable.
+
+	_, err := ParseAndCheck(t, `
+        fun test(): Int {
+            for _ in [1] {
+                guard let y = (nil as Int?) else { continue }
+                return y
+            }
+            return 3
+        }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckResourceInvalidationInForLoop(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    break
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("continue", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    continue
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("return", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    return
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+}
+
+func TestCheckResourceInvalidationInForLoopWithIfElse(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("if break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if continue", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        continue
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if-else both break", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        break
+                    } else {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if break, destroy after", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the non-break path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        break
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if break else destroy", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the else path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        break
+                    } else {
+                        destroy r
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if destroy else break", func(t *testing.T) {
+		t.Parallel()
+
+		// The `destroy r` only runs on the then path,
+		// so `r` leaks if the `break` is taken.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        destroy r
+                    } else {
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("if destroy else destroy break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is destroyed in both branches before the `break`, so no loss.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        destroy r
+                        break
+                    } else {
+                        destroy r
+                    }
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("nested if break in inner if", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    if true {
+                        if true {
+                            break
+                        }
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("resource outside loop, if break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is declared outside the loop and destroyed after the loop,
+		// so the `break` does not leak it.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                for i in [2] {
+                    if true {
+                        break
+                    }
+                }
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckResourceInvalidationInNestedForLoops(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("break in inner loop, destroy in outer", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is declared in the outer loop and destroyed there.
+		// The inner `break` only exits the inner loop, so no leak.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    for j in [2] {
+                        break
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource in inner loop, inner break", func(t *testing.T) {
+		t.Parallel()
+
+		// `r` is declared in the inner loop body and the `break` exits it
+		// without destroying `r`.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    for j in [2] {
+                        let r <- create R()
+                        break
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("outer break inside inner loop", func(t *testing.T) {
+		t.Parallel()
+
+		// `break` always targets the innermost loop,
+		// so the inner `break` only exits the inner loop.
+		// The outer loop's `r` is destroyed at the end of each outer iteration.
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            fun test() {
+                for i in [2] {
+                    let r <- create R()
+                    for j in [2] {
+                        if true {
+                            break
+                        }
+                    }
+                    destroy r
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}

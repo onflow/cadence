@@ -281,7 +281,7 @@ func (v *SomeValue) Storable(
 
 	nonSomeValue, nestedLevels := v.nonSomeValue()
 
-	_, isContainerValue := nonSomeValue.(atreeContainerBackedValue)
+	_, isContainerValue := nonSomeValue.(AtreeBackedValue)
 
 	if v.valueStorable == nil || isContainerValue {
 
