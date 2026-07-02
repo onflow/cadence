@@ -2879,3 +2879,106 @@ func TestInterpretAttachmentBaseUnauthorizedInInit(t *testing.T) {
 		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
 	})
 }
+
+func TestInterpretAttachmentSelfAuth(t *testing.T) {
+	t.Parallel()
+
+	t.Run("narrowed to function access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          entitlement X
+          entitlement Y
+
+          struct S {
+              access(X) fun bar() {}
+          }
+
+          access(all) attachment A for S {
+              access(X) fun foo() {
+                  self as! auth(X, Y) &A
+              }
+          }
+
+          fun test() {
+              let s = attach A() to S()
+              let ref = &s as auth(X, Y) &S
+              ref[A]!.foo()
+          }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+	})
+
+	t.Run("retains function access", func(t *testing.T) {
+		t.Parallel()
+
+		// Narrowing `self` to the function's access must not drop
+		// the function's own entitlements:
+		// inside an `access(X)` function, `self` must still be `auth(X) &A`
+		inter := parseCheckAndPrepare(t, `
+          entitlement X
+          entitlement Y
+
+          struct S {
+              access(X) fun bar() {}
+          }
+
+          access(all) attachment A for S {
+              access(X) fun foo(): Bool {
+                  return (self as? auth(X) &A) != nil
+              }
+          }
+
+          fun test(): Bool {
+              let s = attach A() to S()
+              let ref = &s as auth(X, Y) &S
+              return ref[A]!.foo()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t, interpreter.TrueValue, result)
+	})
+
+	t.Run("unauthorized in non-entitled function", func(t *testing.T) {
+		t.Parallel()
+
+		// Inside a function with primitive (non-entitlement) access,
+		// `self` must be fully unauthorized,
+		// even if the attachment was accessed via an entitled reference —
+		// otherwise a downcast inside the function could recover
+		// any entitlement of the accessed reference
+		inter := parseCheckAndPrepare(t, `
+          entitlement X
+          entitlement Y
+
+          struct S {
+              access(X) fun bar() {}
+          }
+
+          access(all) attachment A for S {
+              access(all) fun foo(): Bool {
+                  return (self as? auth(X) &A) == nil
+              }
+          }
+
+          fun test(): Bool {
+              let s = attach A() to S()
+              let ref = &s as auth(X, Y) &S
+              return ref[A]!.foo()
+          }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		assert.Equal(t, interpreter.TrueValue, result)
+	})
+}

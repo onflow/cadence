@@ -61,6 +61,13 @@ func (checker *Checker) visitStatements(statements []ast.Statement) {
 		// check statement
 
 		ast.AcceptStatement[struct{}](statement, checker)
+
+		// If the return info is now unreachable, the statement ends control flow.
+		// Mark it so the interpreter and compiler can insert a defensive runtime
+		// check that aborts execution if control nevertheless falls through.
+		if functionActivation.ReturnInfo.IsUnreachable() {
+			checker.Elaboration.SetStatementEndsControlFlow(statement)
+		}
 	}
 }
 

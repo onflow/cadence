@@ -683,6 +683,8 @@ func ufix128SaturationArithmaticResult(
 		return fixedpoint.UFix128TypeMin
 	case fix.UnderflowError:
 		return fix.UFix128Zero
+	case fix.DivisionByZeroError:
+		panic(&DivisionByZeroError{})
 	default:
 		panic(err)
 	}

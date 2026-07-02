@@ -19,6 +19,7 @@ on:
     secrets:
       FIND_API_AUTH:
         required: true
+      ATREE_DEPLOY_KEY:
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base-branch || github.run_id }}-${{ inputs.chain }}
@@ -33,10 +34,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup private build environment
+        if: ${{ vars.PRIVATE_BUILDS_SUPPORTED == 'true' }}
+        uses: ./actions/private-setup
+        with:
+          atree_deploy_key: ${{ secrets.ATREE_DEPLOY_KEY }}
+
       - uses: actions/setup-go@v6
         with:
           go-version-file: ./tools/compatibility-check/go.mod
-          cache: true
+          cache: false
 
       - name: Make output dirs
         run: |
@@ -75,8 +82,8 @@ jobs:
       - name: Configure permissions
         if: github.repository != 'onflow/cadence'
         run: |
-          echo "GOPRIVATE=github.com/${{ inputs.repo }}" >> "$GITHUB_ENV"
-          git config --global url."https://${{ github.actor }}:${{ github.token }}@github.com".insteadOf "https://github.com"
+          echo "GOPRIVATE=github.com/${{ inputs.repo }},github.com/onflow/*-internal" >> "$GITHUB_ENV"
+          git config --global url."https://${{ github.actor }}:${{ github.token }}@github.com/${{ inputs.repo }}".insteadOf "https://github.com/${{ inputs.repo }}"
 
       # Check contracts using current branch
 

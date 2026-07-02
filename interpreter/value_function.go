@@ -498,7 +498,7 @@ func MaybeDereferenceReceiver(
 	isNative bool,
 ) Value {
 
-	CheckInvalidatedResourceOrResourceReference(receiverReference, context)
+	CheckInvalidatedValueOrValueReference(receiverReference, context)
 
 	// Receiver needs to be dereferenced, if:
 	//  - The function always required the receiver to be dereferenced (e.g: interpreted functions).

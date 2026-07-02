@@ -207,7 +207,7 @@ func TestInterpretConversionOnTransfer(t *testing.T) {
 
 		// Elements must be boxed.
 
-		element := array.Get(nil, 0)
+		element := array.Get(inter, 0)
 
 		require.IsType(t, &interpreter.SomeValue{}, element)
 		someValue := element.(*interpreter.SomeValue)
@@ -243,7 +243,7 @@ func TestInterpretConversionOnTransfer(t *testing.T) {
 
 		// Elements must be boxed.
 
-		element := array.Get(nil, 0)
+		element := array.Get(inter, 0)
 
 		require.IsType(t, &interpreter.SomeValue{}, element)
 		someValue := element.(*interpreter.SomeValue)

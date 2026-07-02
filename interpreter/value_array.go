@@ -39,6 +39,15 @@ type ArrayValue struct {
 	isResourceKinded *bool
 	elementSize      uint
 	isDestroyed      bool
+
+	// valueID is the atree value ID captured at construction time.
+	// With atree's shared-state design + Cadence's canonical wrapper cache,
+	// the value ID returned by `v.array.ValueID()` is stable for the lifetime
+	// of the wrapper, so the cached value matches the live one.
+	// The cache is used by `isStaleAtreeView` as a defensive invariant check
+	// to catch unexpected divergence (and a stable identifier when
+	// `v.array` has been nilled out by Destroy/Transfer).
+	valueID atree.ValueID
 }
 
 func NewArrayValue(
@@ -216,6 +225,7 @@ func newArrayValueFromAtreeArray(
 	return &ArrayValue{
 		Type:        staticType,
 		array:       atreeArray,
+		valueID:     atreeArray.ValueID(),
 		elementSize: elementSize,
 	}
 }
@@ -228,11 +238,10 @@ var _ ValueIndexableValue = &ArrayValue{}
 var _ MemberAccessibleValue = &ArrayValue{}
 var _ ReferenceTrackedResourceKindedValue = &ArrayValue{}
 var _ IterableValue = &ArrayValue{}
-var _ atreeContainerBackedValue = &ArrayValue{}
+var _ AtreeBackedValue = &ArrayValue{}
+var _ canonicalizableContainer = &ArrayValue{}
 
 func (*ArrayValue) IsValue() {}
-
-func (*ArrayValue) isAtreeContainerBackedValue() {}
 
 func (v *ArrayValue) Accept(context ValueVisitContext, visitor Visitor) {
 	descend := visitor.VisitArrayValue(context, v)
@@ -295,9 +304,27 @@ func (v *ArrayValue) iterate(
 			)
 
 			// atree.Array iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
-			elementValue := MustConvertStoredValue(context, element)
-			CheckInvalidatedResourceOrResourceReference(elementValue, context)
+			// convert to high-level interpreter.Value.
+			//
+			// When the element will not be Transfer'd,
+			// route through MustConvertStoredContainerElement:
+			// `f` may hand the element to user code, where it could be aliased by an `&...` reference,
+			// so we want to canonicalize when safe.
+			// canonicalizeContainerElement self-filters by inspecting the wrapper's parent-callback state,
+			// so it is safe to call regardless of which atree iterator (`Iterate` vs
+			// `IterateReadOnlyLoadedValues`) produced the element.
+			//
+			// For Transfer'd elements, the element passed to `f` is a decoupled copy
+			// (the transfer below uses remove=false),
+			// so the source-element wrapper is transient and caching it has no benefit —
+			// leave it as a transient fresh wrapper and skip the cache lookup entirely.
+			var elementValue Value
+			if transferElements {
+				elementValue = MustConvertStoredValue(context, element)
+			} else {
+				elementValue = MustConvertStoredContainerElement(context, element)
+			}
+			CheckInvalidatedValueOrValueReference(elementValue, context)
 
 			if transferElements {
 				// Each element must be transferred before passing onto the function.
@@ -414,6 +441,8 @@ func (v *ArrayValue) Destroy(context ResourceDestructionContext) {
 
 	InvalidateReferencedResources(context, v)
 
+	context.ClearCanonicalAtreeContainer(valueID)
+
 	v.array = nil
 }
 
@@ -421,23 +450,72 @@ func (v *ArrayValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
-func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Value {
+// canonicalAtreeContainer reports the underlying atree array for canonical
+// wrapper-cache bookkeeping, or nil if the wrapper is invalidated (destroyed
+// or its backing nilled out by Transfer). The cache uses the returned
+// container's `ValueID`, `HasParentUpdater`, and `HasReadOnlyMutationCallback`
+// predicates to decide whether to install / replace the wrapper as canonical;
+// a nil return tells the cache to skip canonicalization for this wrapper.
+func (v *ArrayValue) canonicalAtreeContainer() atreeContainer {
+	if v.array == nil || v.isDestroyed {
+		return nil
+	}
+	return v.array
+}
+
+// iterator returns a mutable atree iterator when `asReference` is true —
+// elements yielded will be exposed through `EphemeralReferenceValue`s,
+// so mutations through those references must propagate via the wrapper's
+// real parent-updater.
+// A read-only iterator (whose wrapper has a trap callback, no real parent-updater)
+// suffices when elements are `Transfer`'d out and decoupled from the source.
+func (v *ArrayValue) iterator(asReference bool) (atree.ArrayIterator, error) {
+	if asReference {
+		return v.array.Iterator()
+	}
+	return v.array.ReadOnlyIterator()
+}
+
+// rangeIterator returns a mutable atree iterator when `asReference` is true —
+// elements yielded will be exposed through `EphemeralReferenceValue`s,
+// so mutations through those references must propagate via the wrapper's
+// real parent-updater.
+// A read-only iterator (whose wrapper has a trap callback, no real parent-updater)
+// suffices when elements are `Transfer`'d out and decoupled from the source.
+func (v *ArrayValue) rangeIterator(fromIndex, toIndex uint64, asReference bool) (atree.ArrayIterator, error) {
+	if asReference {
+		return v.array.RangeIterator(fromIndex, toIndex)
+	}
+	return v.array.ReadOnlyRangeIterator(fromIndex, toIndex)
+}
+
+func (v *ArrayValue) Concat(
+	context ValueTransferContext,
+	other *ArrayValue,
+	accessedType sema.Type,
+) Value {
 
 	first := true
 
-	// Use ReadOnlyIterator here because new ArrayValue is created with elements copied (not removed) from original value.
-	firstIterator, err := v.array.ReadOnlyIterator()
+	// `other`'s elements are checked against the receiver's declared element
+	// type (param type stayed at the declared type — the caller provided it).
+	otherElementType := v.Type.ElementType()
+
+	// Cascade outer authorization into the result element type, matching
+	// sema's ArrayConcatFunctionType.
+	resultElementSemaType := v.SemaType(context).ElementType(false)
+	resultElementSemaType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, resultElementSemaType, false)
+	resultElementStaticType := ConvertSemaToStaticType(context, resultElementSemaType)
+
+	firstIterator, err := v.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	// Use ReadOnlyIterator here because new ArrayValue is created with elements copied (not removed) from original value.
-	secondIterator, err := other.array.ReadOnlyIterator()
+	secondIterator, err := other.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
-
-	elementType := v.Type.ElementType()
 
 	newCount := v.array.Count() + other.array.Count()
 
@@ -451,7 +529,7 @@ func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Val
 
 	return NewArrayValueWithIterator(
 		context,
-		v.Type,
+		NewVariableSizedStaticType(context, resultElementStaticType),
 		common.ZeroAddress,
 		newCount,
 		func() Value {
@@ -468,6 +546,8 @@ func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Val
 
 				if atreeValue == nil {
 					first = false
+				} else if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
 				} else {
 					value = MustConvertStoredValue(context, atreeValue)
 				}
@@ -482,14 +562,22 @@ func (v *ArrayValue) Concat(context ValueTransferContext, other *ArrayValue) Val
 				}
 
 				if atreeValue != nil {
-					value = MustConvertStoredValue(context, atreeValue)
+					if asReference {
+						value = MustConvertStoredContainerElement(context, atreeValue)
+					} else {
+						value = MustConvertStoredValue(context, atreeValue)
+					}
 
-					checkContainerMutation(context, elementType, value)
+					checkContainerMutation(context, otherElementType, value)
 				}
 			}
 
 			if value == nil {
 				return nil
+			}
+
+			if asReference {
+				value = getReferenceValue(context, value, resultElementSemaType)
 			}
 
 			return value.Transfer(
@@ -546,9 +634,7 @@ func (v *ArrayValue) Get(context ContainerReadContext, index int) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	result := MustConvertStoredValue(context, storedValue)
-
-	return result
+	return MustConvertStoredContainerElement(context, storedValue)
 }
 
 func (v *ArrayValue) SetKey(context ContainerMutationContext, key Value, value Value) {
@@ -968,6 +1054,13 @@ func (v *ArrayValue) GetMethod(
 
 	arrayType := v.SemaType(context)
 
+	var accessedType sema.Type
+	if accessedReference != nil {
+		accessedType = MustSemaTypeOfValue(accessedReference, context)
+	} else {
+		accessedType = arrayType
+	}
+
 	switch name {
 	case sema.ArrayTypeAppendFunctionName:
 		return NewBoundHostFunctionValue(
@@ -997,10 +1090,17 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayConcatFunctionType(
+				context,
+				accessedType,
 				arrayType,
 			),
 			NativeArrayConcatFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function can read accessedType from it and cascade the
+			// outer reference's authorization into the result element
+			// type, matching sema.ArrayConcatFunctionType's return.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeInsertFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1019,10 +1119,22 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via arrayValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.ArrayRemoveFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeRemoveFirstFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1030,10 +1142,22 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveFirstFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveFirstFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via arrayValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.ArrayRemoveFirstFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeRemoveLastFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1041,10 +1165,22 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayRemoveLastFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayRemoveLastFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced),
+			// matching the BBQ VM, where the same native function
+			// derives its type from the un-dereferenced receiver.
+			// The native function itself does not need the reference —
+			// it unwraps the receiver via arrayValueFromReceiver.
+			// The inner-reference intersection in
+			// sema.ArrayRemoveLastFunctionType's return type takes effect
+			// when the invocation result is converted to this bound
+			// function's return type (computed above from accessedType).
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeFirstIndexFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1074,10 +1210,17 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArraySliceFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArraySliceFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function can read accessedType from it and cascade the
+			// outer reference's authorization into the result element
+			// type, matching sema.ArraySliceFunctionType's return.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeReverseFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1085,19 +1228,19 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayReverseFunctionType(
+				context,
+				accessedType,
 				arrayType,
 			),
 			NativeArrayReverseFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function can read accessedType from it and cascade the
+			// outer reference's authorization into the result element
+			// type, matching sema.ArrayReverseFunctionType's return.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeFilterFunctionName:
-		var accessedType sema.Type
-		if accessedReference != nil {
-			accessedType = MustSemaTypeOfValue(accessedReference, context)
-		} else {
-			accessedType = arrayType
-		}
-
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -1114,13 +1257,6 @@ func (v *ArrayValue) GetMethod(
 			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeMapFunctionName:
-		var accessedType sema.Type
-		if accessedReference != nil {
-			accessedType = MustSemaTypeOfValue(accessedReference, context)
-		} else {
-			accessedType = arrayType
-		}
-
 		return NewBoundHostFunctionValue(
 			context,
 			v,
@@ -1142,10 +1278,18 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayToVariableSizedFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayToVariableSizedFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function can read accessedType from it and cascade the
+			// outer reference's authorization into the result element
+			// type, matching sema.ArrayToVariableSizedFunctionType's
+			// return.
+			WithDereferenceReceiver(false)
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
 		return NewBoundHostFunctionValue(
@@ -1153,10 +1297,18 @@ func (v *ArrayValue) GetMethod(
 			v,
 			accessedReference,
 			sema.ArrayToConstantSizedFunctionType(
+				context,
+				accessedType,
 				arrayType.ElementType(false),
 			),
 			NativeArrayToConstantSizedFunction,
-		)
+		).
+			// Receiver is kept as-is (not dereferenced) so the native
+			// function can read accessedType from it and cascade the
+			// outer reference's authorization into the result element
+			// type, matching sema.ArrayToConstantSizedFunctionType's
+			// return.
+			WithDereferenceReceiver(false)
 	}
 
 	return nil
@@ -1504,6 +1656,21 @@ func (v *ArrayValue) Transfer(
 
 		InvalidateReferencedResources(context, v)
 
+		context.ClearCanonicalAtreeContainer(v.valueID)
+
+		v.array = nil
+	} else if remove {
+		// Non-resource Transfer with remove: the source's slabs were just
+		// deleted by the PopIterate above. Evict the cached canonical wrapper
+		// (otherwise its entry would leak referencing gone slabs) and nil
+		// `v.array` so any subsequent use of the source wrapper fails cleanly
+		// via `isStaleAtreeView` / `InvalidatedContainerViewError` rather than
+		// crashing inside atree on a missing slab.
+		//
+		// Callers that need to use the source value after this point must
+		// Transfer it onto the stack (`remove=false`) first to obtain a fresh
+		// wrapper at a new SlabID.
+		context.ClearCanonicalAtreeContainer(v.valueID)
 		v.array = nil
 	}
 
@@ -1582,6 +1749,11 @@ func (v *ArrayValue) DeepRemove(context ValueRemoveContext, hasNoParentContainer
 		}()
 	}
 
+	// Evict any canonical wrapper for this value: its slabs are about to be
+	// torn down. Done here (rather than at each call site) so that the
+	// recursive `value.DeepRemove(...)` below also covers nested wrappers.
+	context.ClearCanonicalAtreeContainer(v.valueID)
+
 	// Remove nested values and storables
 
 	storage := v.array.Storage
@@ -1618,7 +1790,43 @@ func (v *ArrayValue) StorageAddress() atree.Address {
 }
 
 func (v *ArrayValue) ValueID() atree.ValueID {
+	return v.valueID
+}
+
+// isStaleAtreeView reports whether this wrapper's underlying atree array has
+// been invalidated (nilled out by Destroy/Transfer) or its live value ID has
+// diverged from the cached one captured at construction.
+// With atree's shared-state design and Cadence's canonical wrapper cache,
+// neither condition should be observable in practice;
+// this is a defensive invariant check used by
+// `CheckInvalidatedValueOrValueReference`.
+func (v *ArrayValue) isStaleAtreeView() bool {
+	if v.array == nil {
+		return true
+	}
+	return v.array.ValueID() != v.valueID
+}
+
+// LiveValueID returns the underlying atree array's current value ID.
+// In contrast to ValueID, which returns a stable value ID cached at
+// construction, LiveValueID reflects mutations to the atree array's root,
+// including slab ID reassignments caused by splits triggered through other
+// ArrayValue instances wrapping the same underlying atree array.
+// Intended for testing only; production code must use ValueID for resource
+// tracking and invalidation.
+func (v *ArrayValue) LiveValueID() atree.ValueID {
 	return v.array.ValueID()
+}
+
+// LiveInlined reports whether the underlying atree array is currently stored
+// inlined inside its parent container's slab, as opposed to as a standalone
+// slab. Atree may transition an array between these representations when its
+// parent container grows or shrinks. The transition does not change the
+// array's ValueID (which is stable across structural changes), so it is not
+// observable through LiveValueID.
+// Intended for testing only.
+func (v *ArrayValue) LiveInlined() bool {
+	return v.array.Inlined()
 }
 
 func (v *ArrayValue) GetOwner() common.Address {
@@ -1649,6 +1857,7 @@ func (v *ArrayValue) Slice(
 	context ArrayCreationContext,
 	from IntValue,
 	to IntValue,
+	accessedType sema.Type,
 ) Value {
 	fromIndex := from.ToInt()
 	toIndex := to.ToInt()
@@ -1664,8 +1873,16 @@ func (v *ArrayValue) Slice(
 		})
 	}
 
-	// Use ReadOnlyIterator here because new ArrayValue is created from elements copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyRangeIterator(uint64(fromIndex), uint64(toIndex))
+	// Cascade outer authorization into the result element type, matching
+	// sema's ArraySliceFunctionType: when sliced through a reference,
+	// elements are exposed as references (with auths intersected). Without
+	// this, the new array's declared element type would mismatch its actual
+	// contents.
+	elementType := v.SemaType(context).ElementType(false)
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
+	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
+
+	iterator, err := v.rangeIterator(uint64(fromIndex), uint64(toIndex), asReference)
 	if err != nil {
 
 		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
@@ -1700,7 +1917,7 @@ func (v *ArrayValue) Slice(
 
 	return NewArrayValueWithIterator(
 		context,
-		NewVariableSizedStaticType(context, v.Type.ElementType()),
+		NewVariableSizedStaticType(context, resultElementStaticType),
 		common.ZeroAddress,
 		newCount,
 		func() Value {
@@ -1714,11 +1931,19 @@ func (v *ArrayValue) Slice(
 
 			var value Value
 			if atreeValue != nil {
-				value = MustConvertStoredValue(context, atreeValue)
+				if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
+				} else {
+					value = MustConvertStoredValue(context, atreeValue)
+				}
 			}
 
 			if value == nil {
 				return nil
+			}
+
+			if asReference {
+				value = getReferenceValue(context, value, elementType)
 			}
 
 			return value.Transfer(
@@ -1735,13 +1960,32 @@ func (v *ArrayValue) Slice(
 
 func (v *ArrayValue) Reverse(
 	context ArrayCreationContext,
+	accessedType sema.Type,
 ) Value {
 	count := v.Count()
 	index := count - 1
 
+	// Cascade outer authorization into the result element type, matching
+	// sema's ArrayReverseFunctionType.
+	elementType := v.SemaType(context).ElementType(false)
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
+
+	// reverse() preserves the array shape (variable- or constant-sized),
+	// so reuse v.Type's shape but with the cascaded element type.
+	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
+	var resultStaticType ArrayStaticType
+	switch t := v.Type.(type) {
+	case *VariableSizedStaticType:
+		resultStaticType = NewVariableSizedStaticType(context, resultElementStaticType)
+	case *ConstantSizedStaticType:
+		resultStaticType = NewConstantSizedStaticType(context, resultElementStaticType, t.Size)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
 	return NewArrayValueWithIterator(
 		context,
-		v.Type,
+		resultStaticType,
 		common.ZeroAddress,
 		uint64(count),
 		func() Value {
@@ -1751,6 +1995,10 @@ func (v *ArrayValue) Reverse(
 
 			value := v.Get(context, index)
 			index--
+
+			if asReference {
+				value = getReferenceValue(context, value, elementType)
+			}
 
 			return value.Transfer(
 				context,
@@ -1772,16 +2020,7 @@ func (v *ArrayValue) Filter(
 
 	elementType := v.SemaType(context).ElementType(false)
 
-	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
-	if asReference {
-		outerRef, _ := sema.MaybeReferenceType(accessedType)
-		elementType = sema.GetDescendantReferenceType(
-			context,
-			elementType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 
 	argumentType := elementType
 	argumentTypes := []sema.Type{argumentType}
@@ -1797,81 +2036,95 @@ func (v *ArrayValue) Filter(
 
 	resultElementStaticType := ConvertSemaToStaticType(context, argumentType)
 
-	return NewArrayValueWithIterator(
-		context,
-		// NOTE: result is NOT v.Type, which could be a constant-sized array type.
-		// Instead, result is always a variable-sized array type,
-		// because filtering can change the number of elements in the array.
-		NewVariableSizedStaticType(context, resultElementStaticType),
-		common.ZeroAddress,
-		uint64(v.Count()), // worst case estimation.
-		func() Value {
+	// Block mutations to v through any sibling wrapper while the lazy
+	// iterator is being consumed by the user procedure. See ArrayValue.Map.
+	var result Value
+	context.WithContainerMutationPrevention(v.ValueID(), func() {
+		result = NewArrayValueWithIterator(
+			context,
+			// NOTE: result is NOT v.Type, which could be a constant-sized array type.
+			// Instead, result is always a variable-sized array type,
+			// because filtering can change the number of elements in the array.
+			NewVariableSizedStaticType(context, resultElementStaticType),
+			common.ZeroAddress,
+			uint64(v.Count()), // worst case estimation.
+			func() Value {
 
-			var value Value
+				var value Value
 
-			for {
-				common.UseComputation(
-					context,
-					common.ComputationUsage{
-						Kind:      common.ComputationKindAtreeArrayReadIteration,
-						Intensity: 1,
-					},
-				)
-
-				atreeValue, err := iterator.Next()
-				if err != nil {
-					panic(errors.NewExternalError(err))
-				}
-
-				// Also handles the end of array case since iterator.Next() returns nil for that.
-				if atreeValue == nil {
-					return nil
-				}
-
-				value = MustConvertStoredValue(context, atreeValue)
-				if value == nil {
-					return nil
-				}
-
-				if asReference {
-					value = getReferenceValue(
+				for {
+					common.UseComputation(
 						context,
-						value,
-						argumentType,
+						common.ComputationUsage{
+							Kind:      common.ComputationKindAtreeArrayReadIteration,
+							Intensity: 1,
+						},
 					)
+
+					atreeValue, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+
+					// Also handles the end of array case since iterator.Next() returns nil for that.
+					if atreeValue == nil {
+						return nil
+					}
+
+					// When asReference is true, the result array stores references
+					// to source elements; the reference wrappers must be canonical
+					// so that mutations (e.g. an access(all) mutating function)
+					// propagate consistently with sibling references taken elsewhere.
+					if asReference {
+						value = MustConvertStoredContainerElement(context, atreeValue)
+					} else {
+						value = MustConvertStoredValue(context, atreeValue)
+					}
+					if value == nil {
+						return nil
+					}
+
+					if asReference {
+						value = getReferenceValue(
+							context,
+							value,
+							argumentType,
+						)
+					}
+
+					procResult := invokeFunctionValue(
+						context,
+						procedure,
+						[]Value{value},
+						argumentTypes,
+						parameterTypes,
+						sema.BoolType,
+						nil,
+					)
+
+					shouldInclude, ok := procResult.(BoolValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					// We found the next entry of the filtered array.
+					if shouldInclude {
+						break
+					}
 				}
 
-				result := invokeFunctionValue(
+				return value.Transfer(
 					context,
-					procedure,
-					[]Value{value},
-					argumentTypes,
-					parameterTypes,
-					sema.BoolType,
+					atree.Address{},
+					false,
 					nil,
+					nil,
+					false, // value has a parent container because it is from iterator.
 				)
-
-				shouldInclude, ok := result.(BoolValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// We found the next entry of the filtered array.
-				if shouldInclude {
-					break
-				}
-			}
-
-			return value.Transfer(
-				context,
-				atree.Address{},
-				false,
-				nil,
-				nil,
-				false, // value has a parent container because it is from iterator.
-			)
-		},
-	)
+			},
+		)
+	})
+	return result
 }
 
 func (v *ArrayValue) Map(
@@ -1883,16 +2136,7 @@ func (v *ArrayValue) Map(
 
 	elementType := v.SemaType(context).ElementType(false)
 
-	asReference := sema.ShouldReturnReference(accessedType, elementType, false)
-	if asReference {
-		outerRef, _ := sema.MaybeReferenceType(accessedType)
-		elementType = sema.GetDescendantReferenceType(
-			context,
-			elementType,
-			sema.UnauthorizedAccess,
-			outerRef.Authorization,
-		)
-	}
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
 
 	argumentType := elementType
 	argumentTypes := []sema.Type{argumentType}
@@ -1934,53 +2178,70 @@ func (v *ArrayValue) Map(
 		},
 	)
 
-	return NewArrayValueWithIterator(
-		context,
-		returnArrayStaticType,
-		common.ZeroAddress,
-		uint64(count),
-		func() Value {
+	// Block mutations to v through any sibling wrapper while the lazy
+	// iterator is being consumed by the user procedure. Without this,
+	// a callback can mutate a sibling wrapper into a slab split/promote
+	// and the iterator continues walking the orphaned root silently.
+	var result Value
+	context.WithContainerMutationPrevention(v.ValueID(), func() {
+		result = NewArrayValueWithIterator(
+			context,
+			returnArrayStaticType,
+			common.ZeroAddress,
+			uint64(count),
+			func() Value {
 
-			// Computation was already metered above
+				// Computation was already metered above
 
-			atreeValue, err := iterator.Next()
-			if err != nil {
-				panic(errors.NewExternalError(err))
-			}
+				atreeValue, err := iterator.Next()
+				if err != nil {
+					panic(errors.NewExternalError(err))
+				}
 
-			if atreeValue == nil {
-				return nil
-			}
+				if atreeValue == nil {
+					return nil
+				}
 
-			value := MustConvertStoredValue(context, atreeValue)
-			if asReference {
-				value = getReferenceValue(
+				// When asReference is true, the closure receives a reference to
+				// the source element; the reference target must be canonical so
+				// that mutations through it (e.g. an access(all) mutating function)
+				// propagate consistently with sibling references taken elsewhere.
+				var value Value
+				if asReference {
+					value = MustConvertStoredContainerElement(context, atreeValue)
+				} else {
+					value = MustConvertStoredValue(context, atreeValue)
+				}
+				if asReference {
+					value = getReferenceValue(
+						context,
+						value,
+						argumentType,
+					)
+				}
+
+				mapped := invokeFunctionValue(
 					context,
-					value,
-					argumentType,
+					procedure,
+					[]Value{value},
+					argumentTypes,
+					parameterTypes,
+					returnType,
+					nil,
 				)
-			}
 
-			result := invokeFunctionValue(
-				context,
-				procedure,
-				[]Value{value},
-				argumentTypes,
-				parameterTypes,
-				returnType,
-				nil,
-			)
-
-			return result.Transfer(
-				context,
-				atree.Address{},
-				false,
-				nil,
-				nil,
-				false, // value has a parent container because it is from iterator.
-			)
-		},
-	)
+				return mapped.Transfer(
+					context,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+					false, // value has a parent container because it is from iterator.
+				)
+			},
+		)
+	})
+	return result
 }
 
 func (v *ArrayValue) ForEach(
@@ -1994,25 +2255,26 @@ func (v *ArrayValue) ForEach(
 
 func (v *ArrayValue) ToVariableSized(
 	context ArrayCreationContext,
+	accessedType sema.Type,
 ) Value {
 	count := v.Count()
 
 	// Convert the constant-sized array type to a variable-sized array type.
 
-	constantSizedType, ok := v.Type.(*ConstantSizedStaticType)
-	if !ok {
+	if _, ok := v.Type.(*ConstantSizedStaticType); !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	variableSizedType := NewVariableSizedStaticType(
-		context,
-		constantSizedType.Type,
-	)
+	// Cascade outer authorization into the result element type, matching
+	// sema's ArrayToVariableSizedFunctionType.
+	elementType := v.SemaType(context).ElementType(false)
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
+	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
+	variableSizedType := NewVariableSizedStaticType(context, resultElementStaticType)
 
 	// Convert the array to a variable-sized array.
 
-	// Use ReadOnlyIterator here because ArrayValue elements are copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyIterator()
+	iterator, err := v.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -2043,7 +2305,16 @@ func (v *ArrayValue) ToVariableSized(
 				return nil
 			}
 
-			value := MustConvertStoredValue(context, atreeValue)
+			var value Value
+			if asReference {
+				value = MustConvertStoredContainerElement(context, atreeValue)
+			} else {
+				value = MustConvertStoredValue(context, atreeValue)
+			}
+
+			if asReference {
+				value = getReferenceValue(context, value, elementType)
+			}
 
 			return value.Transfer(
 				context,
@@ -2060,6 +2331,7 @@ func (v *ArrayValue) ToVariableSized(
 func (v *ArrayValue) ToConstantSized(
 	context ArrayCreationContext,
 	expectedConstantSizedArraySize int64,
+	accessedType sema.Type,
 ) OptionalValue {
 
 	// Ensure the array has the expected size.
@@ -2072,21 +2344,24 @@ func (v *ArrayValue) ToConstantSized(
 
 	// Convert the variable-sized array type to a constant-sized array type.
 
-	variableSizedType, ok := v.Type.(*VariableSizedStaticType)
-	if !ok {
+	if _, ok := v.Type.(*VariableSizedStaticType); !ok {
 		panic(errors.NewUnreachableError())
 	}
 
+	// Cascade outer authorization into the result element type, matching
+	// sema's ArrayToConstantSizedFunctionType.
+	elementType := v.SemaType(context).ElementType(false)
+	elementType, asReference := sema.GetDescendantTypeForAccess(context, accessedType, elementType, false)
+	resultElementStaticType := ConvertSemaToStaticType(context, elementType)
 	constantSizedType := NewConstantSizedStaticType(
 		context,
-		variableSizedType.Type,
+		resultElementStaticType,
 		expectedConstantSizedArraySize,
 	)
 
 	// Convert the array to a constant-sized array.
 
-	// Use ReadOnlyIterator here because ArrayValue elements are copied (not removed) from original ArrayValue.
-	iterator, err := v.array.ReadOnlyIterator()
+	iterator, err := v.iterator(asReference)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -2117,7 +2392,16 @@ func (v *ArrayValue) ToConstantSized(
 				return nil
 			}
 
-			value := MustConvertStoredValue(context, atreeValue)
+			var value Value
+			if asReference {
+				value = MustConvertStoredContainerElement(context, atreeValue)
+			} else {
+				value = MustConvertStoredValue(context, atreeValue)
+			}
+
+			if asReference {
+				value = getReferenceValue(context, value, elementType)
+			}
 
 			return value.Transfer(
 				context,
@@ -2233,9 +2517,10 @@ func (i *ArrayIterator) Next(context ValueIteratorContext) Value {
 	}
 
 	// atree.Array iterator returns low-level atree.Value,
-	// convert to high-level interpreter.Value
-	result := MustConvertStoredValue(context, atreeValue)
-	return result
+	// convert to high-level interpreter.Value. The result is handed back
+	// to user code (e.g. as the loop variable of `for x in arr`), so
+	// canonicalize to keep aliased references consistent.
+	return MustConvertStoredContainerElement(context, atreeValue)
 }
 
 func (i *ArrayIterator) ValueID() (atree.ValueID, bool) {
@@ -2283,10 +2568,11 @@ var NativeArrayConcatFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
 		otherArray := AssertValueOfType[*ArrayValue](args[0])
 
-		return thisArray.Concat(context, otherArray)
+		return thisArray.Concat(context, otherArray, accessedType)
 	},
 )
 
@@ -2315,7 +2601,7 @@ var NativeArrayRemoveFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
 		index := AssertValueOfType[NumberValue](args[0])
 
 		return thisArray.Remove(context, index.ToInt())
@@ -2345,11 +2631,12 @@ var NativeArraySliceFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
 		fromValue := AssertValueOfType[IntValue](args[0])
 		toValue := AssertValueOfType[IntValue](args[1])
 
-		return thisArray.Slice(context, fromValue, toValue)
+		return thisArray.Slice(context, fromValue, toValue, accessedType)
 	},
 )
 
@@ -2361,8 +2648,9 @@ var NativeArrayReverseFunction = NativeFunction(
 		receiver Value,
 		_ []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
-		return thisArray.Reverse(context)
+		thisArray := arrayValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
+		return thisArray.Reverse(context, accessedType)
 	},
 )
 
@@ -2426,9 +2714,10 @@ var NativeArrayToVariableSizedFunction = NativeFunction(
 		receiver Value,
 		_ []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
 
-		return thisArray.ToVariableSized(context)
+		return thisArray.ToVariableSized(context, accessedType)
 	},
 )
 
@@ -2440,13 +2729,14 @@ var NativeArrayToConstantSizedFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
+		accessedType := MustSemaTypeOfValue(receiver, context)
 		constantSizedArrayType, ok := typeArguments.NextStatic().(*ConstantSizedStaticType)
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		return thisArray.ToConstantSized(context, constantSizedArrayType.Size)
+		return thisArray.ToConstantSized(context, constantSizedArrayType.Size, accessedType)
 	},
 )
 
@@ -2473,7 +2763,7 @@ var NativeArrayRemoveFirstFunction = NativeFunction(
 		receiver Value,
 		_ []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
 
 		return thisArray.RemoveFirst(context)
 	},
@@ -2487,7 +2777,7 @@ var NativeArrayRemoveLastFunction = NativeFunction(
 		receiver Value,
 		_ []Value,
 	) Value {
-		thisArray := AssertValueOfType[*ArrayValue](receiver)
+		thisArray := arrayValueFromReceiver(context, receiver)
 
 		return thisArray.RemoveLast(context)
 	},

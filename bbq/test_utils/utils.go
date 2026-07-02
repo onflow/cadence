@@ -80,6 +80,10 @@ type ParseCheckAndCompileOptions struct {
 	ParseAndCheckOptions *ParseAndCheckOptions
 	CompilerConfig       *compiler.Config
 	CheckerErrorHandler  func(error)
+	// CheckerHandler is called with the checker after checking,
+	// before the program is compiled.
+	// It can be used to e.g. manipulate the elaboration for tests.
+	CheckerHandler func(*sema.Checker)
 }
 
 func ParseCheckAndCompile(
@@ -112,6 +116,11 @@ func ParseCheckAndCompileCodeWithOptions(
 		options.CheckerErrorHandler,
 		programs,
 	)
+
+	if options.CheckerHandler != nil {
+		options.CheckerHandler(checker)
+	}
+
 	programs[location] = &CompiledProgram{
 		DesugaredElaboration: compiler.NewDesugaredElaboration(checker.Elaboration),
 	}

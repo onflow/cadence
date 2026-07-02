@@ -8382,6 +8382,11 @@ func TestArrayFunctions(t *testing.T) {
 			interpreter.TypeValue{
 				Type: interpreter.FunctionStaticType{
 					FunctionType: sema.ArrayReverseFunctionType(
+						nil,
+						sema.NewVariableSizedType(
+							nil,
+							sema.UInt8Type,
+						),
 						sema.NewVariableSizedType(
 							nil,
 							sema.UInt8Type,
@@ -8414,6 +8419,12 @@ func TestArrayFunctions(t *testing.T) {
 			interpreter.TypeValue{
 				Type: interpreter.FunctionStaticType{
 					FunctionType: sema.ArrayReverseFunctionType(
+						nil,
+						sema.NewConstantSizedType(
+							nil,
+							sema.UInt8Type,
+							2,
+						),
 						sema.NewConstantSizedType(
 							nil,
 							sema.UInt8Type,
@@ -9813,6 +9824,103 @@ func TestAttachments(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(3), value)
+	})
+
+	t.Run("self auth is narrowed to function access", func(t *testing.T) {
+		t.Parallel()
+
+		// Inside an attachment method, sema types `self` as
+		// `auth(<fn access>) &A`. The runtime reference must match — otherwise
+		// a downcast inside the method could recover the stronger
+		// authorization of the accessed reference.
+		_, err := CompileAndInvoke(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X) fun base() {}
+            }
+
+            access(all) attachment A for S {
+                access(X) fun foo() {
+                    self as! auth(X, Y) &A
+                }
+            }
+
+            fun test() {
+                let s = attach A() to S()
+                let ref = &s as auth(X, Y) &S
+                ref[A]!.foo()
+            }
+        `, "test")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchErr *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchErr)
+	})
+
+	t.Run("self auth retains function access", func(t *testing.T) {
+		t.Parallel()
+
+		// Narrowing `self` to the function's access must not drop
+		// the function's own entitlements:
+		// inside an `access(X)` function, `self` must still be `auth(X) &A`
+		value, err := CompileAndInvoke(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X) fun base() {}
+            }
+
+            access(all) attachment A for S {
+                access(X) fun foo(): Bool {
+                    return (self as? auth(X) &A) != nil
+                }
+            }
+
+            fun test(): Bool {
+                let s = attach A() to S()
+                let ref = &s as auth(X, Y) &S
+                return ref[A]!.foo()
+            }
+        `, "test")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.TrueValue, value)
+	})
+
+	t.Run("self auth is unauthorized in non-entitled function", func(t *testing.T) {
+		t.Parallel()
+
+		// Inside a function with primitive (non-entitlement) access,
+		// `self` must be fully unauthorized,
+		// even if the attachment was accessed via an entitled reference —
+		// otherwise a downcast inside the function could recover
+		// any entitlement of the accessed reference
+		value, err := CompileAndInvoke(t, `
+            entitlement X
+            entitlement Y
+
+            struct S {
+                access(X) fun base() {}
+            }
+
+            access(all) attachment A for S {
+                access(all) fun foo(): Bool {
+                    return (self as? auth(X) &A) == nil
+                }
+            }
+
+            fun test(): Bool {
+                let s = attach A() to S()
+                let ref = &s as auth(X, Y) &S
+                return ref[A]!.foo()
+            }
+        `, "test")
+		require.NoError(t, err)
+
+		require.Equal(t, interpreter.TrueValue, value)
 	})
 }
 

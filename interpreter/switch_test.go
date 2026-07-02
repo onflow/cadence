@@ -390,3 +390,150 @@ func TestInterpretSwitchStatementControlFlowInLoop(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretSwitchStatementOptionalUnboxing(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("optional value with non-optional case", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun test(): String {
+                let x: Int? = 1
+                switch x {
+                case 1: return "one"
+                case 2: return "two"
+                case nil: return "nil"
+                default: return "other"
+                }
+            }
+        `)
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			invokable,
+			interpreter.NewUnmeteredStringValue("one"),
+			result,
+		)
+	})
+
+	t.Run("double optional value with non-optional case", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun test(): String {
+                let x: Int?? = 1
+                switch x {
+                case 1: return "one"
+                case 2: return "two"
+                case nil: return "nil"
+                default: return "other"
+                }
+            }
+        `)
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			invokable,
+			interpreter.NewUnmeteredStringValue("one"),
+			result,
+		)
+	})
+
+	t.Run("nil value with non-optional case", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun test(): String {
+                let x: Int? = nil
+                switch x {
+                case 1: return "one"
+                case 2: return "two"
+                case nil: return "nil"
+                default: return "other"
+                }
+            }
+        `)
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			invokable,
+			interpreter.NewUnmeteredStringValue("nil"),
+			result,
+		)
+	})
+
+	t.Run("optional value with optional case", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun test(): String {
+                let x: Int? = 1
+                switch x {
+                case 1 as Int?: return "one"
+                default: return "other"
+                }
+            }
+        `)
+
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			invokable,
+			interpreter.NewUnmeteredStringValue("one"),
+			result,
+		)
+	})
+
+	t.Run("double optional outer nil with nil case", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun test(): String {
+                let x: Int?? = nil
+                switch x {
+                case 1: return "one"
+                case nil: return "nil"
+                default: return "other"
+                }
+            }
+        `)
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			invokable,
+			interpreter.NewUnmeteredStringValue("nil"),
+			result,
+		)
+	})
+
+	t.Run("double optional inner nil with nil case", func(t *testing.T) {
+		t.Parallel()
+
+		invokable := parseCheckAndPrepare(t, `
+            fun test(): String {
+                let inner: Int? = nil
+                let x: Int?? = inner
+                switch x {
+                case 1: return "one"
+                case nil: return "nil"
+                default: return "other"
+                }
+            }
+        `)
+		result, err := invokable.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			invokable,
+			interpreter.NewUnmeteredStringValue("nil"),
+			result,
+		)
+	})
+}

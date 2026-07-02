@@ -232,9 +232,9 @@ func InclusiveRangeContains(
 	return BoolValue(result)
 }
 
-func getFieldAsIntegerValue(gauge common.Gauge, rangeValue *CompositeValue, name string) IntegerValue {
+func getFieldAsIntegerValue(context ContainerElementContext, rangeValue *CompositeValue, name string) IntegerValue {
 	return convertAndAssertIntegerValue(
-		rangeValue.GetField(gauge, name),
+		rangeValue.GetField(context, name),
 	)
 }
 
