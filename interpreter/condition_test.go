@@ -209,6 +209,126 @@ func TestInterpretFunctionWithResultAndPostTestConditionWithResult(t *testing.T)
 	AssertValuesEqual(t, inter, zero, value)
 }
 
+func TestInterpretFunctionPostConditionWithEarlyReturn(t *testing.T) {
+
+	t.Parallel()
+
+	// A post-condition must be checked on every return path, including
+	// early returns, with `result` bound to the value of that return.
+
+	t.Run("post fails on early-return path", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(x: Int): Int {
+              post {
+                  result < 100
+              }
+              if x > 1000 {
+                  // early return whose value violates the post-condition
+                  return x
+              }
+              return x % 100
+          }
+        `)
+
+		// Normal path: post-condition holds.
+		value, err := inter.Invoke(
+			"test",
+			interpreter.NewUnmeteredIntValueFromInt64(50),
+		)
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(50),
+			value,
+		)
+
+		// Early-return path: post-condition must run and fail.
+		_, err = inter.Invoke(
+			"test",
+			interpreter.NewUnmeteredIntValueFromInt64(2000),
+		)
+		assertConditionError(t, err, ast.ConditionKindPost)
+	})
+
+	t.Run("result bound per return path", func(t *testing.T) {
+		t.Parallel()
+
+		// The post-condition references `result`; verify it sees the
+		// correct value on each distinct return path.
+		inter := parseCheckAndPrepare(t, `
+          fun test(x: Int): Int {
+              post {
+                  result == before(x) + 1000
+              }
+              if x < 0 {
+                  return x + 1000
+              }
+              if x == 0 {
+                  return 1000
+              }
+              return x + 1000
+          }
+        `)
+
+		for _, arg := range []int64{-5, 0, 7} {
+			value, err := inter.Invoke(
+				"test",
+				interpreter.NewUnmeteredIntValueFromInt64(arg),
+			)
+			require.NoError(t, err)
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewUnmeteredIntValueFromInt64(arg+1000),
+				value,
+			)
+		}
+	})
+
+	t.Run("early return inside loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+          fun test(target: Int): Int {
+              post {
+                  result >= 0
+              }
+              var i = 0
+              while i < 10 {
+                  if i == target {
+                      return i
+                  }
+                  i = i + 1
+              }
+              return -1
+          }
+        `)
+
+		// Found within loop: early return, post holds.
+		value, err := inter.Invoke(
+			"test",
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+		)
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			value,
+		)
+
+		// Not found: final return of -1 violates the post-condition.
+		_, err = inter.Invoke(
+			"test",
+			interpreter.NewUnmeteredIntValueFromInt64(99),
+		)
+		assertConditionError(t, err, ast.ConditionKindPost)
+	})
+}
+
 func assertConditionError(
 	t *testing.T,
 	err error,

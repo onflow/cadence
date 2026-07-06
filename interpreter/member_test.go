@@ -1738,3 +1738,325 @@ func TestInterpretOptionalChaining(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretMultiLevelOptionalChaining(t *testing.T) {
+
+	t.Parallel()
+
+	// Two-level chaining: `foo?.bar?.id`.
+	// `bar` is itself an optional field, so the chain can short-circuit
+	// either at the root (`foo` is nil) or at the intermediate link
+	// (`foo.bar` is nil). Both must produce `nil` without evaluating
+	// the remainder of the chain.
+
+	const twoLevelFieldCode = `
+        struct Bar {
+            var id: Int
+            init(_ id: Int) {
+                self.id = id
+            }
+        }
+
+        struct Foo {
+            var bar: Bar?
+            init(bar: Bar?) {
+                self.bar = bar
+            }
+        }
+
+        fun test(makeFoo: Bool, makeBar: Bool): Int? {
+            var foo: Foo? = nil
+            if makeFoo {
+                var bar: Bar? = nil
+                if makeBar {
+                    bar = Bar(5)
+                }
+                foo = Foo(bar: bar)
+            }
+            return foo?.bar?.id
+        }
+    `
+
+	t.Run("two-level field, all non-nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, twoLevelFieldCode)
+
+		value, err := inter.Invoke(
+			"test",
+			interpreter.TrueValue,
+			interpreter.TrueValue,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(5),
+			),
+			value,
+		)
+	})
+
+	t.Run("two-level field, intermediate nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, twoLevelFieldCode)
+
+		// `foo` is non-nil, but `foo.bar` is nil:
+		// the chain must short-circuit at the intermediate link.
+		value, err := inter.Invoke(
+			"test",
+			interpreter.TrueValue,
+			interpreter.FalseValue,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("two-level field, root nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, twoLevelFieldCode)
+
+		value, err := inter.Invoke(
+			"test",
+			interpreter.FalseValue,
+			interpreter.FalseValue,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	// Two-level chaining ending in a method call: `foo?.bar?.getID()`.
+	// When the intermediate link is nil, the method must not be invoked.
+
+	const twoLevelMethodCode = `
+        struct Bar {
+            var id: Int
+            init(_ id: Int) {
+                self.id = id
+            }
+            fun getID(): Int {
+                return self.id
+            }
+        }
+
+        struct Foo {
+            var bar: Bar?
+            init(bar: Bar?) {
+                self.bar = bar
+            }
+        }
+
+        fun test(makeBar: Bool): Int? {
+            var bar: Bar? = nil
+            if makeBar {
+                bar = Bar(7)
+            }
+            let foo: Foo? = Foo(bar: bar)
+            return foo?.bar?.getID()
+        }
+    `
+
+	t.Run("two-level method, all non-nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, twoLevelMethodCode)
+
+		value, err := inter.Invoke("test", interpreter.TrueValue)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(7),
+			),
+			value,
+		)
+	})
+
+	t.Run("two-level method, intermediate nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, twoLevelMethodCode)
+
+		value, err := inter.Invoke("test", interpreter.FalseValue)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	// Three-level chaining: `a?.b?.c?.id`, exercising short-circuiting
+	// at every link of the chain.
+
+	const threeLevelCode = `
+        struct C {
+            var id: Int
+            init(_ id: Int) {
+                self.id = id
+            }
+        }
+
+        struct B {
+            var c: C?
+            init(c: C?) {
+                self.c = c
+            }
+        }
+
+        struct A {
+            var b: B?
+            init(b: B?) {
+                self.b = b
+            }
+        }
+
+        fun test(makeA: Bool, makeB: Bool, makeC: Bool): Int? {
+            var a: A? = nil
+            if makeA {
+                var b: B? = nil
+                if makeB {
+                    var c: C? = nil
+                    if makeC {
+                        c = C(9)
+                    }
+                    b = B(c: c)
+                }
+                a = A(b: b)
+            }
+            return a?.b?.c?.id
+        }
+    `
+
+	t.Run("three-level, all non-nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, threeLevelCode)
+
+		value, err := inter.Invoke(
+			"test",
+			interpreter.TrueValue,
+			interpreter.TrueValue,
+			interpreter.TrueValue,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(9),
+			),
+			value,
+		)
+	})
+
+	t.Run("three-level, last link nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, threeLevelCode)
+
+		value, err := inter.Invoke(
+			"test",
+			interpreter.TrueValue,
+			interpreter.TrueValue,
+			interpreter.FalseValue,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("three-level, middle link nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, threeLevelCode)
+
+		value, err := inter.Invoke(
+			"test",
+			interpreter.TrueValue,
+			interpreter.FalseValue,
+			interpreter.FalseValue,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	t.Run("three-level, root nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, threeLevelCode)
+
+		value, err := inter.Invoke(
+			"test",
+			interpreter.FalseValue,
+			interpreter.FalseValue,
+			interpreter.FalseValue,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t, inter, interpreter.Nil, value)
+	})
+
+	// Multi-level chaining combined with the nil-coalescing operator:
+	// `foo?.bar?.id ?? -1`. Short-circuiting to nil must fall through
+	// to the default value.
+
+	const chainWithCoalesceCode = `
+        struct Bar {
+            var id: Int
+            init(_ id: Int) {
+                self.id = id
+            }
+        }
+
+        struct Foo {
+            var bar: Bar?
+            init(bar: Bar?) {
+                self.bar = bar
+            }
+        }
+
+        fun test(makeBar: Bool): Int {
+            var bar: Bar? = nil
+            if makeBar {
+                bar = Bar(42)
+            }
+            let foo: Foo? = Foo(bar: bar)
+            return foo?.bar?.id ?? -1
+        }
+    `
+
+	t.Run("chain with nil-coalescing, present", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, chainWithCoalesceCode)
+
+		value, err := inter.Invoke("test", interpreter.TrueValue)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+			value,
+		)
+	})
+
+	t.Run("chain with nil-coalescing, short-circuit to default", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, chainWithCoalesceCode)
+
+		value, err := inter.Invoke("test", interpreter.FalseValue)
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(-1),
+			value,
+		)
+	})
+}
