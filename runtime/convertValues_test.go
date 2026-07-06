@@ -2756,6 +2756,77 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("test import out-of-range raw value", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            access(all) fun main(dir: Direction): Direction {
+                return dir
+            }
+
+            access(all) enum Direction: Int {
+                access(all) case UP
+                access(all) case DOWN
+                access(all) case LEFT
+                access(all) case RIGHT
+            }
+        `
+
+		// Forge an enum value whose raw value (99) is not a declared case.
+		forged := cadence.NewEnum([]cadence.Value{
+			cadence.NewInt(99),
+		}).WithType(cadence.NewEnumType(
+			common.ScriptLocation{},
+			"Direction",
+			cadence.IntType,
+			[]cadence.Field{
+				{
+					Identifier: sema.EnumRawValueFieldName,
+					Type:       cadence.IntType,
+				},
+			},
+			nil,
+		))
+
+		_, err := executeTestScript(t, script, forged)
+		RequireError(t, err)
+		assert.ErrorContains(t, err, "is not a valid enum case")
+	})
+
+	t.Run("test import negative raw value", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            access(all) fun main(dir: Direction): Direction {
+                return dir
+            }
+
+            access(all) enum Direction: Int {
+                access(all) case UP
+                access(all) case DOWN
+            }
+        `
+
+		forged := cadence.NewEnum([]cadence.Value{
+			cadence.NewInt(-1),
+		}).WithType(cadence.NewEnumType(
+			common.ScriptLocation{},
+			"Direction",
+			cadence.IntType,
+			[]cadence.Field{
+				{
+					Identifier: sema.EnumRawValueFieldName,
+					Type:       cadence.IntType,
+				},
+			},
+			nil,
+		))
+
+		_, err := executeTestScript(t, script, forged)
+		RequireError(t, err)
+		assert.ErrorContains(t, err, "is not a valid enum case")
+	})
 }
 
 func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {

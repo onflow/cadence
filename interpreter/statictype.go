@@ -1472,6 +1472,10 @@ type StaticTypeConversionHandler interface {
 	StaticAuthorizationConversionHandler
 	GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error)
 	GetCompositeType(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error)
+
+	// GetEnumCaseCount returns the number of declared cases of the given enum type.
+	// It returns an error if the case count cannot be determined.
+	GetEnumCaseCount(enumType *sema.CompositeType) (int, error)
 }
 
 func ConvertStaticToSemaType(

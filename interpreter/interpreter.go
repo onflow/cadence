@@ -5987,6 +5987,29 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 	return elaboration.CompositeType(typeID)
 }
 
+// GetEnumCaseCount returns the number of declared cases of the given enum type.
+// It returns an error if the case count cannot be determined,
+// e.g. because the enum's elaboration is not available.
+func (interpreter *Interpreter) GetEnumCaseCount(enumType *sema.CompositeType) (int, error) {
+	elaboration := interpreter.getElaboration(enumType.Location)
+	if elaboration == nil {
+		return 0, errors.NewUnexpectedError(
+			"cannot determine cases of enum %s: elaboration not available",
+			enumType.QualifiedIdentifier(),
+		)
+	}
+
+	lookupFunctionType := elaboration.EnumLookupFunctionType(enumType)
+	if lookupFunctionType == nil {
+		return 0, errors.NewUnexpectedError(
+			"cannot determine cases of enum %s: enum lookup function type not available",
+			enumType.QualifiedIdentifier(),
+		)
+	}
+
+	return lookupFunctionType.Members.Len(), nil
+}
+
 func (interpreter *Interpreter) GetInterfaceType(
 	location common.Location,
 	qualifiedIdentifier string,
