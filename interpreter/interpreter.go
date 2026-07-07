@@ -2084,9 +2084,16 @@ func ConvertAndBox(
 	return BoxOptional(context, value, targetType)
 }
 
-// applyTargetTypeAuthorization returns a static type that preserves the
-// actual type structure but uses the target type's authorization for references.
-// This prevents entitlement escalation while allowing type narrowing.
+// applyTargetTypeAuthorization returns a static type that preserves the actual type structure,
+// but weakens reference authorizations to match the target type where doing so is safe.
+//
+// The reference case computes the safe projected authorization directly with `PermitsAccess`.
+// If that check fails, the target authorization would be stronger than the value's real authorization,
+// so the actual authorization is preserved.
+//
+// This keeps the rewrite independent of type-position variance.
+// Function parameters, returns, type parameter bounds, and default argument types
+// all recurse through the same rule.
 func applyTargetTypeAuthorization(
 	typeConverter TypeConverter,
 	actualStaticType StaticType,
@@ -2153,11 +2160,13 @@ func applyTargetTypeAuthorization(
 		return NewOptionalStaticType(typeConverter, innerType)
 
 	case *ReferenceStaticType:
-		// Use the actual referenced type as the inner type, but with the borrow type's authorization,
-		// instead of the actual referenced type's authorization.
+		// Use the actual referenced type as the inner type,
+		// but only clamp the authorization down when the target is less permissive (PermitsAccess).
+		// This prevents entitlement recovery without stamping stronger target authorization
+		// onto a value that does not actually have it.
 
 		var targetReferencedType sema.Type
-		var targetAuth Authorization
+		targetAuth := actual.Authorization
 
 		if targetType == sema.AnyStructType {
 			// `AnyStruct` must be treated as unauthorized.
@@ -2165,7 +2174,13 @@ func applyTargetTypeAuthorization(
 			targetReferencedType = sema.AnyStructType
 		} else if borrowRef, ok := targetType.(*sema.ReferenceType); ok {
 			targetReferencedType = borrowRef.Type
-			targetAuth = ConvertSemaAccessToStaticAuthorization(typeConverter, borrowRef.Authorization)
+			convertedTargetAuth := ConvertSemaAccessToStaticAuthorization(
+				typeConverter,
+				borrowRef.Authorization,
+			)
+			if PermitsAccess(typeConverter, convertedTargetAuth, actual.Authorization) {
+				targetAuth = convertedTargetAuth
+			}
 		} else {
 			break
 		}
@@ -2195,16 +2210,21 @@ func applyTargetTypeAuthorization(
 			borrowType,
 		)
 	case FunctionStaticType:
+		var targetFuncType *sema.FunctionType
 		var targetReturnType sema.Type
 
 		if targetType == sema.AnyStructType {
 			targetReturnType = sema.AnyStructType
-		} else if targetFuncType, isFuncType := targetType.(*sema.FunctionType); isFuncType {
-			targetReturnType = targetFuncType.ReturnTypeAnnotation.Type
+		} else if funcType, isFuncType := targetType.(*sema.FunctionType); isFuncType {
+			targetFuncType = funcType
+			targetReturnType = funcType.ReturnTypeAnnotation.Type
 		} else {
 			break
 		}
 
+		// Function values can hide authorized references in return types,
+		// parameter types, generic bounds, and default argument types.
+		// Rewrite all of those types to match the target type's authorization.
 		newReturnType := applyTargetTypeAuthorization(
 			typeConverter,
 			actual.ReturnType(typeConverter),
@@ -2212,6 +2232,16 @@ func applyTargetTypeAuthorization(
 		)
 
 		newSemaReturnType := typeConverter.SemaTypeFromStaticType(newReturnType)
+		newTypeParameters := applyTargetTypeAuthorizationToTypeParameters(
+			typeConverter,
+			actual.TypeParameters,
+			targetFuncType,
+		)
+		newParameters := applyTargetTypeAuthorizationToParameters(
+			typeConverter,
+			actual.Parameters,
+			targetFuncType,
+		)
 
 		return NewFunctionStaticType(
 			typeConverter,
@@ -2222,8 +2252,8 @@ func applyTargetTypeAuthorization(
 				ArgumentExpressionsCheck: actual.ArgumentExpressionsCheck,
 				TypeArgumentsCheck:       actual.TypeArgumentsCheck,
 				Members:                  actual.Members,
-				TypeParameters:           actual.TypeParameters,
-				Parameters:               actual.Parameters,
+				TypeParameters:           newTypeParameters,
+				Parameters:               newParameters,
 				IsConstructor:            actual.IsConstructor,
 				TypeFunctionType:         actual.TypeFunctionType,
 			},
@@ -2266,6 +2296,8 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 
 	case *sema.FunctionType:
 		newReturnType := semaTypeWithStrippedEntitlements(gauge, t.ReturnTypeAnnotation.Type)
+		newTypeParameters := semaTypeParametersWithStrippedEntitlements(gauge, t.TypeParameters)
+		newParameters := semaParametersWithStrippedEntitlements(gauge, t.Parameters)
 		return &sema.FunctionType{
 			Purity:                   t.Purity,
 			ReturnTypeAnnotation:     sema.NewTypeAnnotation(newReturnType),
@@ -2273,8 +2305,8 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 			ArgumentExpressionsCheck: t.ArgumentExpressionsCheck,
 			TypeArgumentsCheck:       t.TypeArgumentsCheck,
 			Members:                  t.Members,
-			TypeParameters:           t.TypeParameters,
-			Parameters:               t.Parameters,
+			TypeParameters:           newTypeParameters,
+			Parameters:               newParameters,
 			IsConstructor:            t.IsConstructor,
 			TypeFunctionType:         t.TypeFunctionType,
 		}
@@ -2282,6 +2314,191 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 	default:
 		return typ
 	}
+}
+
+func applyTargetTypeAuthorizationToTypeParameters(
+	typeConverter TypeConverter,
+	typeParameters []*sema.TypeParameter,
+	targetFuncType *sema.FunctionType,
+) []*sema.TypeParameter {
+	typeParameterCount := len(typeParameters)
+	if typeParameterCount == 0 {
+		return typeParameters
+	}
+
+	newTypeParameters := make([]*sema.TypeParameter, typeParameterCount)
+
+	for i, typeParameter := range typeParameters {
+		var targetTypeBound sema.Type
+		if targetFuncType == nil || i >= len(targetFuncType.TypeParameters) {
+			// If the target function type is absent or malformed, erase against
+			// `AnyStruct` defensively.
+			targetTypeBound = sema.AnyStructType
+		} else {
+			// A nil bound means the type parameter is unconstrained.
+			// It is not equivalent to an `AnyStruct` bound.
+			targetTypeBound = targetFuncType.TypeParameters[i].TypeBound
+		}
+
+		var newTypeBound sema.Type
+		if typeParameter.TypeBound != nil {
+			newTypeBound = semaTypeWithTargetAuthorization(
+				typeConverter,
+				typeParameter.TypeBound,
+				targetTypeBound,
+			)
+		}
+
+		newTypeParameters[i] = &sema.TypeParameter{
+			TypeBound: newTypeBound,
+			Name:      typeParameter.Name,
+			Optional:  typeParameter.Optional,
+		}
+	}
+
+	return newTypeParameters
+}
+
+func applyTargetTypeAuthorizationToParameters(
+	typeConverter TypeConverter,
+	parameters []sema.Parameter,
+	targetFuncType *sema.FunctionType,
+) []sema.Parameter {
+	parameterCount := len(parameters)
+	if parameterCount == 0 {
+		return parameters
+	}
+
+	newParameters := make([]sema.Parameter, parameterCount)
+
+	for i, parameter := range parameters {
+		var targetParameterType sema.Type
+		var targetDefaultArgument sema.Type
+		if targetFuncType == nil || i >= len(targetFuncType.Parameters) {
+			// If the target function type is absent or malformed, erase against
+			// `AnyStruct` defensively. Valid conversions have matching arity.
+			targetParameterType = sema.AnyStructType
+		} else {
+			targetParameter := targetFuncType.Parameters[i]
+			targetParameterType = targetParameter.TypeAnnotation.Type
+			if targetParameterType == nil {
+				// Parameter types are required for valid function types.
+				// A nil target parameter type is malformed, not unconstrained.
+				targetParameterType = sema.AnyStructType
+			}
+			targetDefaultArgument = targetParameter.DefaultArgument
+		}
+
+		newType := semaTypeWithTargetAuthorization(
+			typeConverter,
+			parameter.TypeAnnotation.Type,
+			targetParameterType,
+		)
+
+		var newDefaultArgument sema.Type
+		if parameter.DefaultArgument != nil {
+			if targetDefaultArgument == nil {
+				targetDefaultArgument = targetParameterType
+			}
+
+			newDefaultArgument = semaTypeWithTargetAuthorization(
+				typeConverter,
+				parameter.DefaultArgument,
+				targetDefaultArgument,
+			)
+		}
+
+		newParameters[i] = sema.Parameter{
+			TypeAnnotation:  sema.NewTypeAnnotation(newType),
+			DefaultArgument: newDefaultArgument,
+			Label:           parameter.Label,
+			Identifier:      parameter.Identifier,
+		}
+	}
+
+	return newParameters
+}
+
+func semaTypeWithTargetAuthorization(
+	typeConverter TypeConverter,
+	actualType sema.Type,
+	targetType sema.Type,
+) sema.Type {
+	if actualType == nil {
+		return nil
+	}
+
+	actualStaticType := ConvertSemaToStaticType(typeConverter, actualType)
+	if actualStaticType == PrimitiveStaticTypeUnknown || actualStaticType == nil {
+		// Some sema types, such as bare generic type parameters, do not have a
+		// static representation that can carry reference authorization metadata.
+		return actualType
+	}
+
+	newStaticType := applyTargetTypeAuthorization(
+		typeConverter,
+		actualStaticType,
+		targetType,
+	)
+
+	return typeConverter.SemaTypeFromStaticType(newStaticType)
+}
+
+func semaTypeParametersWithStrippedEntitlements(
+	gauge common.MemoryGauge,
+	typeParameters []*sema.TypeParameter,
+) []*sema.TypeParameter {
+	typeParameterCount := len(typeParameters)
+	if typeParameterCount == 0 {
+		return typeParameters
+	}
+
+	newTypeParameters := make([]*sema.TypeParameter, typeParameterCount)
+
+	for i, typeParameter := range typeParameters {
+		var newTypeBound sema.Type
+		if typeParameter.TypeBound != nil {
+			newTypeBound = semaTypeWithStrippedEntitlements(gauge, typeParameter.TypeBound)
+		}
+
+		newTypeParameters[i] = &sema.TypeParameter{
+			TypeBound: newTypeBound,
+			Name:      typeParameter.Name,
+			Optional:  typeParameter.Optional,
+		}
+	}
+
+	return newTypeParameters
+}
+
+func semaParametersWithStrippedEntitlements(
+	gauge common.MemoryGauge,
+	parameters []sema.Parameter,
+) []sema.Parameter {
+	parameterCount := len(parameters)
+	if parameterCount == 0 {
+		return parameters
+	}
+
+	newParameters := make([]sema.Parameter, parameterCount)
+
+	for i, parameter := range parameters {
+		newType := semaTypeWithStrippedEntitlements(gauge, parameter.TypeAnnotation.Type)
+
+		var newDefaultArgument sema.Type
+		if parameter.DefaultArgument != nil {
+			newDefaultArgument = semaTypeWithStrippedEntitlements(gauge, parameter.DefaultArgument)
+		}
+
+		newParameters[i] = sema.Parameter{
+			TypeAnnotation:  sema.NewTypeAnnotation(newType),
+			DefaultArgument: newDefaultArgument,
+			Label:           parameter.Label,
+			Identifier:      parameter.Identifier,
+		}
+	}
+
+	return newParameters
 }
 
 func convert(

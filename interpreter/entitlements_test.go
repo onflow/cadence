@@ -2152,6 +2152,389 @@ func TestInterpretEntitlementEscalationViaDefaultFunction(t *testing.T) {
 	}
 }
 
+func TestInterpretFunctionParameterEntitlementStripping(t *testing.T) {
+	t.Parallel()
+
+	t.Run("force-cast cannot recover stronger callback type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement Bump
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(Bump) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let runner = fun(callback: fun(auth(Bump) &S): Void) {
+                    callback(&s as auth(Bump) &S)
+                }
+
+                // Expose the runner through a weaker public type:
+                // the callback only requires an unauthorized reference.
+                let weak: fun(fun(&S): Void): Void = runner
+
+                // Erase to AnyStruct.
+                let anyRunner: AnyStruct = weak
+
+                // Attempt to recover the stronger callback type.
+                anyRunner as! fun(fun(auth(Bump) &S): Void): Void
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("conditional cast does not grant authorized reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement Bump
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(Bump) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+
+                let runner = fun(callback: fun(auth(Bump) &S): Void) {
+                    callback(&s as auth(Bump) &S)
+                }
+
+                let weak: fun(fun(&S): Void): Void = runner
+                let anyRunner: AnyStruct = weak
+
+                if let strong = anyRunner as? fun(fun(auth(Bump) &S): Void): Void {
+                    strong(fun(ref: auth(Bump) &S) {
+                        ref.bump()
+                    })
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
+
+	t.Run("force-cast cannot recover stronger callback type without AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement Bump
+
+            struct S {
+                var count: Int
+                init() {
+                    self.count = 0
+                }
+                access(Bump) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let runner = fun(callback: fun(auth(Bump) &S): Void) {
+                    callback(&s as auth(Bump) &S)
+                }
+
+                let weak: fun(fun(&S): Void): Void = runner
+
+                weak as! fun(fun(auth(Bump) &S): Void): Void
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("legitimate downcast to more permissive parameter still succeeds", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement Bump
+
+            struct S {}
+
+            fun refParamFunc(_ ref: &S) {}
+
+            fun main() {
+                let widened: fun(auth(Bump) &S): Void = refParamFunc
+                widened as! fun(&S): Void
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+
+	t.Run("subset callback: cannot recover the full entitlement set", func(t *testing.T) {
+		t.Parallel()
+
+		// The public callback grants only E, while the runner internally passes
+		// auth(E, F). The projected authorization must be clamped to E, so the
+		// full auth(E, F) callback type must not be recoverable.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+
+            struct S {
+                var count: Int
+                init() {
+                    self.count = 0
+                }
+                access(E) fun bumpE() {
+                    self.count = self.count + 1
+                }
+                access(F) fun bumpF() {
+                    self.count = self.count + 100
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let runner = fun(callback: fun(auth(E, F) &S): Void) {
+                    callback(&s as auth(E, F) &S)
+                }
+
+                let weak: fun(fun(auth(E) &S): Void): Void = runner
+
+                weak as! fun(fun(auth(E, F) &S): Void): Void
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("subset callback: the granted entitlement subset is preserved", func(t *testing.T) {
+		t.Parallel()
+
+		// Complements the previous case: the projected authorization must be
+		// exactly the target subset, not over-stripped to unauthorized. The
+		// callback typed at the public auth(E) must therefore remain usable.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+
+            struct S {
+                var count: Int
+                init() {
+                    self.count = 0
+                }
+                access(E) fun bumpE() {
+                    self.count = self.count + 1
+                }
+                access(F) fun bumpF() {
+                    self.count = self.count + 100
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+
+                let runner = fun(callback: fun(auth(E, F) &S): Void) {
+                    callback(&s as auth(E, F) &S)
+                }
+
+                let weak: fun(fun(auth(E) &S): Void): Void = runner
+
+                if let strong = weak as? fun(fun(auth(E) &S): Void): Void {
+                    strong(fun(ref: auth(E) &S) {
+                        ref.bumpE()
+                    })
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			result,
+		)
+	})
+
+	t.Run("authorized reference nested in a container parameter cannot be recovered", func(t *testing.T) {
+		t.Parallel()
+
+		// The authorized reference is nested inside an array inside the callback
+		// parameter, so the rewrite must recurse through the container.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+                init() {
+                    self.count = 0
+                }
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+
+                let runner = fun(callback: fun([auth(E) &S]): Void) {
+                    callback([&s as auth(E) &S])
+                }
+
+                let weak: fun(fun([&S]): Void): Void = runner
+                let anyRunner: AnyStruct = weak
+
+                if let strong = anyRunner as? fun(fun([auth(E) &S]): Void): Void {
+                    strong(fun(refs: [auth(E) &S]) {
+                        refs[0].bump()
+                    })
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
+
+	t.Run("authorized reference in a weakened return type cannot be recovered", func(t *testing.T) {
+		t.Parallel()
+
+		// Covariant counterpart: a function exposed with a weaker return type
+		// must not allow recovering the authorized return reference.
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+                init() {
+                    self.count = 0
+                }
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+
+                let provider = fun(): auth(E) &S {
+                    return &s as auth(E) &S
+                }
+
+                let weak: fun(): &S = provider
+                let anyProvider: AnyStruct = weak
+
+                if let strong = anyProvider as? fun(): auth(E) &S {
+                    strong().bump()
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
+
+	t.Run("disjunction entitlement callback cannot be recovered", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+
+            struct S {
+                var count: Int
+                init() {
+                    self.count = 0
+                }
+                access(E | F) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main() {
+                let s = S()
+
+                let runner = fun(callback: fun(auth(E | F) &S): Void) {
+                    callback(&s as auth(E | F) &S)
+                }
+
+                let weak: fun(fun(&S): Void): Void = runner
+                let anyRunner: AnyStruct = weak
+
+                anyRunner as! fun(fun(auth(E | F) &S): Void): Void
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+}
+
 func TestInterpretEntitlementConversion(t *testing.T) {
 
 	t.Parallel()
