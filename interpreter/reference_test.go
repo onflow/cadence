@@ -6269,6 +6269,92 @@ func TestInterpretNestedEphemeralReferenceAsAnyStructCasting(t *testing.T) {
 			forceCastTypeMismatchError.ActualType.ID(),
 		)
 	})
+
+	t.Run("higher-order function with entitled callback parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                access(all) var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            // Only accepts an entitled callback, and invokes it with an entitled reference.
+            fun runner(_ callback: fun(auth(E) &S): Void) {
+                let s = S()
+                callback(&s as auth(E) &S)
+            }
+
+            fun erasedWeakRunner(): AnyStruct {
+                // Publicly exposes 'runner' behind a weak callback boundary.
+                // The widening assignment does not rewrap the value, so it keeps its
+                // original type: fun(fun(auth(E) &S): Void): Void.
+                let f: fun(fun(&S): Void): Void = runner
+
+                return f
+            }
+
+            // Attempt to recover the strong higher-order function type via AnyStruct.
+            // This must fail: the entitlement on the nested callback parameter must
+            // not survive erasure to AnyStruct.
+            fun testCasting() {
+                let anyStruct: AnyStruct = erasedWeakRunner()
+                let strong = anyStruct as! fun(fun(auth(E) &S): Void): Void
+            }
+
+            // End-to-end escalation attempt: if the cast (incorrectly) succeeds,
+            // the recovered callback receives an auth(E) &S and can call bump().
+            fun testEscalation(): Int {
+                let anyStruct: AnyStruct = erasedWeakRunner()
+                var observed = -1
+                if let strong = anyStruct as? fun(fun(auth(E) &S): Void): Void {
+                    strong(fun(ref: auth(E) &S): Void {
+                        ref.bump()
+                        observed = ref.count
+                    })
+                }
+                return observed
+            }
+        `)
+
+		// Recovering the strong higher-order function type through AnyStruct must fail:
+		// the entitlement on the (nested) callback parameter must not survive erasure.
+		_, err := inter.Invoke("testCasting")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+		assert.Equal(
+			t,
+			common.TypeID("fun(fun(auth(S.test.E)&S.test.S):Void):Void"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun(fun(&S.test.S):Void):Void"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+
+		// The optional-cast escalation path must not recover the entitled callback,
+		// so bump() must never be reachable and the state must stay unmutated.
+		result, err := inter.Invoke("testEscalation")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(-1),
+			result,
+		)
+	})
 }
 
 func TestInterpretNestedStorageReferenceAsAnyStructCasting(t *testing.T) {
