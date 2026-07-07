@@ -3790,6 +3790,21 @@ func newStorageCapabilityControllerSetTargetFunction(
 			capabilityID,
 		)
 
+		// Update the controller's target and persist the updated controller record.
+		//
+		// The in-memory field write alone is not enough:
+		// the controller value is stored as a single (non-atree-container) storable,
+		// so mutating a field does not mark its slab dirty,
+		// and the change would be lost on commit unless the controller record
+		// is explicitly written back.
+		controller.TargetPath = newTargetPathValue
+		context.WriteStored(
+			address,
+			common.StorageDomainCapabilityController,
+			interpreter.Uint64StorageMapKey(capabilityID),
+			controller,
+		)
+
 		addressValue := interpreter.AddressValue(address)
 
 		handler.EmitEvent(context, StorageCapabilityControllerTargetChangedEventType, []interpreter.Value{
