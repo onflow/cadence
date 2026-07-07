@@ -43,7 +43,7 @@ require (
 	github.com/multiformats/go-multibase v0.2.0 // indirect
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
-	github.com/onflow/atree v0.16.0 // indirect
+	github.com/onflow/atree v0.16.1 // indirect
 	github.com/onflow/crypto v0.25.3 // indirect
 	github.com/onflow/fixed-point v0.1.1 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v1.9.2 // indirect
@@ -89,5 +89,3 @@ require (
 )
 
 replace github.com/onflow/cadence => ../../
-
-replace github.com/onflow/atree => github.com/onflow/atree-internal v0.16.1-rc.3
