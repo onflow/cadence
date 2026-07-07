@@ -5992,6 +5992,10 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 // e.g. because the enum's elaboration is not available.
 func (interpreter *Interpreter) GetEnumCaseCount(enumType *sema.CompositeType) (int, error) {
 	elaboration := interpreter.getElaboration(enumType.Location)
+	return EnumCaseCount(enumType, elaboration)
+}
+
+func EnumCaseCount(enumType *sema.CompositeType, elaboration *sema.Elaboration) (int, error) {
 	if elaboration == nil {
 		return 0, errors.NewUnexpectedError(
 			"cannot determine cases of enum %s: elaboration not available",

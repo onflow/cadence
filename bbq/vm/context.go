@@ -632,22 +632,8 @@ func (c *Context) GetEnumCaseCount(enumType *sema.CompositeType) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if elaboration == nil {
-		return 0, errors.NewUnexpectedError(
-			"cannot determine cases of enum %s: elaboration not available",
-			enumType.QualifiedIdentifier(),
-		)
-	}
 
-	lookupFunctionType := elaboration.EnumLookupFunctionType(enumType)
-	if lookupFunctionType == nil {
-		return 0, errors.NewUnexpectedError(
-			"cannot determine cases of enum %s: enum lookup function type not available",
-			enumType.QualifiedIdentifier(),
-		)
-	}
-
-	return lookupFunctionType.Members.Len(), nil
+	return interpreter.EnumCaseCount(enumType, elaboration)
 }
 
 func (c *Context) GetInterfaceType(
