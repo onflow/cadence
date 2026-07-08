@@ -93,7 +93,7 @@ func (vm *VM) pop() Value {
 	vm.stack[lastIndex] = nil
 	vm.stack = vm.stack[:lastIndex]
 
-	interpreter.CheckInvalidatedResourceOrResourceReference(value, vm.context)
+	interpreter.CheckInvalidatedValueOrValueReference(value, vm.context)
 
 	return value
 }
@@ -108,8 +108,8 @@ func (vm *VM) pop2() (Value, Value) {
 	vm.stack = vm.stack[:lastIndex-1]
 
 	context := vm.context
-	interpreter.CheckInvalidatedResourceOrResourceReference(value1, context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value2, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value1, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value2, context)
 
 	return value1, value2
 }
@@ -124,9 +124,9 @@ func (vm *VM) pop3() (Value, Value, Value) {
 	vm.stack = vm.stack[:lastIndex-2]
 
 	context := vm.context
-	interpreter.CheckInvalidatedResourceOrResourceReference(value1, context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value2, context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(value3, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value1, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value2, context)
+	interpreter.CheckInvalidatedValueOrValueReference(value3, context)
 
 	return value1, value2, value3
 }
@@ -138,7 +138,7 @@ func (vm *VM) peekN(count int) []Value {
 
 	context := vm.context
 	for _, value := range values {
-		interpreter.CheckInvalidatedResourceOrResourceReference(value, context)
+		interpreter.CheckInvalidatedValueOrValueReference(value, context)
 	}
 
 	return values
@@ -151,7 +151,7 @@ func (vm *VM) popN(count int) []Value {
 
 	context := vm.context
 	for _, value := range values {
-		interpreter.CheckInvalidatedResourceOrResourceReference(value, context)
+		interpreter.CheckInvalidatedValueOrValueReference(value, context)
 	}
 
 	vm.stack = vm.stack[:startIndex]
@@ -162,7 +162,7 @@ func (vm *VM) popN(count int) []Value {
 func (vm *VM) peek() Value {
 	lastIndex := len(vm.stack) - 1
 	value := vm.stack[lastIndex]
-	interpreter.CheckInvalidatedResourceOrResourceReference(value, vm.context)
+	interpreter.CheckInvalidatedValueOrValueReference(value, vm.context)
 	return value
 }
 
@@ -179,8 +179,8 @@ func (vm *VM) peekPop() (Value, Value) {
 	poppedValue := vm.pop()
 
 	context := vm.context
-	interpreter.CheckInvalidatedResourceOrResourceReference(peekedValue, context)
-	interpreter.CheckInvalidatedResourceOrResourceReference(poppedValue, context)
+	interpreter.CheckInvalidatedValueOrValueReference(peekedValue, context)
+	interpreter.CheckInvalidatedValueOrValueReference(poppedValue, context)
 
 	return peekedValue, poppedValue
 }
@@ -675,8 +675,26 @@ func checkAndConvertReturnValue(
 }
 
 func opReturn(vm *VM) {
-	vm.popCallFrame()
-	vm.push(interpreter.Void)
+	poppedCallFrame := vm.popCallFrame()
+
+	value := interpreter.Void
+
+	// Defensively check the expected return type allows returning void.
+	// In a correct program, the void return path is only ever taken
+	// in functions with return type Void.
+	// Without this check, a function with a non-Void return type
+	// which (incorrectly) returns void would push Void
+	// masquerading as a value of the return type –
+	// particularly dangerous for return type Never,
+	// which is assignable to any type.
+	if poppedCallFrame != nil {
+		expectedReturnType := poppedCallFrame.returnType
+		if expectedReturnType != interpreter.PrimitiveStaticTypeVoid {
+			value = checkAndConvertReturnValue(vm.context, value, expectedReturnType)
+		}
+	}
+
+	vm.push(value)
 }
 
 func opJump(vm *VM, ins opcode.InstructionJump) {
@@ -1055,16 +1073,20 @@ func opGetMethod(vm *VM, ins opcode.InstructionGetMethod) {
 
 	var base *interpreter.EphemeralReferenceValue
 
-	if reference, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
-		if compositeValue, ok := reference.Value.(*interpreter.CompositeValue); ok &&
-			compositeValue.Kind == common.CompositeKindAttachment {
-			base = attachmentBaseForMethod(context, compositeValue, method, reference)
-		}
-	}
-
 	// Ignore casting failures. Only interested in the receiver as a reference.
 	// If the receiver is not a reference, then `accessedReference` must be `nil`.
 	accessedReference, _ := receiver.(interpreter.ReferenceValue)
+
+	if reference, ok := receiver.(*interpreter.EphemeralReferenceValue); ok {
+		if compositeValue, ok := reference.Value.(*interpreter.CompositeValue); ok &&
+			compositeValue.Kind == common.CompositeKindAttachment {
+			var narrowedSelf interpreter.ReferenceValue
+			base, narrowedSelf = attachmentBaseForMethod(context, compositeValue, method, reference)
+			if narrowedSelf != nil {
+				accessedReference = narrowedSelf
+			}
+		}
+	}
 
 	boundFunction := NewBoundFunctionValue(
 		context,
@@ -1542,6 +1564,8 @@ func checkMemberAccessTargetType(
 func opRemoveField(vm *VM, ins opcode.InstructionRemoveField) {
 	memberAccessibleValue := vm.pop().(interpreter.MemberAccessibleValue)
 
+	checkMemberAccessTargetType(vm, ins.AccessedType, memberAccessibleValue)
+
 	// VM assumes the field name is always a string.
 	fieldNameIndex := ins.FieldName
 	fieldName := getRawStringConstant(vm, fieldNameIndex)
@@ -1927,8 +1951,15 @@ func opNewRef(vm *VM, ins opcode.InstructionNewRef) {
 	vm.push(ref)
 }
 
-func opIterator(vm *VM) {
+func opIterator(vm *VM, ins opcode.InstructionIterator) {
 	value := vm.pop()
+
+	checkIndexedType(
+		vm,
+		ins.IndexedType,
+		value,
+	)
+
 	iterable := value.(interpreter.IterableValue)
 	context := vm.context
 	iterator := iterable.Iterator(context)
@@ -2297,7 +2328,7 @@ func (vm *VM) run() {
 		case opcode.InstructionEmitEvent:
 			opEmitEvent(vm, ins)
 		case opcode.InstructionIterator:
-			opIterator(vm)
+			opIterator(vm, ins)
 		case opcode.InstructionIteratorHasNext:
 			opIteratorHasNext(vm)
 		case opcode.InstructionIteratorNext:

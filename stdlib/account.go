@@ -106,7 +106,11 @@ type AccountCreator interface {
 	EventEmitter
 	AccountHandler
 	// CreateAccount creates a new account.
-	CreateAccount(payer common.Address) (address common.Address, err error)
+	//
+	// `context` is the invocation context of the program creating the account,
+	// forwarded so the implementation can run follow-up work (e.g. invoke another Cadence function)
+	// against the SAME storage as the creating program. See runtime.Interface.CreateAccount.
+	CreateAccount(payer common.Address, context interpreter.InvocationContext) (address common.Address, err error)
 }
 
 func NativeAccountConstructor(creator AccountCreator) interpreter.NativeFunction {
@@ -147,7 +151,7 @@ func NewVMAccountConstructor(creator AccountCreator) StandardLibraryValue {
 }
 
 func NewAccount(
-	context interpreter.MemberAccessibleContext,
+	context interpreter.InvocationContext,
 	payer interpreter.MemberAccessibleValue,
 	creator AccountCreator,
 ) interpreter.Value {
@@ -185,7 +189,7 @@ func NewAccount(
 		context,
 		func() (address common.Address) {
 			var err error
-			address, err = creator.CreateAccount(payerAddress)
+			address, err = creator.CreateAccount(payerAddress, context)
 			if err != nil {
 				panic(err)
 			}

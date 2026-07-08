@@ -135,7 +135,7 @@ func (v *SelfVariable) InitializeWithGetter(func() Value) {
 
 func (v *SelfVariable) GetValue(context ValueStaticTypeContext) Value {
 	// TODO: pass proper location range
-	CheckInvalidatedResourceOrResourceReference(v.selfRef, context)
+	CheckInvalidatedValueOrValueReference(v.selfRef, context)
 	return v.value
 }
 

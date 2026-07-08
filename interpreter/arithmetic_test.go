@@ -1031,3 +1031,54 @@ func TestInterpretDivisionByZero(t *testing.T) {
 		})
 	}
 }
+
+func TestInterpretSaturatingDivisionByZero(t *testing.T) {
+	t.Parallel()
+
+	numericTypes := common.Concat(
+		sema.AllUnsignedIntegerTypes,
+		sema.AllSignedIntegerTypes,
+		sema.AllUnsignedFixedPointTypes,
+		sema.AllSignedFixedPointTypes,
+	)
+
+	for _, typ := range numericTypes {
+
+		saturatingType, ok := typ.(sema.SaturatingArithmeticType)
+		if !ok || !saturatingType.SupportsSaturatingDivide() {
+			continue
+		}
+
+		typeName := typ.String()
+
+		t.Run(typeName, func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndPrepare(t,
+				fmt.Sprintf(
+					`
+                          fun test(): %[1]s {
+                              return %[1]s(4).saturatingDivide(%[1]s(0))
+                          }
+                        `,
+					typeName,
+				),
+			)
+
+			_, err := inter.Invoke("test")
+			RequireError(t, err)
+
+			require.True(t, errors.IsUserError(err))
+
+			switch typ {
+			case sema.IntType:
+				// Int is implemented in the values package.
+				divisionByZero := values.DivisionByZeroError{}
+				require.ErrorAs(t, err, &divisionByZero)
+			default:
+				divisionByZero := &interpreter.DivisionByZeroError{}
+				require.ErrorAs(t, err, &divisionByZero)
+			}
+		})
+	}
+}

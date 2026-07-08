@@ -88,9 +88,42 @@ func NewAccessFromEntitlementOrderedSet(
 }
 
 // IntersectAccess returns the intersection of two accesses.
-// If either is unauthorized, the result is unauthorized.
-// If both are EntitlementSetAccess, the result contains only entitlements present in both.
-// For all other combinations, the result is unauthorized.
+// The result is deliberately conservative:
+// a disjunction is only ever preserved when the other side
+// guarantees every one of its options,
+// and the result is unauthorized in all other cases involving disjunctions.
+//
+// Rules:
+//   - If either side is not an EntitlementSetAccess (e.g. unauthorized, primitive,
+//     or entitlement map access), the result is unauthorized.
+//   - Conjunction ∩ Conjunction: standard set intersection (Conjunction).
+//     Both sides guarantee all of their entitlements,
+//     so anything in the intersection is guaranteed.
+//   - Conjunction ∩ Disjunction (and vice versa):
+//     A conjunction guarantees all of its entitlements,
+//     while a disjunction only guarantees that at least one (unspecified) entitlement
+//     from its set is present.
+//     The disjunction is preserved as the result only when the conjunction
+//     is a superset of the disjunction —
+//     in that case the conjunction guarantees every option of the disjunction.
+//     Otherwise the result is unauthorized.
+//     (E.g. auth(A) ∩ auth(A | B | C) = unauthorized,
+//     but auth(A, B, C) ∩ auth(A | B | C) = auth(A | B | C).)
+//   - Disjunction ∩ Disjunction: unauthorized,
+//     even when the option sets are identical.
+//
+// NOTE: These rules are intentionally stricter than the entailment join
+// (least upper bound) of the two accesses, which leastCommonAccess computes.
+// For example, for auth(E | F) ∩ auth(E | F),
+// every possible holder of either side entails auth(E | F),
+// so preserving the disjunction would be sound;
+// and for auth(A) ∩ auth(A | B | C),
+// a holder of A entails auth(A | B | C),
+// so auth(A | B | C) would be a sound result.
+// IntersectAccess nevertheless returns unauthorized in these cases:
+// whenever the two sides may hold different actual entitlements,
+// expressiveness is traded for simpler reasoning
+// about authorization escalation through nested references.
 func IntersectAccess(a, b Access) Access {
 	aSet, ok := a.(EntitlementSetAccess)
 	if !ok {
@@ -102,20 +135,36 @@ func IntersectAccess(a, b Access) Access {
 		return UnauthorizedAccess
 	}
 
-	intersection := orderedmap.KeySetIntersection(
-		aSet.Entitlements,
-		bSet.Entitlements,
-	)
+	switch {
+	case aSet.SetKind == Conjunction && bSet.SetKind == Conjunction:
+		intersection := orderedmap.KeySetIntersection(
+			aSet.Entitlements,
+			bSet.Entitlements,
+		)
+		return NewAccessFromEntitlementOrderedSet(intersection, Conjunction)
 
-	// If either is a disjunction, the result must be a disjunction,
-	// because a disjunction only guarantees one of the entitlements is present.
-	// Only if both are conjunctions can the result be a conjunction.
-	setKind := Conjunction
-	if aSet.SetKind == Disjunction || bSet.SetKind == Disjunction {
-		setKind = Disjunction
+	case aSet.SetKind == Conjunction && bSet.SetKind == Disjunction:
+		// Preserve the disjunction only if the conjunction guarantees all of
+		// its options. Otherwise nothing is statically guaranteed in common.
+		if bSet.Entitlements.ForAllKeys(aSet.Entitlements.Contains) {
+			return bSet
+		}
+		return UnauthorizedAccess
+
+	case aSet.SetKind == Disjunction && bSet.SetKind == Conjunction:
+		// Symmetric to the previous case.
+		if aSet.Entitlements.ForAllKeys(bSet.Entitlements.Contains) {
+			return aSet
+		}
+		return UnauthorizedAccess
+
+	default:
+		// Disjunction ∩ Disjunction: conservatively unauthorized,
+		// even when the option sets are identical
+		// (in which case preserving the disjunction would be sound —
+		// see the NOTE in the function documentation).
+		return UnauthorizedAccess
 	}
-
-	return NewAccessFromEntitlementOrderedSet(intersection, setKind)
 }
 
 func (EntitlementSetAccess) isAccess() {}

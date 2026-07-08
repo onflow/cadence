@@ -384,6 +384,54 @@ func TestCheckInvalidGuardStatementElseBlockMustExit(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("else with switch-break only does not exit", func(t *testing.T) {
+		t.Parallel()
+
+		// The break inside the switch is consumed by the switch and falls
+		// past the guard's else, so the else block does NOT definitely
+		// exit. The check must reject this — failing to do so is a
+		// soundness bug (a shadowing `guard let x = ...` could let an
+		// outer-typed value be used at the inner type after the guard).
+		_, err := ParseAndCheck(t, `
+          fun test() {
+              guard true else {
+                  switch 1 { default: break }
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.GuardStatementElseBlockMustExitError{}, errs[0])
+	})
+
+	t.Run("else with nested guard-break in switch case does not exit", func(t *testing.T) {
+		t.Parallel()
+
+		// The inner guard's `break` exits only the surrounding switch,
+		// not the outer guard. When the inner guard fails and switch
+		// case 1 is taken, control falls past the switch and past the
+		// outer guard's else — the outer else does NOT definitely exit.
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              guard true else {
+                  switch 1 {
+                  case 1:
+                      guard let y = (nil as Int?) else {
+                          break
+                      }
+                      return 2
+                  default:
+                      return 0
+                  }
+              }
+              return 3
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.GuardStatementElseBlockMustExitError{}, errs[0])
+	})
 }
 
 func TestCheckGuardStatementResourceTracking(t *testing.T) {
@@ -635,5 +683,55 @@ func TestCheckGuardStatementWithResourceFailableCast(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+}
+
+func TestCheckInvalidForGuardStatementElseBlockMustExit(t *testing.T) {
+	t.Parallel()
+
+	t.Run("simple", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			fun test(): Int {
+                for _ in [1] {
+                    guard true else {
+                        switch false { default: break }
+                    }
+                    return 1
+                }
+                return 2
+            }
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.GuardStatementElseBlockMustExitError{}, errs[0])
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+	        fun test(): Int {
+                for _ in [1] {
+                    guard true else {
+                        switch 1 {
+                            case 1:
+                                guard true else {
+                                    break
+                                }
+                                return 2
+                            default:
+                                return 0
+                        }
+                    }
+                    return 1
+                }
+                return 3
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.GuardStatementElseBlockMustExitError{}, errs[0])
 	})
 }

@@ -1486,11 +1486,50 @@ func (checker *Checker) leaveValueScope(getEndPosition EndPositionGetter, checkR
 //    when detecting resource use after invalidation in loops
 
 // checkResourceLoss reports an error if there is a variable in the current scope
-// that has a resource type and which was not moved or destroyed
+// that has a resource type and which was not moved or destroyed.
+//
+// Called from two places:
+//   - explicitly by `VisitReturnStatement` at the return site, so the
+//     reported leak points at the `return` and the per-branch resource
+//     state is still available (see the comment there);
+//   - implicitly by `leaveValueScope` whenever a block scope ends.
+//
+// The skip condition below resolves the interaction between those two
+// sites so each leak is reported exactly once, and matches the
+// historical halt-suppression behavior.
 func (checker *Checker) checkResourceLoss(depth int) {
 
 	returnInfo := checker.functionActivations.Current().ReturnInfo
-	if returnInfo.IsUnreachable() {
+
+	// Skip only when control flow has definitely exited via return or
+	// halt — that is, `DefinitelyExited` is set, AND no path through
+	// the current scope reached a `break`/`continue`.
+	//
+	// `DefinitelyExited` is set by every termination kind (return, halt,
+	// break, continue) and AND-merged across branches, so by itself it
+	// captures "every path terminated somehow". The skip narrows that
+	// to "via return or halt":
+	//
+	//   - return: `VisitReturnStatement` already called
+	//     `checkResourceLoss` at the return site. Skipping here
+	//     prevents the surrounding scope-leave from re-reporting the
+	//     same leak.
+	//
+	//   - halt (a call returning `Never`, e.g. `panic(...)`): leak
+	//     reporting is intentionally suppressed — the program aborts,
+	//     so the resource "leak" never materializes. (Historical
+	//     behavior — see e.g. the "panic statement" test in
+	//     `TestCheckResourceInvalidationOfCopy`.)
+	//
+	//   - break / continue: do NOT skip. They set `DefinitelyExited`
+	//     (so subsequent statements are correctly unreachable) and a
+	//     corresponding `MaybeJumped*` flag, but they do NOT report at
+	//     their site (multi-branch double-report problem; see
+	//     `VisitBreakStatement`). Resources declared in the loop/switch
+	//     case body that are not destroyed before the jump are real
+	//     leaks that this scope-leave must report — so when a
+	//     `MaybeJumped*` is set, do not skip.
+	if returnInfo.DefinitelyExited && !returnInfo.MaybeJumped() {
 		return
 	}
 
@@ -1499,6 +1538,12 @@ func (checker *Checker) checkResourceLoss(depth int) {
 		if variable.Type.IsResourceType() &&
 			variable.DeclarationKind != common.DeclarationKindSelf &&
 			!checker.resources.Get(Resource{Variable: variable}).DefinitivelyInvalidated() {
+
+			// NOTE: a variable may be reported as lost more than once,
+			// e.g. both by the return-site check and by a scope-end check.
+			// This over-reporting is intentional: each "exit" of the scope
+			// performs and reports its own loss check,
+			// which ensures that resource loss is detected at all exits.
 
 			checker.report(
 				&ResourceLossError{
@@ -1853,7 +1898,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	case PrimitiveAccess:
 		checker.checkPrimitiveAccess(access, isConstant, declarationKind, startPos)
 	case *EntitlementMapAccess:
-		checker.checkEntitlementMapAccess(declarationType, containerKind, startPos)
+		checker.checkEntitlementMapAccess(declarationType, containerKind, declarationKind, startPos)
 	case EntitlementSetAccess:
 		checker.checkEntitlementSetAccess(containerKind, startPos)
 	}
@@ -1932,6 +1977,7 @@ func (checker *Checker) checkPrimitiveAccess(
 func (checker *Checker) checkEntitlementMapAccess(
 	declarationType Type,
 	containerKind *common.CompositeKind,
+	declarationKind common.DeclarationKind,
 	startPos ast.Position,
 ) {
 	// Mapping access may only be used inside of structs and resources.
@@ -1945,6 +1991,16 @@ func (checker *Checker) checkEntitlementMapAccess(
 			},
 		)
 		return
+	}
+
+	// Mapping access may only be used on fields.
+	if declarationKind != common.DeclarationKindField {
+		checker.report(
+			&InvalidNonFieldMappingAccessError{
+				DeclarationKind: declarationKind,
+				Pos:             startPos,
+			},
+		)
 	}
 
 	if !isValidMappingAccessMemberType(declarationType) {
@@ -2699,7 +2755,8 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 	var onlyPotential bool
 	switch {
 	case resource.Member != nil:
-		onlyPotential = returnInfo.MaybeReturned || returnInfo.MaybeJumped()
+		onlyPotential = returnInfo.MaybeReturned ||
+			returnInfo.MaybeJumped()
 
 	case resource.Variable != nil &&
 		resource.Variable.DeclarationKind != common.DeclarationKindSelf:
@@ -2707,14 +2764,21 @@ func (checker *Checker) maybeAddResourceInvalidation(resource Resource, invalida
 		declarationOffset := resource.Variable.Pos.Offset
 		invalidationOffset := invalidation.StartPos.Offset
 
-		err := returnInfo.JumpOffsets.ForEach(func(jumpOffset int) error {
-			if declarationOffset < jumpOffset && jumpOffset < invalidationOffset {
-				return errFoundJump
-			}
-			return nil
-		})
+		checkJumpOffsets := func(jumpOffsets *persistent.OrderedSet[int]) bool {
+			err := jumpOffsets.ForEach(func(jumpOffset int) error {
+				if declarationOffset < jumpOffset && jumpOffset < invalidationOffset {
+					return errFoundJump
+				}
+				return nil
+			})
+			return err == errFoundJump
+		}
 
-		onlyPotential = err == errFoundJump
+		// Both loop-targeting and switch-targeting jumps make the
+		// invalidation only potential — the jump skips the invalidation.
+		// The sets only differ in lifetime (see `LoopJumpOffsets`).
+		onlyPotential = checkJumpOffsets(returnInfo.LoopJumpOffsets) ||
+			checkJumpOffsets(returnInfo.SwitchJumpOffsets)
 	}
 
 	if onlyPotential {

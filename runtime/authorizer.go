@@ -25,15 +25,16 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
+// newAccountReferenceValueFromAddress builds an `&Account` reference value for the given address and authorization.
 func newAccountReferenceValueFromAddress(
 	context interpreter.AccountCreationContext,
 	address common.Address,
-	environment Environment,
 	authorization sema.Access,
 ) *interpreter.EphemeralReferenceValue {
 	addressValue := interpreter.NewAddressValue(context, address)
 
-	accountValue := environment.newAccountValue(context, addressValue)
+	getAccount := context.GetAccountHandlerFunc()
+	accountValue := getAccount(context, addressValue)
 
 	staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(
 		context,
@@ -49,7 +50,6 @@ func newAccountReferenceValueFromAddress(
 }
 
 func authorizerValues(
-	environment Environment,
 	context interpreter.AccountCreationContext,
 	addresses []Address,
 	parameters []sema.Parameter,
@@ -70,7 +70,6 @@ func authorizerValues(
 		accountReferenceValue := newAccountReferenceValueFromAddress(
 			context,
 			address,
-			environment,
 			referenceType.Authorization,
 		)
 

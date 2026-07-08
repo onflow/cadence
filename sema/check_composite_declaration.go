@@ -2538,6 +2538,27 @@ func (checker *Checker) checkSpecialFunction(
 
 	checker.Elaboration.SetFunctionDeclarationFunctionType(specialFunction.FunctionDeclaration, functionType)
 
+	// The access modifier of a special function is otherwise ignored
+	// (e.g. initializers are considered fully entitled to their container type),
+	// but a mapping access modifier is still invalid:
+	// mapping access may only be used on fields.
+	//
+	// Skip events: their initializer is synthesized by the parser
+	// from the event declaration, including its access modifier,
+	// which was already checked on the event declaration itself.
+	compositeKind := containerType.GetCompositeKind()
+	if compositeKind != common.CompositeKindEvent {
+		declaredAccess := checker.accessFromAstAccess(specialFunction.FunctionDeclaration.Access)
+		if _, ok := declaredAccess.(*EntitlementMapAccess); ok {
+			checker.checkEntitlementMapAccess(
+				functionType,
+				&compositeKind,
+				specialFunction.DeclarationKind(),
+				specialFunction.StartPosition(),
+			)
+		}
+	}
+
 	checker.checkFunction(
 		specialFunction.FunctionDeclaration.ParameterList,
 		nil,

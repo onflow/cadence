@@ -25,6 +25,7 @@ import (
 
 type contractLoader interface {
 	interpreter.StorageMutationTracker
+	interpreter.AtreeContainerCache
 	common.Gauge
 }
 

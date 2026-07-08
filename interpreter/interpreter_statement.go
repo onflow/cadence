@@ -57,10 +57,21 @@ func (interpreter *Interpreter) evalStatement(statement ast.Statement) Statement
 
 func (interpreter *Interpreter) visitStatements(statements []ast.Statement) StatementResult {
 
+	elaboration := interpreter.Program.Elaboration
+
 	for _, statement := range statements {
 		result := interpreter.evalStatement(statement)
 		if result, ok := result.(controlResult); ok {
 			return result
+		}
+
+		// Defensive: the type checker may have determined that control flow
+		// does not continue past this statement. If execution nevertheless
+		// reaches this point, panic instead of silently continuing.
+		if elaboration.IsStatementEndingControlFlow(statement) {
+			panic(&UnreachableInstructionError{
+				Range: ast.NewRangeFromPositioned(interpreter, statement),
+			})
 		}
 	}
 
@@ -268,26 +279,22 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 
 		// If the case has no expression it is the default case.
 		// Evaluate it, i.e. all statements
-
 		if switchCase.Expression == nil {
 			return runStatements()
 		}
 
 		// The case has an expression.
 		// Evaluate it and compare it to the test value
-
 		result := interpreter.evalExpression(switchCase.Expression)
-
 		caseValue, ok := result.(EquatableValue)
-
 		if !ok {
 			continue
 		}
 
-		// If the test value and case values are equal,
-		// evaluate the case's statements
-
-		if testValue.Equal(interpreter, caseValue) {
+		// If the test value and case values are equal, evaluate the case's statements.
+		// Use `TestValueEqual` to have the same equality as the `==` operator.
+		// i.e: equality check should do implicit unboxing.
+		if TestValueEqual(interpreter, testValue, caseValue) {
 			return runStatements()
 		}
 
@@ -338,6 +345,10 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 
 	value := interpreter.evalExpression(statement.Value)
 
+	forStmtTypes := interpreter.Program.Elaboration.ForStatementType(statement)
+
+	interpreter.checkIndexedValue(forStmtTypes.ContainerType, value)
+
 	// Do not transfer the iterable value.
 	// Instead, transfer each iterating element.
 	// This is done in `ForEach` method.
@@ -346,8 +357,6 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	forStmtTypes := interpreter.Program.Elaboration.ForStatementType(statement)
 
 	var index IntValue
 	if statement.Index != nil {
@@ -501,7 +510,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 }
 
 func extractEventFields(
-	gauge common.Gauge,
+	context ContainerElementContext,
 	event *CompositeValue, eventType *sema.CompositeType) []Value {
 
 	count := len(eventType.ConstructorParameters)
@@ -512,7 +521,7 @@ func extractEventFields(
 	eventFields := make([]Value, count)
 
 	for i, parameter := range eventType.ConstructorParameters {
-		value := event.GetField(gauge, parameter.Identifier)
+		value := event.GetField(context, parameter.Identifier)
 		eventFields[i] = value
 	}
 
@@ -702,13 +711,23 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 		// Set right value to left target,
 		// and left value to right target
 
-		CheckInvalidatedResourceOrResourceReference(rightValue, interpreter)
+		CheckInvalidatedValueOrValueReference(rightValue, interpreter)
 		transferredRightValue := TransferAndConvert(interpreter, rightValue, rightType, leftType)
 
-		CheckInvalidatedResourceOrResourceReference(leftValue, interpreter)
+		CheckInvalidatedValueOrValueReference(leftValue, interpreter)
 		transferredLeftValue := TransferAndConvert(interpreter, leftValue, leftType, rightType)
 
+		// Re-check before each set, matching the VM's per-instruction pop3
+		// staleness check. The first set's atree eviction-cleanup can drain
+		// the source slab of a reference-typed swap operand that is still
+		// referenced by the second set's value (a pre-existing reference-
+		// corruption hazard in the non-resource through-reference swap path).
+		// Failing here surfaces the issue in both runtimes; without it the
+		// interpreter would silently corrupt the second slot.
+		CheckInvalidatedValueOrValueReference(transferredRightValue, interpreter)
 		leftGetterSetter.set(transferredRightValue)
+
+		CheckInvalidatedValueOrValueReference(transferredLeftValue, interpreter)
 		rightGetterSetter.set(transferredLeftValue)
 	}
 

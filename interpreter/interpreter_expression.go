@@ -111,7 +111,7 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 			return value, nil
 		},
 		set: func(_ Value) {
-			CheckInvalidatedResourceOrResourceReference(target, interpreter)
+			CheckInvalidatedValueOrValueReference(target, interpreter)
 			// writing to composites with indexing syntax is not supported
 			panic(errors.NewUnreachableError())
 		},
@@ -363,7 +363,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 ) {
 
-	CheckInvalidatedResourceOrResourceReference(target, interpreter)
+	CheckInvalidatedValueOrValueReference(target, interpreter)
 
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
@@ -448,7 +448,7 @@ func (interpreter *Interpreter) checkIndexedValue(
 	indexedType sema.Type,
 	indexedValue Value,
 ) {
-	CheckInvalidatedResourceOrResourceReference(indexedValue, interpreter)
+	CheckInvalidatedValueOrValueReference(indexedValue, interpreter)
 
 	CheckIndexedType(
 		interpreter,
@@ -489,7 +489,7 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	result := ast.AcceptExpression[Value](expression, interpreter)
 	interpreter.expression = previousExpression
 
-	CheckInvalidatedResourceOrResourceReference(
+	CheckInvalidatedValueOrValueReference(
 		result,
 		interpreter,
 	)
@@ -497,7 +497,19 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 	return result
 }
 
-func CheckInvalidatedResourceOrResourceReference(
+// CheckInvalidatedValueOrValueReference checks whether a value is either:
+//   - an invalidated resource, or a reference to one — panics with
+//     `InvalidatedResourceError` or `InvalidatedResourceReferenceError`.
+//   - an atree-backed container wrapper (ArrayValue, DictionaryValue,
+//     CompositeValue) whose underlying atree container has been invalidated
+//     (nilled out by Destroy or Transfer), or whose cached value ID has
+//     diverged from the live one — panics with `InvalidatedContainerViewError`.
+//     This second check is defensive: with atree's shared-state design and
+//     Cadence's canonical wrapper cache, the divergence path should not fire
+//     in practice; the nil-out path fires whenever a wrapper is used after
+//     the resource it backed was destroyed/transferred, or after a non-resource
+//     Transfer with `remove=true` deleted its source slabs.
+func CheckInvalidatedValueOrValueReference(
 	value Value,
 	context ValueStaticTypeContext,
 ) {
@@ -521,11 +533,24 @@ func CheckInvalidatedResourceOrResourceReference(
 			// This step is not really needed, since reference tracking is supposed to clear the
 			// `value.Value` if the referenced-value was moved/deleted.
 			// However, have this as a second layer of defensive.
-			CheckInvalidatedResourceOrResourceReference(
+			// The atree-view staleness check below is also transitively triggered for the
+			// referenced value through this recursion.
+			CheckInvalidatedValueOrValueReference(
 				value.Value,
 				context,
 			)
 		}
+	}
+
+	// Defensive invariant: every code path that already calls this helper
+	// transparently gains the atree-view staleness check.
+	// With atree's shared-state design and Cadence's canonical wrapper cache
+	// this should never fire; if it does, an internal invariant has been violated.
+	if atreeBackedValue, ok := value.(AtreeBackedValue); ok &&
+		atreeBackedValue.isStaleAtreeView() {
+		panic(&InvalidatedContainerViewError{
+			ValueID: atreeBackedValue.ValueID().String(),
+		})
 	}
 }
 
@@ -1282,6 +1307,21 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(
 
 	interpreter.reportInvokedFunctionReturn()
 
+	// Defensive: an invocation with return type Never must not return normally.
+	// If it nevertheless does (e.g. due to a mistyped native function,
+	// or a return type which disagrees with the invoked function's actual type),
+	// panic instead of continuing with an impossible value.
+	//
+	// This is a second line of defense:
+	// the return-value validation (see ConvertAndBoxWithValidation,
+	// performed in invokeFunctionValueWithEval) aborts execution first,
+	// as no value conforms to Never.
+	if returnType == sema.NeverType {
+		panic(&UnreachableInstructionError{
+			Range: ast.NewRangeFromPositioned(interpreter, invocationExpression),
+		})
+	}
+
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
 	if isOptionalChaining {
@@ -1576,7 +1616,7 @@ func CreateReferenceValue(
 
 		case ReferenceValue:
 			if isImplicit {
-				CheckInvalidatedResourceOrResourceReference(value, context)
+				CheckInvalidatedValueOrValueReference(value, context)
 
 				// During implicit reference creation (e.g: member/index access on a reference),
 				// if the value is already a reference, we need to create a new reference

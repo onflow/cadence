@@ -302,7 +302,15 @@ func TestOwnerArrayRemove(t *testing.T) {
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		owner,
-		value,
+		// Copy value "onto the stack", append requires a copy
+		value.Transfer(
+			inter,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+			true,
+		),
 	)
 
 	assert.Equal(t, owner, array.GetOwner())
@@ -517,7 +525,16 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
-		keyValue, value1,
+		keyValue,
+		// Copy value "onto the stack", insert requires a copy
+		value1.Transfer(
+			inter,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+			true,
+		),
 	)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -527,7 +544,15 @@ func TestOwnerDictionaryRemove(t *testing.T) {
 	existingValue := dictionary.Insert(
 		inter,
 		keyValue,
-		value2,
+		// Copy value "onto the stack", insert requires a copy
+		value2.Transfer(
+			inter,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+			true,
+		),
 	)
 	require.IsType(t, &SomeValue{}, existingValue)
 	innerValue := existingValue.(*SomeValue).InnerValue()
@@ -563,7 +588,16 @@ func TestOwnerDictionaryInsertExisting(t *testing.T) {
 			ValueType: PrimitiveStaticTypeAnyStruct,
 		},
 		newOwner,
-		keyValue, value,
+		keyValue,
+		// Copy value "onto the stack", insert requires a copy
+		value.Transfer(
+			inter,
+			atree.Address{},
+			false,
+			nil,
+			map[atree.ValueID]struct{}{},
+			true,
+		),
 	)
 
 	assert.Equal(t, newOwner, dictionary.GetOwner())
@@ -655,6 +689,547 @@ func TestOwnerCompositeTransfer(t *testing.T) {
 
 	assert.Equal(t, common.ZeroAddress, composite.GetOwner())
 	assert.Equal(t, common.ZeroAddress, value.GetOwner())
+}
+
+// TestArrayValueTransferRemoveInvalidatesSourceAndEvictsCache pins down the
+// `else if remove` branch of `ArrayValue.Transfer` for non-resources:
+//   - the cached canonical wrapper for the source's value ID is evicted, and
+//   - the source wrapper itself is invalidated (`v.array = nil`), so any
+//     subsequent use through `CheckInvalidatedValueOrValueReference`
+//     surfaces as `InvalidatedContainerViewError` rather than a nil-deref or
+//     a use-after-free of deleted atree slabs.
+func TestArrayValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	arr := NewArrayValue(
+		inter,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeInt,
+		},
+		oldOwner,
+		NewUnmeteredIntValueFromInt64(1),
+	)
+
+	valueID := arr.ValueID()
+
+	// Simulate a prior canonicalizing access (e.g., `&outer[i]`).
+	inter.SetCanonicalAtreeContainer(valueID, arr)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	transferred := arr.Transfer(
+		inter,
+		atree.Address(newOwner),
+		true, // remove
+		nil,
+		nil,
+		true, // array is standalone.
+	)
+	require.IsType(t, &ArrayValue{}, transferred)
+
+	assert.Nil(t,
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be evicted after non-resource Transfer with remove=true",
+	)
+
+	defer func() {
+		err, ok := recover().(error)
+		require.True(t, ok)
+
+		var invalidatedContainerViewError *InvalidatedContainerViewError
+		require.ErrorAs(t, err, &invalidatedContainerViewError)
+	}()
+	CheckInvalidatedValueOrValueReference(arr, inter)
+}
+
+// TestDictionaryValueTransferRemoveInvalidatesSourceAndEvictsCache pins down
+// the `else if remove` branch of `DictionaryValue.Transfer` for non-resources:
+//   - the cached canonical wrapper for the source's value ID is evicted, and
+//   - the source wrapper itself is invalidated (`v.dictionary = nil`), so any
+//     subsequent use through `CheckInvalidatedValueOrValueReference`
+//     surfaces as `InvalidatedContainerViewError` rather than a nil-deref or
+//     a use-after-free of deleted atree slabs.
+func TestDictionaryValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	dictionary := NewDictionaryValueWithAddress(
+		inter,
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeInt,
+		},
+		oldOwner,
+		NewUnmeteredStringValue("k"), NewUnmeteredIntValueFromInt64(1),
+	)
+
+	valueID := dictionary.ValueID()
+
+	inter.SetCanonicalAtreeContainer(valueID, dictionary)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	transferred := dictionary.Transfer(
+		inter,
+		atree.Address(newOwner),
+		true, // remove
+		nil,
+		nil,
+		true, // dictionary is standalone.
+	)
+	require.IsType(t, &DictionaryValue{}, transferred)
+
+	assert.Nil(t,
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be evicted after non-resource Transfer with remove=true",
+	)
+
+	defer func() {
+		err, ok := recover().(error)
+		require.True(t, ok)
+
+		var invalidatedContainerViewError *InvalidatedContainerViewError
+		require.ErrorAs(t, err, &invalidatedContainerViewError)
+	}()
+	CheckInvalidatedValueOrValueReference(dictionary, inter)
+}
+
+// TestCompositeValueTransferRemoveInvalidatesSourceAndEvictsCache pins down
+// the `else if remove` branch of `CompositeValue.Transfer` for non-resources:
+//   - the cached canonical wrapper for the source's value ID is evicted, and
+//   - the source wrapper itself is invalidated (`v.dictionary = nil`), so any
+//     subsequent use through `CheckInvalidatedValueOrValueReference`
+//     surfaces as `InvalidatedContainerViewError` rather than a nil-deref or
+//     a use-after-free of deleted atree slabs.
+func TestCompositeValueTransferRemoveInvalidatesSourceAndEvictsCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	composite := newTestCompositeValue(inter, oldOwner)
+	composite.SetMember(inter, "f", NewUnmeteredIntValueFromInt64(1))
+
+	valueID := composite.ValueID()
+
+	inter.SetCanonicalAtreeContainer(valueID, composite)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	transferred := composite.Transfer(
+		inter,
+		atree.Address(newOwner),
+		true, // remove
+		nil,
+		nil,
+		true, // composite is standalone.
+	)
+	require.IsType(t, &CompositeValue{}, transferred)
+
+	assert.Nil(t,
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be evicted after non-resource Transfer with remove=true",
+	)
+
+	defer func() {
+		err, ok := recover().(error)
+		require.True(t, ok)
+
+		var invalidatedContainerViewError *InvalidatedContainerViewError
+		require.ErrorAs(t, err, &invalidatedContainerViewError)
+	}()
+	CheckInvalidatedValueOrValueReference(composite, inter)
+}
+
+// TestArrayValueTransferNoRemoveKeepsCanonicalCache asserts that a non-resource
+// Transfer without `remove` leaves the source wrapper valid (`v.array` stays
+// set, slabs untouched), so the cache entry must NOT be evicted. Guards
+// against the `else if remove` cache-clear branch over-firing on plain
+// (non-removing) Transfers.
+func TestArrayValueTransferNoRemoveKeepsCanonicalCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	arr := NewArrayValue(
+		inter,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeInt,
+		},
+		oldOwner,
+		NewUnmeteredIntValueFromInt64(1),
+	)
+
+	valueID := arr.ValueID()
+
+	inter.SetCanonicalAtreeContainer(valueID, arr)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	_ = arr.Transfer(
+		inter,
+		atree.Address(newOwner),
+		false, // no remove
+		nil,
+		nil,
+		true,
+	)
+
+	assert.Same(t,
+		Value(arr),
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be kept when source is not removed",
+	)
+}
+
+// TestArrayValueDestroyEvictsCanonicalCache pins down the cache eviction in
+// ArrayValue.Destroy. Constructs an empty resource-kinded array (so the
+// destruction walk has nothing to do), registers it in the cache, calls
+// Destroy, asserts the cache entry is gone and v.array has been nilled.
+func TestArrayValueDestroyEvictsCanonicalCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	owner := common.Address{0x1}
+
+	arr := NewArrayValue(
+		inter,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeAnyResource,
+		},
+		owner,
+	)
+
+	valueID := arr.ValueID()
+
+	inter.SetCanonicalAtreeContainer(valueID, arr)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	arr.Destroy(inter)
+
+	assert.True(t, arr.IsDestroyed(),
+		"the wrapper must be marked destroyed",
+	)
+	assert.Nil(t,
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be evicted by Destroy",
+	)
+}
+
+// TestDictionaryValueDestroyEvictsCanonicalCache pins down the cache eviction
+// in DictionaryValue.Destroy. Constructs an empty resource-kinded dictionary
+// (so the destruction walk has nothing to do), registers it in the cache,
+// calls Destroy, asserts the cache entry is gone and the wrapper is marked
+// destroyed.
+func TestDictionaryValueDestroyEvictsCanonicalCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	owner := common.Address{0x1}
+
+	dictionary := NewDictionaryValueWithAddress(
+		inter,
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeAnyResource,
+		},
+		owner,
+	)
+
+	valueID := dictionary.ValueID()
+
+	inter.SetCanonicalAtreeContainer(valueID, dictionary)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	dictionary.Destroy(inter)
+
+	assert.True(t, dictionary.IsDestroyed())
+	assert.Nil(t,
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be evicted by Destroy",
+	)
+}
+
+// TestCompositeValueDestroyEvictsCanonicalCache pins down the cache eviction
+// in CompositeValue.Destroy. Uses a resource-kinded composite with no fields
+// and no default-destroy events (so the destruction walk has nothing to do),
+// registers it in the cache, calls Destroy, asserts the cache entry is gone
+// and the wrapper is marked destroyed.
+func TestCompositeValueDestroyEvictsCanonicalCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	owner := common.Address{0x1}
+
+	resourceType := &sema.CompositeType{
+		Location:   TestLocation,
+		Identifier: "TestResource",
+		Kind:       common.CompositeKindResource,
+		Members:    &sema.StringMemberOrderedMap{},
+	}
+	inter.Program.Elaboration.SetCompositeType(resourceType.ID(), resourceType)
+
+	composite := NewCompositeValue(
+		inter,
+		TestLocation,
+		"TestResource",
+		common.CompositeKindResource,
+		nil,
+		owner,
+	)
+
+	valueID := composite.ValueID()
+
+	inter.SetCanonicalAtreeContainer(valueID, composite)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	composite.Destroy(inter)
+
+	assert.True(t, composite.IsDestroyed())
+	assert.Nil(t,
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be evicted by Destroy",
+	)
+}
+
+// TestClearAllCanonicalAtreeContainers pins down the bulk-evict API used by
+// test harnesses that swap the underlying atree storage (e.g. smoke tests'
+// resetStorage). Populates the cache with one wrapper per container type,
+// calls ClearAll, asserts none of the three entries remain.
+func TestClearAllCanonicalAtreeContainers(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	owner := common.Address{0x1}
+
+	arr := NewArrayValue(
+		inter,
+		&VariableSizedStaticType{
+			Type: PrimitiveStaticTypeInt,
+		},
+		owner,
+		NewUnmeteredIntValueFromInt64(1),
+	)
+	dictionary := NewDictionaryValueWithAddress(
+		inter,
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeInt,
+		},
+		owner,
+		NewUnmeteredStringValue("k"), NewUnmeteredIntValueFromInt64(1),
+	)
+	composite := newTestCompositeValue(inter, owner)
+
+	inter.SetCanonicalAtreeContainer(arr.ValueID(), arr)
+	inter.SetCanonicalAtreeContainer(dictionary.ValueID(), dictionary)
+	inter.SetCanonicalAtreeContainer(composite.ValueID(), composite)
+
+	require.NotNil(t, inter.CanonicalAtreeContainer(arr.ValueID()))
+	require.NotNil(t, inter.CanonicalAtreeContainer(dictionary.ValueID()))
+	require.NotNil(t, inter.CanonicalAtreeContainer(composite.ValueID()))
+
+	inter.ClearAllCanonicalAtreeContainers()
+
+	assert.Nil(t, inter.CanonicalAtreeContainer(arr.ValueID()))
+	assert.Nil(t, inter.CanonicalAtreeContainer(dictionary.ValueID()))
+	assert.Nil(t, inter.CanonicalAtreeContainer(composite.ValueID()))
+}
+
+func TestMustConvertStoredContainerElementCanonicalizesSomeInnerContainer(t *testing.T) {
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	innerType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeInt,
+	}
+	outerType := &VariableSizedStaticType{
+		Type: &OptionalStaticType{
+			Type: innerType,
+		},
+	}
+
+	inner := NewArrayValue(
+		inter,
+		innerType,
+		common.ZeroAddress,
+		NewUnmeteredIntValueFromInt64(1),
+	)
+	outer := NewArrayValue(
+		inter,
+		outerType,
+		common.ZeroAddress,
+		NewSomeValueNonCopying(inter, inner),
+	)
+
+	firstSome := outer.Get(inter, 0).(*SomeValue)
+	firstInner := firstSome.InnerValue().(*ArrayValue)
+	valueID := firstInner.ValueID()
+
+	cached := inter.CanonicalAtreeContainer(valueID)
+	require.NotNil(t, cached)
+	require.Same(t, firstInner, cached)
+
+	secondSome := outer.Get(inter, 0).(*SomeValue)
+	secondInner := secondSome.InnerValue().(*ArrayValue)
+
+	assert.Same(t, firstInner, secondInner)
+	assert.Same(t, firstInner, inter.CanonicalAtreeContainer(valueID))
+}
+
+func TestMustConvertStoredContainerElementCanonicalizesNestedSomeInnerContainer(t *testing.T) {
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	innerType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeInt,
+	}
+	outerType := &VariableSizedStaticType{
+		Type: &OptionalStaticType{
+			Type: &OptionalStaticType{
+				Type: innerType,
+			},
+		},
+	}
+
+	inner := NewArrayValue(
+		inter,
+		innerType,
+		common.ZeroAddress,
+		NewUnmeteredIntValueFromInt64(1),
+	)
+	outer := NewArrayValue(
+		inter,
+		outerType,
+		common.ZeroAddress,
+		NewSomeValueNonCopying(
+			inter,
+			NewSomeValueNonCopying(inter, inner),
+		),
+	)
+
+	firstOuterSome := outer.Get(inter, 0).(*SomeValue)
+	firstInnerSome := firstOuterSome.InnerValue().(*SomeValue)
+	firstInner := firstInnerSome.InnerValue().(*ArrayValue)
+	valueID := firstInner.ValueID()
+
+	cached := inter.CanonicalAtreeContainer(valueID)
+	require.NotNil(t, cached)
+	require.Same(t, firstInner, cached)
+
+	secondOuterSome := outer.Get(inter, 0).(*SomeValue)
+	secondInnerSome := secondOuterSome.InnerValue().(*SomeValue)
+	secondInner := secondInnerSome.InnerValue().(*ArrayValue)
+
+	assert.Same(t, firstInner, secondInner)
+	assert.Same(t, firstInner, inter.CanonicalAtreeContainer(valueID))
+}
+
+// TestDictionaryValueTransferNoRemoveKeepsCanonicalCache asserts that a
+// non-resource Transfer without `remove` leaves the source wrapper valid
+// (`v.dictionary` stays set, slabs untouched), so the cache entry must NOT
+// be evicted. Guards against the `else if remove` cache-clear branch
+// over-firing on plain (non-removing) Transfers.
+func TestDictionaryValueTransferNoRemoveKeepsCanonicalCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	dictionary := NewDictionaryValueWithAddress(
+		inter,
+		&DictionaryStaticType{
+			KeyType:   PrimitiveStaticTypeString,
+			ValueType: PrimitiveStaticTypeInt,
+		},
+		oldOwner,
+		NewUnmeteredStringValue("k"), NewUnmeteredIntValueFromInt64(1),
+	)
+
+	valueID := dictionary.ValueID()
+
+	inter.SetCanonicalAtreeContainer(valueID, dictionary)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	_ = dictionary.Transfer(
+		inter,
+		atree.Address(newOwner),
+		false, // no remove
+		nil,
+		nil,
+		true,
+	)
+
+	assert.Same(t,
+		Value(dictionary),
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be kept when source is not removed",
+	)
+}
+
+// TestCompositeValueTransferNoRemoveKeepsCanonicalCache asserts that a
+// non-resource Transfer without `remove` leaves the source wrapper valid
+// (`v.dictionary` stays set, slabs untouched), so the cache entry must NOT
+// be evicted. Guards against the `else if remove` cache-clear branch
+// over-firing on plain (non-removing) Transfers.
+func TestCompositeValueTransferNoRemoveKeepsCanonicalCache(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	oldOwner := common.Address{0x1}
+	newOwner := common.Address{0x2}
+
+	composite := newTestCompositeValue(inter, oldOwner)
+	composite.SetMember(inter, "f", NewUnmeteredIntValueFromInt64(1))
+
+	valueID := composite.ValueID()
+
+	inter.SetCanonicalAtreeContainer(valueID, composite)
+	require.NotNil(t, inter.CanonicalAtreeContainer(valueID))
+
+	_ = composite.Transfer(
+		inter,
+		atree.Address(newOwner),
+		false, // no remove
+		nil,
+		nil,
+		true,
+	)
+
+	assert.Same(t,
+		Value(composite),
+		inter.CanonicalAtreeContainer(valueID),
+		"cache entry must be kept when source is not removed",
+	)
 }
 
 func TestStringer(t *testing.T) {

@@ -123,9 +123,9 @@ func (e ExternalInterface) AllocateSlabIndex(owner []byte) (index atree.SlabInde
 	return
 }
 
-func (e ExternalInterface) CreateAccount(payer Address) (address Address, err error) {
+func (e ExternalInterface) CreateAccount(payer Address, context interpreter.InvocationContext) (address Address, err error) {
 	errors.WrapPanic(func() {
-		address, err = e.Interface.CreateAccount(payer)
+		address, err = e.Interface.CreateAccount(payer, context)
 	})
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)

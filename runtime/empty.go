@@ -69,7 +69,7 @@ func (EmptyRuntimeInterface) AllocateSlabIndex(_ []byte) (atree.SlabIndex, error
 	panic("unexpected call to AllocateSlabIndex")
 }
 
-func (EmptyRuntimeInterface) CreateAccount(_ Address) (address Address, err error) {
+func (EmptyRuntimeInterface) CreateAccount(_ Address, _ interpreter.InvocationContext) (address Address, err error) {
 	panic("unexpected call to CreateAccount")
 }
 
