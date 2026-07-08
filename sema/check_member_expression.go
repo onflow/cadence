@@ -183,6 +183,22 @@ func intersectReferenceAuthorizationsInType(
 		}
 		return NewDictionaryType(memoryGauge, keyType, valueType)
 
+	case *CapabilityType:
+		borrowType := t.BorrowType
+		if borrowType == nil {
+			return t
+		}
+
+		newBorrowType := intersectReferenceAuthorizationsInType(
+			memoryGauge,
+			borrowType,
+			outerAuthorization,
+		)
+		if newBorrowType == borrowType {
+			return t
+		}
+		return NewCapabilityType(memoryGauge, newBorrowType)
+
 	default:
 		return typ
 	}
