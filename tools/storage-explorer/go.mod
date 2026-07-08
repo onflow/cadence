@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/storage-explorer
 
-go 1.26
+go 1.25
 
 require (
 	github.com/gorilla/mux v1.8.1

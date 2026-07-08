@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/constructorcheck
 
-go 1.26
+go 1.25
 
 require golang.org/x/tools v0.32.0
 
