@@ -4513,11 +4513,14 @@ func (r randomValueGenerator) randomUTF8StringOfSize(size int) string {
 	return strings.ToValidUTF8(string(identifier), "$")
 }
 
+// maxRandomEnumCases is the maximum number of cases a randomly-generated enum
+// can have. Enum raw values are positional (case i has raw value i), so the
+// valid raw values of a generated enum are always within [0, caseCount).
+const maxRandomEnumCases = 10
+
 func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) cadence.Enum {
 	// Get a random integer subtype to be used as the raw-type of enum
 	typ := r.randomValueKind(randomValueKindWord64)
-
-	rawValue := r.generateHashableValueOfKind(inter, typ).(cadence.NumberValue)
 
 	identifier := fmt.Sprintf("E%d", r.rand.Uint64())
 
@@ -4551,6 +4554,28 @@ func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) ca
 		),
 	)
 
+	// Register the enum's cases through its lookup function type, so that the
+	// import-time enum case validation can determine the valid raw values.
+	// This mirrors how real (declared) enums are set up.
+	caseCount := r.randomInt(maxRandomEnumCases-1) + 1
+	enumLookupFunctionType := sema.EnumLookupFunctionType(semaEnumType)
+	for caseIndex := 0; caseIndex < caseCount; caseIndex++ {
+		caseName := fmt.Sprintf("case%d", caseIndex)
+		enumLookupFunctionType.Members.Set(
+			caseName,
+			sema.NewUnmeteredPublicConstantFieldMember(
+				enumLookupFunctionType,
+				caseName,
+				semaEnumType,
+				"",
+			),
+		)
+	}
+	inter.Program.Elaboration.SetEnumLookupFunctionType(
+		semaEnumType,
+		enumLookupFunctionType,
+	)
+
 	// Add the type to the elaboration, to short-circuit the type-lookup.
 	inter.Program.Elaboration.SetCompositeType(
 		semaEnumType.ID(),
@@ -4558,6 +4583,9 @@ func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) ca
 	)
 
 	rawType := r.cadenceIntegerType(typ)
+
+	// Generate a raw value that corresponds to a valid case, i.e. within [0, caseCount).
+	rawValue := r.cadenceIntegerValueOfKind(typ, r.randomInt(caseCount-1))
 
 	fields := []cadence.Value{
 		rawValue,
@@ -4577,6 +4605,58 @@ func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) ca
 			nil,
 		),
 	)
+}
+
+// cadenceIntegerValueOfKind constructs a cadence integer value of the given
+// integer kind from the given (small, non-negative) value. It is used to
+// produce valid enum raw values, which are always small non-negative integers.
+func (r randomValueGenerator) cadenceIntegerValueOfKind(kind randomValueKind, value int) cadence.Value {
+	switch kind {
+	case randomValueKindInt:
+		return cadence.NewInt(value)
+	case randomValueKindInt8:
+		return cadence.NewInt8(int8(value))
+	case randomValueKindInt16:
+		return cadence.NewInt16(int16(value))
+	case randomValueKindInt32:
+		return cadence.NewInt32(int32(value))
+	case randomValueKindInt64:
+		return cadence.NewInt64(int64(value))
+	case randomValueKindInt128:
+		return cadence.NewInt128(value)
+	case randomValueKindInt256:
+		return cadence.NewInt256(value)
+
+	case randomValueKindUInt:
+		return cadence.NewUInt(uint(value))
+	case randomValueKindUInt8:
+		return cadence.NewUInt8(uint8(value))
+	case randomValueKindUInt16:
+		return cadence.NewUInt16(uint16(value))
+	case randomValueKindUInt32:
+		return cadence.NewUInt32(uint32(value))
+	case randomValueKindUInt64Variant1,
+		randomValueKindUInt64Variant2,
+		randomValueKindUInt64Variant3,
+		randomValueKindUInt64Variant4:
+		return cadence.NewUInt64(uint64(value))
+	case randomValueKindUInt128:
+		return cadence.NewUInt128(uint(value))
+	case randomValueKindUInt256:
+		return cadence.NewUInt256(uint(value))
+
+	case randomValueKindWord8:
+		return cadence.NewWord8(uint8(value))
+	case randomValueKindWord16:
+		return cadence.NewWord16(uint16(value))
+	case randomValueKindWord32:
+		return cadence.NewWord32(uint32(value))
+	case randomValueKindWord64:
+		return cadence.NewWord64(uint64(value))
+
+	default:
+		panic(fmt.Sprintf("unsupported integer kind: %d", kind))
+	}
 }
 
 func (r randomValueGenerator) randomValueKind(kind randomValueKind) randomValueKind {
