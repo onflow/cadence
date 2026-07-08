@@ -9988,8 +9988,48 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
                     let r: &S = ref.removeFirst()
                 }
+			`)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeFirst capability borrow type intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases(cap: Capability<auth(E) &S>) {
+                    var a: [Capability<auth(E) &S>] = [cap]
+                    let ref = &a as auth(Mutate) &[Capability<&S>]
+
+                    let removeFirst: fun(): Capability<&S> = ref.removeFirst
+                }
             `)
 			require.NoError(t, err)
+		})
+
+		t.Run("array removeFirst capability borrow type escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                access(all) struct S {}
+                fun cases(cap: Capability<auth(E) &S>) {
+                    var a: [Capability<auth(E) &S>] = [cap]
+                    let ref = &a as auth(Mutate) &[Capability<&S>]
+
+                    let removeFirst: fun(): Capability<auth(E) &S> = ref.removeFirst
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():Capability<auth(S.test.E)&S.test.S>"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("fun():Capability<&S.test.S>"),
+				typeMismatchError.ActualType.ID(),
+			)
 		})
 
 		t.Run("array removeLast intersects inner auth", func(t *testing.T) {

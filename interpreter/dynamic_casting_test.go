@@ -4759,3 +4759,113 @@ func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretDynamicCastingEntitledCapabilityThroughBoundContainerMethod(t *testing.T) {
+
+	t.Parallel()
+
+	newCapabilityValue := func(t *testing.T, inter Invokable) interpreter.Value {
+		t.Helper()
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		borrowType := result.(interpreter.TypeValue).Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+		return capabilityValue
+	}
+
+	t.Run("unparameterized capability downcast is allowed", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun unparameterizedCapabilityDowncast(
+                cap: Capability<auth(E1, E2) &Int>
+            ): Bool {
+                let erased: Capability = cap
+                let recovered = erased as? Capability<auth(E1, E2) &Int>
+                return recovered != nil
+            }
+        `)
+
+		result, err := inter.Invoke(
+			"unparameterizedCapabilityDowncast",
+			newCapabilityValue(t, inter),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(true), result)
+	})
+
+	t.Run("typed capability downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun typedCapabilityDowncast(
+                cap: Capability<auth(E1, E2) &Int>
+            ): Bool {
+                let downgraded: Capability<&Int> = cap
+                let recovered = downgraded as? Capability<auth(E1, E2) &Int>
+                return recovered != nil
+            }
+        `)
+
+		result, err := inter.Invoke(
+			"typedCapabilityDowncast",
+			newCapabilityValue(t, inter),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("bound container method downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun boundContainerMethodDowncast(
+                cap: Capability<auth(E1, E2) &Int>
+            ): Bool {
+                var caps: [Capability<auth(E1, E2) &Int>] = [cap]
+                let ref = &caps as auth(Mutate) &[Capability<&Int>]
+
+                let removeFirst =
+                    ref.removeFirst as? fun(): Capability<auth(E1, E2) &Int>
+
+                return removeFirst != nil
+            }
+        `)
+
+		result, err := inter.Invoke(
+			"boundContainerMethodDowncast",
+			newCapabilityValue(t, inter),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+}
