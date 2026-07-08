@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/go-apply-expr-diff
 
-go 1.26
+go 1.25
 
 require (
 	github.com/dave/dst v0.27.3
