@@ -4514,8 +4514,29 @@ func (t *FunctionType) IsInvalidType() bool {
 }
 
 func (t *FunctionType) IsOrContainsReferenceType() bool {
-	returnType := t.ReturnTypeAnnotation.Type
-	return returnType.IsOrContainsReferenceType()
+
+	if t.ReturnTypeAnnotation.Type.IsOrContainsReferenceType() {
+		return true
+	}
+
+	for _, parameter := range t.Parameters {
+		if parameter.TypeAnnotation.Type.IsOrContainsReferenceType() {
+			return true
+		}
+		if parameter.DefaultArgument != nil &&
+			parameter.DefaultArgument.IsOrContainsReferenceType() {
+			return true
+		}
+	}
+
+	for _, typeParameter := range t.TypeParameters {
+		if typeParameter.TypeBound != nil &&
+			typeParameter.TypeBound.IsOrContainsReferenceType() {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {

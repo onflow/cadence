@@ -3271,6 +3271,64 @@ func TestType_IsOrContainsReference(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "Function with a reference parameter",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+				Parameters: []Parameter{
+					{
+						TypeAnnotation: NewTypeAnnotation(
+							&ReferenceType{
+								Type: someNonReferenceType,
+							},
+						),
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Function with a reference parameter default argument",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+				Parameters: []Parameter{
+					{
+						TypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+						DefaultArgument: &ReferenceType{
+							Type: someNonReferenceType,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Function with a reference type-parameter bound",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+				TypeParameters: []*TypeParameter{
+					{
+						Name: "T",
+						TypeBound: &ReferenceType{
+							Type: someNonReferenceType,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Function without any reference",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+				Parameters: []Parameter{
+					{
+						TypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
 			name:     "Interface",
 			ty:       &InterfaceType{},
 			expected: false,

@@ -10180,6 +10180,37 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 			)
 		})
 
+		t.Run("array removeFirst function element callback-parameter escalation prevented, local runner", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
+                fun cases() {
+                    let runner = fun(callback: fun(auth(E) &S): Void) {
+                        callback(&S() as auth(E) &S)
+                    }
+                    let runners: [fun(fun(auth(E) &S): Void): Void] = [runner]
+                    let ref = &runners as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                    let removeFirst: fun(): fun(fun(auth(E) &S): Void): Void = ref.removeFirst
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():fun(fun(auth(S.test.E)&S.test.S):Void):Void"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("fun():fun(fun(&S.test.S):Void):Void"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
 	})
 
 }

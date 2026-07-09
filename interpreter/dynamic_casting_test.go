@@ -4944,4 +4944,77 @@ func TestInterpretDynamicCastingEntitledReferenceThroughBoundContainerMethodInFu
 			result,
 		)
 	})
+
+	t.Run("bound container method downcast is rejected, function parameter position", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun boundContainerMethodDowncast(): Bool {
+                let runner = fun(callback: fun(auth(E) &S): Void) {
+                    callback(&S() as auth(E) &S)
+                }
+                let runners: [fun(fun(auth(E) &S): Void): Void] = [runner]
+                let ref = &runners as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                let removeFirst =
+                    ref.removeFirst as? fun(): fun(fun(auth(E) &S): Void): Void
+
+                return removeFirst != nil
+            }
+        `)
+
+		result, err := inter.Invoke("boundContainerMethodDowncast")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("recovered callback cannot escalate to entitled method, function parameter position", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+                let runner = fun(callback: fun(auth(E) &S): Void) {
+                    callback(&s as auth(E) &S)
+                }
+                let runners: [fun(fun(auth(E) &S): Void): Void] = [runner]
+                let ref = &runners as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                if let strong = ref.removeFirst as? fun(): fun(fun(auth(E) &S): Void): Void {
+                    strong()(fun(strongRef: auth(E) &S) {
+                        strongRef.bump()
+                    })
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
 }
