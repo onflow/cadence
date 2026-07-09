@@ -10048,6 +10048,78 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("array removeFirst function element return type intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let removeFirst: fun(): fun(): &S = ref.removeFirst
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeFirst function element return type escalation prevented", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let removeFirst: fun(): fun(): auth(E) &S = ref.removeFirst
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():fun():auth(S.test.E)&S.test.S"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("fun():fun():&S.test.S"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array removeFirst function element parameter type escalation prevented", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
+                fun cases(f: fun(fun(auth(E) &S): Void): Void) {
+                    let fns: [fun(fun(auth(E) &S): Void): Void] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                    let removeFirst: fun(): fun(fun(auth(E) &S): Void): Void = ref.removeFirst
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():fun(fun(auth(S.test.E)&S.test.S):Void):Void"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("fun():fun(fun(&S.test.S):Void):Void"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
 	})
 
 }

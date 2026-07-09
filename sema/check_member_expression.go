@@ -199,6 +199,98 @@ func intersectReferenceAuthorizationsInType(
 		}
 		return NewCapabilityType(memoryGauge, newBorrowType)
 
+	case *FunctionType:
+		changed := false
+
+		newReturnType := intersectReferenceAuthorizationsInType(
+			memoryGauge,
+			t.ReturnTypeAnnotation.Type,
+			outerAuthorization,
+		)
+		if newReturnType != t.ReturnTypeAnnotation.Type {
+			changed = true
+		}
+
+		newTypeParameters := t.TypeParameters
+		typeParametersCopied := false
+		for i, typeParameter := range t.TypeParameters {
+			if typeParameter.TypeBound == nil {
+				continue
+			}
+			newTypeBound := intersectReferenceAuthorizationsInType(
+				memoryGauge,
+				typeParameter.TypeBound,
+				outerAuthorization,
+			)
+			if newTypeBound == typeParameter.TypeBound {
+				continue
+			}
+			if !typeParametersCopied {
+				newTypeParameters = make([]*TypeParameter, len(t.TypeParameters))
+				copy(newTypeParameters, t.TypeParameters)
+				typeParametersCopied = true
+				changed = true
+			}
+			newTypeParameters[i] = &TypeParameter{
+				TypeBound: newTypeBound,
+				Name:      typeParameter.Name,
+				Optional:  typeParameter.Optional,
+			}
+		}
+
+		newParameters := t.Parameters
+		parametersCopied := false
+		for i, parameter := range t.Parameters {
+			newParameterType := intersectReferenceAuthorizationsInType(
+				memoryGauge,
+				parameter.TypeAnnotation.Type,
+				outerAuthorization,
+			)
+
+			newDefaultArgument := parameter.DefaultArgument
+			if parameter.DefaultArgument != nil {
+				newDefaultArgument = intersectReferenceAuthorizationsInType(
+					memoryGauge,
+					parameter.DefaultArgument,
+					outerAuthorization,
+				)
+			}
+
+			if newParameterType == parameter.TypeAnnotation.Type &&
+				newDefaultArgument == parameter.DefaultArgument {
+				continue
+			}
+			if !parametersCopied {
+				newParameters = make([]Parameter, len(t.Parameters))
+				copy(newParameters, t.Parameters)
+				parametersCopied = true
+				changed = true
+			}
+			newParameters[i] = Parameter{
+				TypeAnnotation:  NewTypeAnnotation(newParameterType),
+				DefaultArgument: newDefaultArgument,
+				Label:           parameter.Label,
+				Identifier:      parameter.Identifier,
+			}
+		}
+
+		if !changed {
+			return t
+		}
+
+		return &FunctionType{
+			Purity:                   t.Purity,
+			ReturnTypeAnnotation:     NewTypeAnnotation(newReturnType),
+			Arity:                    t.Arity,
+			ArgumentExpressionsCheck: t.ArgumentExpressionsCheck,
+			TypeArgumentsCheck:       t.TypeArgumentsCheck,
+			Members:                  t.Members,
+			TypeParameters:           newTypeParameters,
+			Parameters:               newParameters,
+			IsConstructor:            t.IsConstructor,
+			TypeFunctionType:         t.TypeFunctionType,
+		}
+
 	default:
 		return typ
 	}
