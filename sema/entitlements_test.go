@@ -5444,6 +5444,7 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 
 	t.Run("cannot include non-maps", func(t *testing.T) {
 		t.Parallel()
+
 		tests := []string{
 			"struct X {}",
 			"struct interface X {}",
@@ -5466,7 +5467,7 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, errs[0], &sema.InvalidEntitlementMappingInclusionError{})
+				assert.IsType(t, &sema.InvalidEntitlementMappingInclusionError{}, errs[0])
 			})
 		}
 	})
@@ -6000,6 +6001,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("three or more conjunction", func(t *testing.T) {
 		t.Parallel()
+
 		checker, err := ParseAndCheckWithOptions(t,
 			`
                 entitlement X
@@ -6058,6 +6060,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("has one entitlement of three", func(t *testing.T) {
 		t.Parallel()
+
 		checker, err := ParseAndCheckWithOptions(t,
 			`
               entitlement X
@@ -6117,6 +6120,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("has one entitlement of three", func(t *testing.T) {
 		t.Parallel()
+
 		checker, err := ParseAndCheckWithOptions(t,
 			`
               entitlement X
@@ -6175,6 +6179,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("no suggestion for disjoint possession set", func(t *testing.T) {
 		t.Parallel()
+
 		checker, err := ParseAndCheckWithOptions(t, `
               entitlement X
               entitlement Y
@@ -6592,8 +6597,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("member expression in indexing assignment", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
             entitlement X
@@ -6624,8 +6629,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("function call in indexer", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
             entitlement X
@@ -6660,8 +6665,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("member expression in indexer", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
             entitlement X
@@ -6697,8 +6702,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("capture function", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
             entitlement X
@@ -6735,8 +6740,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("capture reference", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
                 entitlement X
@@ -9454,8 +9459,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array filter", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9483,8 +9490,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array map", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9512,8 +9521,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array slice", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9541,8 +9552,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array concat", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9574,8 +9587,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array reverse", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9603,8 +9618,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array toVariableSized", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S; 1] = [S()]
@@ -9632,8 +9649,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array toConstantSized", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9667,6 +9686,7 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 		// would if such keys existed).
 		t.Run("dictionary forEachKey", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
             fun cases() {
                 // case 1
@@ -9692,8 +9712,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array remove", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var a1: [S] = [S()]
@@ -9721,8 +9743,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array removeFirst", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var a1: [S] = [S()]
@@ -9750,8 +9774,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array removeLast", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var a1: [S] = [S()]
@@ -9779,8 +9805,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary remove", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var d1: {String: S} = {"a": S()}
@@ -9808,8 +9836,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary insert", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var d1: {String: S} = {}
@@ -9843,9 +9873,12 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary remove intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
                     var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
@@ -9861,9 +9894,12 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary remove intersects inner auth, escalation prevented", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
                     var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
@@ -9889,9 +9925,12 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary insert intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
                     var d: {String: auth(E) &S} = {}
@@ -9907,9 +9946,12 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary insert intersects inner auth, escalation prevented", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
                     var d: {String: auth(E) &S} = {}
@@ -9936,13 +9978,16 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array remove intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
-                    var a: [auth(E) &S] = [&s as auth(E) &S]
-                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let refs: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &refs as auth(Mutate) &[auth(E) &S]
 
                     let r: &S = ref.remove(at: 0)
                 }
@@ -9952,13 +9997,16 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array remove intersects inner auth, escalation prevented", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
-                    var a: [auth(E) &S] = [&s as auth(E) &S]
-                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let refs: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &refs as auth(Mutate) &[auth(E) &S]
 
                     let r: auth(E) &S = ref.remove(at: 0)
                 }
@@ -9978,13 +10026,16 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array removeFirst intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
-                    var a: [auth(E) &S] = [&s as auth(E) &S]
-                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let refs: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &refs as auth(Mutate) &[auth(E) &S]
 
                     let r: &S = ref.removeFirst()
                 }
@@ -9992,14 +10043,36 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		t.Run("array removeFirst capability borrow type intersects inner auth", func(t *testing.T) {
+		t.Run("array removeLast intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
+                fun cases() {
+                    let s = S()
+                    let refs: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &refs as auth(Mutate) &[auth(E) &S]
+
+                    let r: &S = ref.removeLast()
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeFirst capability borrow type intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
                 fun cases(cap: Capability<auth(E) &S>) {
-                    var a: [Capability<auth(E) &S>] = [cap]
-                    let ref = &a as auth(Mutate) &[Capability<&S>]
+                    let caps: [Capability<auth(E) &S>] = [cap]
+                    let ref = &caps as auth(Mutate) &[Capability<&S>]
 
                     let removeFirst: fun(): Capability<&S> = ref.removeFirst
                 }
@@ -10009,12 +10082,15 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array removeFirst capability borrow type escalation prevented", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases(cap: Capability<auth(E) &S>) {
-                    var a: [Capability<auth(E) &S>] = [cap]
-                    let ref = &a as auth(Mutate) &[Capability<&S>]
+                    let caps: [Capability<auth(E) &S>] = [cap]
+                    let ref = &caps as auth(Mutate) &[Capability<&S>]
 
                     let removeFirst: fun(): Capability<auth(E) &S> = ref.removeFirst
                 }
@@ -10030,22 +10106,6 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 				common.TypeID("fun():Capability<&S.test.S>"),
 				typeMismatchError.ActualType.ID(),
 			)
-		})
-
-		t.Run("array removeLast intersects inner auth", func(t *testing.T) {
-			t.Parallel()
-			_, err := ParseAndCheck(t, `
-                entitlement E
-                access(all) struct S {}
-                fun cases() {
-                    let s = S()
-                    var a: [auth(E) &S] = [&s as auth(E) &S]
-                    let ref = &a as auth(Mutate) &[auth(E) &S]
-
-                    let r: &S = ref.removeLast()
-                }
-            `)
-			require.NoError(t, err)
 		})
 
 		t.Run("array removeFirst function element return type intersects inner auth", func(t *testing.T) {
