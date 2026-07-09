@@ -100,55 +100,70 @@ func importValidatedArguments(
 		}
 
 		// Ensure the argument is of an importable type
-		argType := arg.StaticType(context)
-
 		if !arg.IsImportable(context) {
 			return nil, &ArgumentNotImportableError{
-				Type: argType,
+				Type: arg.StaticType(context),
 			}
 		}
 
-		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubTypeOfSemaType(context, argType, parameterType) {
+		// Validate the imported argument against the parameter type
+		err = validateImportedArgument(context, arg, parameterType)
+		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: parameterIndex,
-				Err: &InvalidValueTypeError{
-					ExpectedType: parameterType,
-				},
+				Err:   err,
 			}
 		}
-
-		// Check whether the decoded value conforms to the type associated with the value
-		if !arg.ConformsToStaticType(context, interpreter.TypeConformanceResults{}) {
-			return nil, &InvalidEntryPointArgumentError{
-				Index: parameterIndex,
-				Err: &MalformedValueError{
-					ExpectedType: parameterType,
-				},
-			}
-		}
-
-		// Ensure static type info is available for all values
-		interpreter.InspectValue(
-			context,
-			arg,
-			func(value interpreter.Value) bool {
-				if value == nil {
-					return true
-				}
-
-				if !hasValidStaticType(context, value) {
-					panic(errors.NewUnexpectedError("invalid static type for argument: %d", parameterIndex))
-				}
-
-				return true
-			},
-		)
 
 		argumentValues[parameterIndex] = arg
 	}
 
 	return argumentValues, nil
+}
+
+// validateImportedArgument checks that an imported argument value:
+//   - is a subtype of the expected parameter type,
+//   - conforms to its associated static type, and
+//   - has valid static type information for all its nested values.
+func validateImportedArgument(
+	context ValidatedArgumentImportContext,
+	value interpreter.Value,
+	parameterType sema.Type,
+) error {
+	valueType := value.StaticType(context)
+
+	// Check that the value is a subtype of the static parameter type
+	if !interpreter.IsSubTypeOfSemaType(context, valueType, parameterType) {
+		return &InvalidValueTypeError{
+			ExpectedType: parameterType,
+		}
+	}
+
+	// Check whether the value conforms to the type associated with the value
+	if !value.ConformsToStaticType(context, interpreter.TypeConformanceResults{}) {
+		return &MalformedValueError{
+			ExpectedType: parameterType,
+		}
+	}
+
+	// Ensure static type info is available for all values
+	interpreter.InspectValue(
+		context,
+		value,
+		func(value interpreter.Value) bool {
+			if value == nil {
+				return true
+			}
+
+			if !hasValidStaticType(context, value) {
+				panic(errors.NewUnexpectedError("invalid static type for argument"))
+			}
+
+			return true
+		},
+	)
+
+	return nil
 }
 
 func hasValidStaticType(context interpreter.ValueStaticTypeContext, value interpreter.Value) bool {
