@@ -678,10 +678,11 @@ func (c *Context) NewFunctionWithType(
 		}
 	case *NativeFunctionValue:
 		return &NativeFunctionValue{
-			Name:         funcValue.Name,
-			Function:     funcValue.Function,
-			functionType: funcStaticType.FunctionType,
-			fields:       funcValue.fields,
+			Name:                funcValue.Name,
+			Function:            funcValue.Function,
+			functionType:        funcStaticType.FunctionType,
+			fields:              funcValue.fields,
+			dereferenceReceiver: funcValue.dereferenceReceiver,
 		}
 	case *BoundFunctionValue:
 		method := c.NewFunctionWithType(funcValue.Method, funcStaticType).(FunctionValue)
