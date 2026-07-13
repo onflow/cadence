@@ -5018,3 +5018,248 @@ func TestInterpretDynamicCastingEntitledReferenceThroughBoundContainerMethodInFu
 		)
 	})
 }
+
+// TestInterpretDynamicCastingEntitledReferenceThroughBoundCopyMethod verifies that
+// the public array copy methods (slice, reverse, concat, filter, toVariableSized)
+// cap every authorization exported through the bound method when the array is
+// accessed through a weaker reference.
+//
+// Unlike the extracting methods (remove/removeFirst/removeLast),
+// which route their return type through intersectContainerElementReferences,
+// the copy methods route it through sema.GetDescendantTypeForAccess.
+// That helper derives the bound-function type from the *backing* array's element type
+// — the strong, owned type — and must intersect it against the outer reference's authorization
+// even for element types that carry authorized references but report no fields or elements
+// (function and capability values).
+func TestInterpretDynamicCastingEntitledReferenceThroughBoundCopyMethod(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, code string) {
+		t.Helper()
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	}
+
+	t.Run("array slice, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let slice = ref.slice as? fun(Int, Int): [fun(): auth(E) &S]
+
+                return slice != nil
+            }
+        `)
+	})
+
+	t.Run("array reverse, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let reverse = ref.reverse as? fun(): [fun(): auth(E) &S]
+
+                return reverse != nil
+            }
+        `)
+	})
+
+	t.Run("array concat, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let concat =
+                    ref.concat as? fun([fun(): auth(E) &S]): [fun(): auth(E) &S]
+
+                return concat != nil
+            }
+        `)
+	})
+
+	t.Run("array filter, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let filter =
+                    ref.filter as? fun(view fun(fun(): &S): Bool): [fun(): auth(E) &S]
+
+                return filter != nil
+            }
+        `)
+	})
+
+	t.Run("array toVariableSized, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S; 1] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S; 1]
+
+                let toVariableSized =
+                    ref.toVariableSized as? fun(): [fun(): auth(E) &S]
+
+                return toVariableSized != nil
+            }
+        `)
+	})
+
+	t.Run("array slice, capability-borrow element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun getBorrowType(): Type {
+                return Type<auth(E) &S>()
+            }
+
+            fun main(cap: Capability<auth(E) &S>): Bool {
+                let caps: [Capability<auth(E) &S>] = [cap]
+                let ref = &caps as auth(Mutate) &[Capability<&S>]
+
+                let slice = ref.slice as? fun(Int, Int): [Capability<auth(E) &S>]
+
+                return slice != nil
+            }
+        `)
+
+		btResult, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+		require.IsType(t, interpreter.TypeValue{}, btResult)
+		borrowType := btResult.(interpreter.TypeValue).Type
+
+		capability := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		result, err := inter.Invoke("main", capability)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("array slice, function-parameter element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let runner = fun(callback: fun(auth(E) &S): Void) {
+                    callback(&S() as auth(E) &S)
+                }
+                let runners: [fun(fun(auth(E) &S): Void): Void] = [runner]
+                let ref = &runners as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                let slice =
+                    ref.slice as? fun(Int, Int): [fun(fun(auth(E) &S): Void): Void]
+
+                return slice != nil
+            }
+        `)
+	})
+
+	t.Run("recovered slice provider cannot escalate to entitled method", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+                let provider = fun(): auth(E) &S {
+                    return &s as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                if let strong = ref.slice as? fun(Int, Int): [fun(): auth(E) &S] {
+                    strong(0, 1)[0]().bump()
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
+}

@@ -320,14 +320,43 @@ func MaybeReferenceType(typ Type) (*ReferenceType, bool) {
 }
 
 // GetDescendantTypeForAccess returns the type that a descendant (member or element)
-// should have when read through `accessedType`, and whether the type was rewritten
-// (equivalent to ShouldReturnReference's result for the same inputs).
-// When `accessedType` is a reference, and the descendant warrants becoming a reference per ShouldReturnReference,
-// the descendant is wrapped via GetDescendantReferenceType with an unauthorized wrapping authorization,
-// intersecting any inner reference authorizations with the outer reference's authorization,
-// and the returned boolean is true.
-// Otherwise (for owned access, for primitive descendants, or in assignment contexts):
-// `descendantType` is returned unchanged and the returned boolean is false.
+// should have when read through `accessedType`, and whether the descendant was
+// wrapped in a reference (equivalent to ShouldReturnReference's result for the same inputs).
+//
+// Two independent decisions are made here, and must not be coupled:
+//
+//  1. Whether the descendant value must be wrapped in a reference.
+//     This is ShouldReturnReference's decision, and it drives the returned boolean.
+//     Only fielded/element-containing descendants (or descendants that are already
+//     references) are wrapped, and only when read through a reference.
+//
+//  2. Whether references nested inside the descendant's type must be
+//     authorization-intersected with the outer reference's authorization.
+//     This applies whenever the container is read through a reference, regardless
+//     of decision (1), so that a weak reference to a container caps every
+//     authorization exported through the descendant.
+//
+// Coupling the second decision to the first is unsound for descendants that carry
+// references but report no fields or elements — notably capability and function
+// values (`CapabilityType` and `FunctionType` both return false from
+// ContainFieldsOrElements). Those take ShouldReturnReference's early exit even
+// when they nest authorized references (e.g. `fun(): auth(E) &S`), so without a
+// separate intersection step their nested authorizations would leak through
+// unchanged.
+//
+// When the descendant warrants becoming a reference per ShouldReturnReference,
+// it is wrapped via GetDescendantReferenceType with an unauthorized wrapping
+// authorization, intersecting any inner reference authorizations with the outer
+// reference's authorization, and the returned boolean is true.
+//
+// When the descendant is not wrapped but is read through a reference, its nested
+// reference authorizations are still intersected via intersectContainerElementReferences,
+// and the returned boolean is false.
+//
+// Otherwise (for owned access, or in assignment contexts, where the descendant is
+// written rather than read out): `descendantType` is returned unchanged and the
+// returned boolean is false.
+//
 // This encapsulates the cascading rule that applies uniformly when reading element/member data
 // out of a referenced container or composite.
 // Call sites that need a custom wrapping authorization (e.g. mapped field access)
@@ -344,7 +373,19 @@ func GetDescendantTypeForAccess(
 	isAssignment bool,
 ) (Type, bool) {
 	if !ShouldReturnReference(accessedType, descendantType, isAssignment) {
-		return descendantType, false
+		// The descendant is not wrapped in a reference.
+		// In assignment contexts the descendant is being written, not read out,
+		// so no intersection applies and the type is returned unchanged.
+		if isAssignment {
+			return descendantType, false
+		}
+		// When the container is read through a reference, references nested inside
+		// the descendant's type must still be intersected with the outer reference's
+		// authorization, even though the descendant itself is not wrapped.
+		// This handles descendants that carry references but
+		// report no fields or elements (capability and function values).
+		// For owned access, or descendants without nested references, this is a no-op.
+		return intersectContainerElementReferences(memoryGauge, accessedType, descendantType), false
 	}
 	outerRef, isRef := MaybeReferenceType(accessedType)
 	if !isRef {
