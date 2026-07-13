@@ -3798,12 +3798,23 @@ func newStorageCapabilityControllerSetTargetFunction(
 		// and the change would be lost on commit unless the controller record
 		// is explicitly written back.
 		controller.TargetPath = newTargetPathValue
-		context.WriteStored(
+		existed := context.WriteStored(
 			address,
 			common.StorageDomainCapabilityController,
 			interpreter.Uint64StorageMapKey(capabilityID),
 			controller,
 		)
+		// The retarget operates on an existing controller,
+		// so its record must already exist:
+		// the write above is expected to overwrite it, not create a new one.
+		// A missing record indicates an internal stale-controller inconsistency,
+		// which must fail loudly rather than silently recreate the record.
+		if !existed {
+			panic(errors.NewUnexpectedError(
+				"retarget: capability controller record %d does not exist",
+				capabilityID,
+			))
+		}
 
 		addressValue := interpreter.AddressValue(address)
 
