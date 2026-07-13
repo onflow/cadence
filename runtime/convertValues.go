@@ -1598,7 +1598,24 @@ func (i valueImporter) importCompositeValue(
 	// breaking the invariant that an enum value is always one of its cases.
 	// Built-in enums (location == nil) are handled by their dedicated
 	// constructors above and never reach here.
-	if kind == common.CompositeKindEnum {
+	//
+	// The validation is driven by the *resolved* declaration's kind
+	// (`compositeType.Kind`), not the caller-controlled serialized `kind`:
+	// a forged value that mislabels an enum as another composite kind
+	// must not be able to skip validation.
+	if compositeType.Kind == common.CompositeKindEnum {
+		// A value whose resolved type is an enum must also be serialized as an enum.
+		// Otherwise, the constructed CompositeValue would carry a kind
+		// that is inconsistent with its type, which no conforming value ever has.
+		if kind != common.CompositeKindEnum {
+			return nil, errors.NewDefaultUserError(
+				"cannot import value of type '%s': expected %s, got %s",
+				compositeType.QualifiedIdentifier(),
+				common.CompositeKindEnum.Name(),
+				kind.Name(),
+			)
+		}
+
 		err := i.validateImportedEnumCase(compositeType, fields)
 		if err != nil {
 			return nil, err
@@ -1639,6 +1656,25 @@ func (i valueImporter) validateImportedEnumCase(
 		return errors.NewDefaultUserError(
 			"cannot import value of type '%s': missing raw value",
 			enumType.QualifiedIdentifier(),
+		)
+	}
+
+	// The raw value must have exactly the enum's declared raw-value type,
+	// not merely a subtype or some other integer type.
+	// The interpreter constructs each case's raw value as the case index
+	// converted to the declared raw type (see EnumLookupFunction),
+	// and looks cases up by the exact big-endian byte representation of that typed value.
+	// A raw value of a different integer type therefore never identifies a declared case,
+	// even when it is numerically in range.
+	rawType := enumType.EnumRawType
+	expectedRawStaticType := interpreter.ConvertSemaToStaticType(i.context, rawType)
+	actualRawStaticType := rawValue.StaticType(i.context)
+	if !actualRawStaticType.Equal(expectedRawStaticType) {
+		return errors.NewDefaultUserError(
+			"cannot import value of type '%s': raw value has type %s, expected %s",
+			enumType.QualifiedIdentifier(),
+			actualRawStaticType,
+			expectedRawStaticType,
 		)
 	}
 
