@@ -173,10 +173,10 @@ func TestRuntimeInvokeContractFunctionEnumValidation(t *testing.T) {
 			errorContains: "is not a valid enum case",
 		},
 		{
-			// Rejected by the ConformsToStaticType check in validateImportedArgument.
+			// Rejected by the exact-raw-type check in the enum importer.
 			name:          "wrong raw type",
 			arg:           makeTier(cadence.NewInt(1), cadence.IntType),
-			errorContains: "does not conform to expected type",
+			errorContains: "raw value has type Int, expected UInt8",
 		},
 	}
 
