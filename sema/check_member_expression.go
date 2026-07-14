@@ -211,32 +211,12 @@ func intersectReferenceAuthorizationsInType(
 			changed = true
 		}
 
-		newTypeParameters := t.TypeParameters
-		typeParametersCopied := false
-		for i, typeParameter := range t.TypeParameters {
-			if typeParameter.TypeBound == nil {
-				continue
-			}
-			newTypeBound := intersectReferenceAuthorizationsInType(
-				memoryGauge,
-				typeParameter.TypeBound,
-				outerAuthorization,
-			)
-			if newTypeBound == typeParameter.TypeBound {
-				continue
-			}
-			if !typeParametersCopied {
-				newTypeParameters = make([]*TypeParameter, len(t.TypeParameters))
-				copy(newTypeParameters, t.TypeParameters)
-				typeParametersCopied = true
-				changed = true
-			}
-			newTypeParameters[i] = &TypeParameter{
-				TypeBound: newTypeBound,
-				Name:      typeParameter.Name,
-				Optional:  typeParameter.Optional,
-			}
-		}
+		// The type parameters are preserved unchanged, rather than copied with
+		// intersected bounds. A type parameter bound constrains type arguments; it is
+		// not a value-bearing position and cannot hide a recoverable authorized
+		// reference. Preserving the original binders also keeps the `GenericType`
+		// references in the parameter and return types, and the `TypeArgumentsCheck`
+		// callback, consistent, since all identify the binders by pointer identity.
 
 		newParameters := t.Parameters
 		parametersCopied := false
@@ -285,7 +265,7 @@ func intersectReferenceAuthorizationsInType(
 			ArgumentExpressionsCheck: t.ArgumentExpressionsCheck,
 			TypeArgumentsCheck:       t.TypeArgumentsCheck,
 			Members:                  t.Members,
-			TypeParameters:           newTypeParameters,
+			TypeParameters:           t.TypeParameters,
 			Parameters:               newParameters,
 			IsConstructor:            t.IsConstructor,
 			TypeFunctionType:         t.TypeFunctionType,
