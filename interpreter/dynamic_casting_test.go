@@ -4870,6 +4870,151 @@ func TestInterpretDynamicCastingEntitledCapabilityThroughBoundContainerMethod(t 
 	})
 }
 
+func TestInterpretDynamicCastingEntitledReferenceThroughBoundContainerElement(t *testing.T) {
+
+	t.Parallel()
+
+	// Reading a function- or capability-typed element out of a bound container
+	// reference must cap the element's nested reference authorizations to the
+	// container reference's authorization, so an inline downcast on the extracted
+	// value cannot recover a stronger authorization than the container permits.
+	// Function and capability values report no fields or elements, so they are
+	// not wrapped in a reference on extraction; the cap is applied via conversion.
+
+	t.Run("array element function-type downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let functions: [fun(): auth(E) &S] = [provider]
+                let arrayRef = &functions as auth(Mutate) &[fun(): &S]
+
+                return (arrayRef[0] as? fun(): auth(E) &S) != nil
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("dictionary element function-type downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let dictionary: {String: fun(): auth(E) &S} = {"x": provider}
+                let dictionaryRef =
+                    &dictionary as auth(Mutate) &{String: fun(): &S}
+
+                return (dictionaryRef["x"] as? fun(): auth(E) &S) != nil
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("recovered callback cannot escalate to entitled method", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+                let provider = fun(): auth(E) &S {
+                    return &s as auth(E) &S
+                }
+                let functions: [fun(): auth(E) &S] = [provider]
+                let arrayRef = &functions as auth(Mutate) &[fun(): &S]
+
+                if let strong = arrayRef[0] as? fun(): auth(E) &S {
+                    strong().bump()
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
+
+	t.Run("array element capability downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		newCapabilityValue := func(t *testing.T, inter Invokable) interpreter.Value {
+			t.Helper()
+
+			result, err := inter.Invoke("getBorrowType")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.TypeValue{}, result)
+			borrowType := result.(interpreter.TypeValue).Type
+
+			return interpreter.NewUnmeteredCapabilityValue(
+				4,
+				interpreter.AddressValue{},
+				borrowType,
+			)
+		}
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun main(cap: Capability<auth(E1, E2) &Int>): Bool {
+                let caps: [Capability<auth(E1, E2) &Int>] = [cap]
+                let ref = &caps as auth(Mutate) &[Capability<&Int>]
+
+                return (ref[0] as? Capability<auth(E1, E2) &Int>) != nil
+            }
+        `)
+
+		result, err := inter.Invoke("main", newCapabilityValue(t, inter))
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+}
+
 func TestInterpretDynamicCastingEntitledReferenceThroughBoundContainerMethodInFunctionType(t *testing.T) {
 
 	t.Parallel()

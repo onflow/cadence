@@ -3476,6 +3476,30 @@ func (c *Compiler[_, _]) compileIndexAccessWithTransferredIndex(
 				Type:       index,
 				IsImplicit: true,
 			})
+		} else if resultType := indexExpressionTypes.ResultType; resultType.IsOrContainsReferenceType() {
+			// The element is not wrapped in a reference (function and capability
+			// values report no fields or elements, so ShouldReturnReference returns
+			// false for them), but it carries references in its type.
+			// When read through a container reference, those nested reference
+			// authorizations must still be intersected with the container
+			// reference's authorization, so that a downcast cannot recover a
+			// stronger authorization than the container reference permits.
+			// sema.GetDescendantTypeForAccess already computed the capped ResultType;
+			// apply it here so the runtime value's type reflects the cap.
+			// For owned access ResultType equals the element's own type, so this is a no-op.
+			//
+			// This branch MUST precede the optional-boxing branch below:
+			// a reference-carrying element can also be optional (e.g. a dictionary
+			// value `(fun(): &S)?`), in which case both this condition and the
+			// optional condition hold. InstructionConvert both caps the nested
+			// authorization and boxes the optional (ConvertAndBox is convert +
+			// BoxOptional), so it subsumes the optional branch.
+			// Reversing the order would box without capping, which would be incorrect.
+			resultTypeIndex := c.getOrAddType(resultType)
+			c.emit(opcode.InstructionConvert{
+				ValueType:  resultTypeIndex,
+				TargetType: resultTypeIndex,
+			})
 		} else if _, isOptional := indexExpressionTypes.ResultType.(*sema.OptionalType); isOptional {
 			// When accessing an element, the underlying container's element type may differ
 			// from the reference's element type.
