@@ -2223,7 +2223,7 @@ func applyTargetTypeAuthorization(
 		}
 
 		// Function values can hide authorized references in return types,
-		// parameter types, generic bounds, and default argument types.
+		// parameter types, and default argument types.
 		// Rewrite all of those types to match the target type's authorization.
 		newReturnType := applyTargetTypeAuthorization(
 			typeConverter,
@@ -2232,17 +2232,22 @@ func applyTargetTypeAuthorization(
 		)
 
 		newSemaReturnType := typeConverter.SemaTypeFromStaticType(newReturnType)
-		newTypeParameters := applyTargetTypeAuthorizationToTypeParameters(
-			typeConverter,
-			actual.TypeParameters,
-			targetFuncType,
-		)
 		newParameters := applyTargetTypeAuthorizationToParameters(
 			typeConverter,
 			actual.Parameters,
 			targetFuncType,
 		)
 
+		// The type parameters are preserved unchanged, rather than cloned with
+		// rewritten bounds. A type parameter bound constrains type arguments; it is
+		// not a value-bearing position, so it cannot hide a recoverable authorized
+		// reference and does not need rewriting.
+		//
+		// Preserving the original binders is also required for correctness:
+		// the `GenericType` references in the parameter and return types, and the
+		// `TypeArgumentsCheck` callback, all identify the binders by pointer identity.
+		// Cloning the binders while leaving those references pointing at the originals
+		// would break type-argument resolution and silently skip `TypeArgumentsCheck`.
 		return NewFunctionStaticType(
 			typeConverter,
 			&sema.FunctionType{
@@ -2252,7 +2257,7 @@ func applyTargetTypeAuthorization(
 				ArgumentExpressionsCheck: actual.ArgumentExpressionsCheck,
 				TypeArgumentsCheck:       actual.TypeArgumentsCheck,
 				Members:                  actual.Members,
-				TypeParameters:           newTypeParameters,
+				TypeParameters:           actual.TypeParameters,
 				Parameters:               newParameters,
 				IsConstructor:            actual.IsConstructor,
 				TypeFunctionType:         actual.TypeFunctionType,
@@ -2296,8 +2301,13 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 
 	case *sema.FunctionType:
 		newReturnType := semaTypeWithStrippedEntitlements(gauge, t.ReturnTypeAnnotation.Type)
-		newTypeParameters := semaTypeParametersWithStrippedEntitlements(gauge, t.TypeParameters)
 		newParameters := semaParametersWithStrippedEntitlements(gauge, t.Parameters)
+		// The type parameters are preserved unchanged, rather than cloned with
+		// stripped bounds. A type parameter bound constrains type arguments; it is
+		// not a value-bearing position and cannot hide a recoverable authorized
+		// reference. Preserving the original binders also keeps the `GenericType`
+		// references in the parameter and return types, and the `TypeArgumentsCheck`
+		// callback, consistent, since all identify the binders by pointer identity.
 		return &sema.FunctionType{
 			Purity:                   t.Purity,
 			ReturnTypeAnnotation:     sema.NewTypeAnnotation(newReturnType),
@@ -2305,7 +2315,7 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 			ArgumentExpressionsCheck: t.ArgumentExpressionsCheck,
 			TypeArgumentsCheck:       t.TypeArgumentsCheck,
 			Members:                  t.Members,
-			TypeParameters:           newTypeParameters,
+			TypeParameters:           t.TypeParameters,
 			Parameters:               newParameters,
 			IsConstructor:            t.IsConstructor,
 			TypeFunctionType:         t.TypeFunctionType,
@@ -2314,49 +2324,6 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 	default:
 		return typ
 	}
-}
-
-func applyTargetTypeAuthorizationToTypeParameters(
-	typeConverter TypeConverter,
-	typeParameters []*sema.TypeParameter,
-	targetFuncType *sema.FunctionType,
-) []*sema.TypeParameter {
-	typeParameterCount := len(typeParameters)
-	if typeParameterCount == 0 {
-		return typeParameters
-	}
-
-	newTypeParameters := make([]*sema.TypeParameter, typeParameterCount)
-
-	for i, typeParameter := range typeParameters {
-		var targetTypeBound sema.Type
-		if targetFuncType == nil || i >= len(targetFuncType.TypeParameters) {
-			// If the target function type is absent or malformed, erase against
-			// `AnyStruct` defensively.
-			targetTypeBound = sema.AnyStructType
-		} else {
-			// A nil bound means the type parameter is unconstrained.
-			// It is not equivalent to an `AnyStruct` bound.
-			targetTypeBound = targetFuncType.TypeParameters[i].TypeBound
-		}
-
-		var newTypeBound sema.Type
-		if typeParameter.TypeBound != nil {
-			newTypeBound = semaTypeWithTargetAuthorization(
-				typeConverter,
-				typeParameter.TypeBound,
-				targetTypeBound,
-			)
-		}
-
-		newTypeParameters[i] = &sema.TypeParameter{
-			TypeBound: newTypeBound,
-			Name:      typeParameter.Name,
-			Optional:  typeParameter.Optional,
-		}
-	}
-
-	return newTypeParameters
 }
 
 func applyTargetTypeAuthorizationToParameters(
@@ -2442,33 +2409,6 @@ func semaTypeWithTargetAuthorization(
 	)
 
 	return typeConverter.SemaTypeFromStaticType(newStaticType)
-}
-
-func semaTypeParametersWithStrippedEntitlements(
-	gauge common.MemoryGauge,
-	typeParameters []*sema.TypeParameter,
-) []*sema.TypeParameter {
-	typeParameterCount := len(typeParameters)
-	if typeParameterCount == 0 {
-		return typeParameters
-	}
-
-	newTypeParameters := make([]*sema.TypeParameter, typeParameterCount)
-
-	for i, typeParameter := range typeParameters {
-		var newTypeBound sema.Type
-		if typeParameter.TypeBound != nil {
-			newTypeBound = semaTypeWithStrippedEntitlements(gauge, typeParameter.TypeBound)
-		}
-
-		newTypeParameters[i] = &sema.TypeParameter{
-			TypeBound: newTypeBound,
-			Name:      typeParameter.Name,
-			Optional:  typeParameter.Optional,
-		}
-	}
-
-	return newTypeParameters
 }
 
 func semaParametersWithStrippedEntitlements(
