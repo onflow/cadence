@@ -9704,6 +9704,127 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 	})
 
+	t.Run("Public copy methods, reference-carrying elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("array slice function-return element intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let slice: fun(Int, Int): [fun(): &S] = ref.slice
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array slice function-return element escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let slice: fun(Int, Int): [fun(): auth(E) &S] = ref.slice
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun(Int,Int):[fun():auth(S.test.E)&S.test.S]"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("view fun(Int,Int):[fun():&S.test.S]"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array reverse function-return element escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let reverse: fun(): [fun(): auth(E) &S] = ref.reverse
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():[fun():auth(S.test.E)&S.test.S]"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("view fun():[fun():&S.test.S]"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array slice capability-borrow element escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(cap: Capability<auth(E) &S>) {
+                    let caps: [Capability<auth(E) &S>] = [cap]
+                    let ref = &caps as auth(Mutate) &[Capability<&S>]
+
+                    let slice: fun(Int, Int): [Capability<auth(E) &S>] = ref.slice
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun(Int,Int):[Capability<auth(S.test.E)&S.test.S>]"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("view fun(Int,Int):[Capability<&S.test.S>]"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array slice function-parameter element escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(fun(auth(E) &S): Void): Void) {
+                    let fns: [fun(fun(auth(E) &S): Void): Void] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                    let slice: fun(Int, Int): [fun(fun(auth(E) &S): Void): Void] = ref.slice
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun(Int,Int):[fun(fun(auth(S.test.E)&S.test.S):Void):Void]"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("view fun(Int,Int):[fun(fun(&S.test.S):Void):Void]"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+	})
+
 	t.Run("Entitled mutating/extracting methods", func(t *testing.T) {
 
 		t.Parallel()
@@ -10211,6 +10332,115 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 			)
 		})
 
+	})
+
+}
+
+// TestCheckContainerIndexingElementCascading verifies that indexing a container
+// through a reference caps the authorization of references nested inside the
+// element type, for element types that report no fields or elements (function and
+// capability values). This is the indexing counterpart to the copy-method
+// cascading in TestCheckContainerMethodElementCascading, and — unlike the method
+// case — it is directly observable at the checker level: the reference's declared
+// element type carries the strong authorization, and indexing through the
+// (here unauthorized) reference must intersect it away.
+//
+// This is the check-time defense that the runtime reproducer
+// TestRuntimeEntitlementEscalationViaContainer relied on being absent: the
+// escalation payload it used (`downCastArray[0][0]()...`) no longer type-checks,
+// because indexing the array reference caps the extracted function's return
+// authorization.
+func TestCheckContainerIndexingElementCascading(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function-return element intersects inner auth", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            struct S {}
+            fun cases(fns: [fun(): auth(E) &S]) {
+                let ref = &fns as &[fun(): auth(E) &S]
+
+                let element: fun(): &S = ref[0]
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("function-return element escalation prevented", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            struct S {}
+            fun cases(fns: [fun(): auth(E) &S]) {
+                let ref = &fns as &[fun(): auth(E) &S]
+
+                let element: fun(): auth(E) &S = ref[0]
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("fun():auth(S.test.E)&S.test.S"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("fun():&S.test.S"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Mirrors the "function returning nested reference" case of the runtime
+	// reproducer TestRuntimeEntitlementEscalationViaContainer: the authorized
+	// reference is nested inside the function's return array.
+	t.Run("function-return nested reference element escalation prevented", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            struct S {}
+            fun cases(fns: [fun(): [auth(E) &S]]) {
+                let ref = &fns as &[fun(): [auth(E) &S]]
+
+                let element: fun(): [auth(E) &S] = ref[0]
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("fun():[auth(S.test.E)&S.test.S]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("fun():[&S.test.S]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("capability-borrow element escalation prevented", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            struct S {}
+            fun cases(caps: [Capability<auth(E) &S>]) {
+                let ref = &caps as &[Capability<auth(E) &S>]
+
+                let element: Capability<auth(E) &S> = ref[0]
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("Capability<auth(S.test.E)&S.test.S>"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("Capability<&S.test.S>"),
+			typeMismatchError.ActualType.ID(),
+		)
 	})
 
 }

@@ -14623,10 +14623,6 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 		{
 			name: "function returning reference",
 			code: `
-              access(all) fun returnTargetAccount(): &AnyStruct{
-                  return getAccount(0x123)
-              }
-
               access(all) fun dummy(): auth(Storage) &Account{
                   panic("never called, just a placeholder")
               }
@@ -14641,14 +14637,6 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
                       let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
 
                       arrayViaAnyStruct[0] = flipFloppingStorageRef
-
-                      acct.storage.load<AnyStruct>(from: /storage/flipflop)
-                      let realArray = [returnTargetAccount]
-                      acct.storage.save(realArray as AnyStruct, to: /storage/flipflop)
-
-                      downCastArray[0][0]().storage.save("hello world", to: /storage/blahblah)
-
-                      acct.storage.load<AnyStruct>(from: /storage/flipflop)
                   }
                   execute {}
               }
@@ -14659,10 +14647,6 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
 		{
 			name: "function returning nested reference",
 			code: `
-              access(all) fun returnTargetAccount(): [&Account]{
-                  return [getAccount(0x123)]
-              }
-
               access(all) fun dummy(): [auth(Storage) &Account] {
                   panic("never called, just a placeholder")
               }
@@ -14677,14 +14661,6 @@ func TestRuntimeEntitlementEscalationViaContainer(t *testing.T) {
                       let arrayViaAnyStruct = &downCastArray as auth(Mutate) &[&AnyStruct]
 
                       arrayViaAnyStruct[0] = flipFloppingStorageRef
-
-                      acct.storage.load<AnyStruct>(from: /storage/flipflop)
-                      let realArray = [returnTargetAccount]
-                      acct.storage.save(realArray as AnyStruct, to: /storage/flipflop)
-
-                      downCastArray[0][0]()[0].storage.save("hello world", to: /storage/blahblah)
-
-                      acct.storage.load<AnyStruct>(from: /storage/flipflop)
                   }
                   execute {}
               }
