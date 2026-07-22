@@ -343,12 +343,16 @@ var compositeBuiltInFunctions = []*NativeFunctionValue{
 // Built-in functions that are common to all the types.
 var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 
-	// `isInstance` function
+	// `isInstance` function.
+	// The receiver is kept as-is (not dereferenced), so that when `isInstance` is
+	// invoked through a reference, `IsInstance` can compute the type through the
+	// reference's view and avoid leaking entitlements hidden by the borrow type.
+	// For a non-reference receiver this has no effect.
 	NewNativeFunctionValue(
 		sema.IsInstanceFunctionName,
 		sema.IsInstanceFunctionType,
 		interpreter.NativeIsInstanceFunction,
-	),
+	).WithDereferenceReceiver(false),
 
 	// `getType` function.
 	// The receiver is kept as-is (not dereferenced), so that when `getType` is
