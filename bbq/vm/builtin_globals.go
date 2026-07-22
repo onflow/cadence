@@ -350,12 +350,16 @@ var CommonBuiltinTypeBoundFunctions = []*NativeFunctionValue{
 		interpreter.NativeIsInstanceFunction,
 	),
 
-	// `getType` function
+	// `getType` function.
+	// The receiver is kept as-is (not dereferenced), so that when `getType` is
+	// invoked through a reference, `NativeGetTypeFunction` can compute the type
+	// through the reference's view and avoid leaking entitlements hidden by the
+	// borrow type. For a non-reference receiver this has no effect.
 	NewNativeFunctionValue(
 		sema.GetTypeFunctionName,
 		sema.GetTypeFunctionType,
 		interpreter.NativeGetTypeFunction,
-	),
+	).WithDereferenceReceiver(false),
 
 	// TODO: add remaining functions
 }
