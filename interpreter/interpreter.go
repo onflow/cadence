@@ -2099,6 +2099,35 @@ func applyTargetTypeAuthorization(
 	actualStaticType StaticType,
 	targetType sema.Type,
 ) StaticType {
+
+	// The target may wrap the actual (non-optional) type in an optional,
+	// e.g. actual `auth(E) &Int` vs target `(&Int)?`, or `auth(E) &Int` vs `AnyStruct?`.
+	// Recurse into the target's inner type to weaken the authorization,
+	// then re-wrap the result in an optional so the computed type differs from
+	// the original. Otherwise the conversion in `convert` would take the
+	// `Equal` shortcut and skip stripping, leaving `auth(E)` on the elements
+	// (observable via `getType()`).
+	//
+	// This only applies when the actual type is not itself optional;
+	// the optional-vs-optional case is handled by the `*OptionalStaticType` case below.
+	if optionalTargetType, isOptionalTarget := targetType.(*sema.OptionalType); isOptionalTarget {
+		if _, actualIsOptional := actualStaticType.(*OptionalStaticType); !actualIsOptional {
+			innerType := applyTargetTypeAuthorization(
+				typeConverter,
+				actualStaticType,
+				optionalTargetType.Type,
+			)
+			// Only wrap (and thereby force conversion) when weakening actually occurred.
+			// For non-reference values (e.g. `Int` -> `Int?`) nothing is stripped and
+			// boxing happens lazily at access, so preserve the original type to keep
+			// the conversion a no-op, matching the pre-existing behavior.
+			if innerType.Equal(actualStaticType) {
+				return actualStaticType
+			}
+			return NewOptionalStaticType(typeConverter, innerType)
+		}
+	}
+
 	switch actual := actualStaticType.(type) {
 	case *VariableSizedStaticType:
 		var targetElementType sema.Type
@@ -2798,7 +2827,7 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					return convert(context, value, targetElementType)
+					return ConvertAndBox(context, value, targetElementType)
 				},
 			)
 		}
@@ -2842,8 +2871,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					convertedKey := convert(context, key, targetKeyType)
-					convertedValue := convert(context, value, targetValueType)
+					convertedKey := ConvertAndBox(context, key, targetKeyType)
+					convertedValue := ConvertAndBox(context, value, targetValueType)
 
 					return convertedKey, convertedValue
 				},
