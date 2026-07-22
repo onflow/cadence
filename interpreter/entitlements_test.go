@@ -2706,3 +2706,123 @@ func TestInterpretBaseDowncast(t *testing.T) {
 		forceCastTypeMismatchErr.ActualType.ID(),
 	)
 }
+
+func TestInterpretOptionalContainerElementEntitlementStripping(t *testing.T) {
+	t.Parallel()
+
+	t.Run("variable-sized array to optional reference element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            fun main() {
+                let arr: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let converted: [(&Int)?] = arr
+                let recovered = converted[0]! as! auth(E) &Int
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("constant-sized array to optional reference element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            fun main() {
+                let arr: [auth(E) &Int; 1] = [&1 as auth(E) &Int]
+                let converted: [(&Int)?; 1] = arr
+                let recovered = converted[0]! as! auth(E) &Int
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("dictionary to optional reference value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            fun main() {
+                let d: {String: auth(E) &Int} = {"a": &1 as auth(E) &Int}
+                let converted: {String: (&Int)?} = d
+                let recovered = converted["a"]! as! auth(E) &Int
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("array to optional AnyStruct element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            fun main() {
+                let arr: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let converted: [AnyStruct?] = arr
+                let recovered = converted[0]! as! auth(E) &Int
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	t.Run("no getType leak after conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            fun main(): String {
+                let arr: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let converted: [(&Int)?] = arr
+                return converted.getType().identifier
+            }
+        `)
+
+		res, err := inter.Invoke("main")
+		require.NoError(t, err)
+		require.Equal(t,
+			interpreter.NewUnmeteredStringValue("[(&Int)?]"),
+			res,
+		)
+	})
+
+	t.Run("non-reference array to optional element is unaffected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            fun main(): Int {
+                let arr: [Int] = [1, 2]
+                let converted: [Int?] = arr
+                return converted[0]!
+            }
+        `)
+
+		res, err := inter.Invoke("main")
+		require.NoError(t, err)
+		require.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(1),
+			res,
+		)
+	})
+}
