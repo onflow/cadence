@@ -4834,6 +4834,107 @@ func TestGuard(t *testing.T) {
 	})
 }
 
+func TestGuardWithPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("guard", func(t *testing.T) {
+		t.Parallel()
+
+		test := func(t *testing.T, argument vm.Value, expected interpreter.IntValue) {
+			result, logs, err := CompileAndInvokeWithConditionLogs(
+				t,
+				`
+                  fun test(x: Bool): Int {
+                      post {
+                          conditionLog("post condition")
+                          result > 0
+                      }
+                      guard x else {
+                          return 2
+                      }
+                      return 1
+                  }
+                `,
+				"test",
+				argument,
+			)
+			require.NoError(t, err)
+			assert.Equal(t, expected, result)
+			assert.Equal(t, []string{`"post condition"`}, logs)
+		}
+
+		t.Run("success", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				interpreter.TrueValue,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			)
+		})
+
+		t.Run("else", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				interpreter.FalseValue,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			)
+		})
+	})
+
+	t.Run("guard let", func(t *testing.T) {
+		t.Parallel()
+
+		test := func(t *testing.T, argument vm.Value, expected interpreter.IntValue) {
+			result, logs, err := CompileAndInvokeWithConditionLogs(
+				t,
+				`
+                  fun test(x: Int?): Int {
+                      post {
+                          conditionLog("post condition")
+                          result > 0
+                      }
+                      guard let value = x else {
+                          return 2
+                      }
+                      return value
+                  }
+                `,
+				"test",
+				argument,
+			)
+			require.NoError(t, err)
+			assert.Equal(t, expected, result)
+			assert.Equal(t, []string{`"post condition"`}, logs)
+		}
+
+		t.Run("success", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredIntValueFromInt64(1),
+				),
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			)
+		})
+
+		t.Run("else", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				interpreter.NilValue{},
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			)
+		})
+	})
+}
+
 func TestGuardLet(t *testing.T) {
 
 	t.Parallel()
