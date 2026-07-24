@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 // A Config specifies details about how programs should be loaded.
@@ -47,6 +48,13 @@ type Config struct {
 	HandleCheckerError func(err ParsingCheckingError, checker *sema.Checker) error
 	// CryptoContractElaboration is the elaboration of the Crypto contract
 	CryptoContractElaboration *sema.Elaboration
+	// ExtraValues returns additional standard library values to declare in the
+	// base value activation for the given location, beyond the Cadence default
+	// standard library values.
+	ExtraValues func(location common.Location) []stdlib.StandardLibraryValue
+	// ExtraTypes returns additional standard library types to declare in the
+	// base type activation for the given location, beyond the default base types.
+	ExtraTypes func(location common.Location) []stdlib.StandardLibraryType
 }
 
 func NewSimpleConfig(

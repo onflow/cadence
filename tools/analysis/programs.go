@@ -134,9 +134,20 @@ func (programs *Programs) check(
 	for _, value := range stdlib.InterpreterDefaultStandardLibraryValues(nil) {
 		baseValueActivation.DeclareValue(value)
 	}
+	if config.ExtraValues != nil {
+		for _, value := range config.ExtraValues(location) {
+			baseValueActivation.DeclareValue(value)
+		}
+	}
+
 	baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
 	for _, ty := range stdlib.DefaultStandardLibraryTypes {
 		baseTypeActivation.DeclareType(ty)
+	}
+	if config.ExtraTypes != nil {
+		for _, ty := range config.ExtraTypes(location) {
+			baseTypeActivation.DeclareType(ty)
+		}
 	}
 
 	checker, err := sema.NewChecker(
