@@ -82,3 +82,30 @@ access(all) contract Bar {}"
 
 	assert.Empty(t, outputStr)
 }
+
+// TestDefaultStandardLibraryTypes checks that the default standard library
+// types (BLS, RLP), which are declared in the base type activation, are
+// available to all contracts.
+func TestDefaultStandardLibraryTypes(t *testing.T) {
+
+	t.Parallel()
+
+	var output bytes.Buffer
+	var input bytes.Buffer
+
+	checker := NewContractChecker(flow.Testnet.Chain(), &output)
+
+	contractsCSV := `location,code
+A.0000000000000001.Foo,"access(all) contract Foo {
+    access(all) fun types(): [Type] {
+        return [Type<BLS>(), Type<RLP>()]
+    }
+}"
+`
+
+	input.Write([]byte(contractsCSV))
+
+	checker.CheckCSV(&input)
+
+	assert.Empty(t, output.String())
+}

@@ -134,6 +134,10 @@ func (programs *Programs) check(
 	for _, value := range stdlib.InterpreterDefaultStandardLibraryValues(nil) {
 		baseValueActivation.DeclareValue(value)
 	}
+	baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+	for _, ty := range stdlib.DefaultStandardLibraryTypes {
+		baseTypeActivation.DeclareType(ty)
+	}
 
 	checker, err := sema.NewChecker(
 		program,
@@ -142,6 +146,9 @@ func (programs *Programs) check(
 		&sema.Config{
 			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
 				return baseValueActivation
+			},
+			BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseTypeActivation
 			},
 			AccessCheckMode: sema.AccessCheckModeStrict,
 			LocationHandler: sema.AddressLocationHandlerFunc(
