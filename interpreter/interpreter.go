@@ -6397,13 +6397,17 @@ var NativeIsInstanceFunction = NativeFunction(
 )
 
 func isInstanceFunction(context FunctionCreationContext, self Value, accessedReference ReferenceValue) FunctionValue {
+	// The receiver is kept as-is (not dereferenced), so that when `isInstance` is
+	// invoked through a reference, `IsInstance` can compute the type through the
+	// reference's view and avoid leaking entitlements hidden by the borrow type.
+	// For a non-reference receiver this has no effect.
 	return NewBoundHostFunctionValue(
 		context,
 		self,
 		accessedReference,
 		sema.IsInstanceFunctionType,
 		NativeIsInstanceFunction,
-	)
+	).WithDereferenceReceiver(false)
 }
 
 func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeValue) Value {
@@ -6414,10 +6418,44 @@ func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeV
 		return FalseValue
 	}
 
-	// NOTE: not invocation.Self, as that is only set for composite values
-	selfType := self.StaticType(invocationContext)
+	// When `isInstance` is invoked through a reference, the receiver is kept as
+	// the reference (the bound function does not dereference it, see
+	// `isInstanceFunction` and the VM's registration). Use the type as seen
+	// through the reference's view, so that entitlements hidden by the borrow
+	// type are not observable via `isInstance` (which would otherwise disagree
+	// with `getType` and leak the hidden entitlements as a boolean oracle).
+	var selfType StaticType
+	if reference, isReference := self.(ReferenceValue); isReference {
+		selfType = referenceViewStaticType(invocationContext, reference)
+	} else {
+		// NOTE: not invocation.Self, as that is only set for composite values
+		selfType = self.StaticType(invocationContext)
+	}
+
 	return BoolValue(
 		IsSubType(invocationContext, selfType, staticType),
+	)
+}
+
+// referenceViewStaticType returns the static type of the value referenced by the
+// given reference, as seen through the reference's view: authorizations are
+// weakened to match the borrow type, while the concrete type structure is
+// preserved (e.g. a reference with borrow type `&AnyStruct` over an `Int` value
+// still yields `Int`). Used by `getType` and `isInstance` so that entitlements
+// hidden by the borrow type are not observable through a reference. This matches
+// how the reference's own `StaticType` and element accesses compute the view.
+func referenceViewStaticType(context ValueStaticTypeContext, reference ReferenceValue) StaticType {
+	referencedValue := reference.ReferencedValue(context, true)
+	// The referenced value may have been moved out (e.g. a storage reference
+	// whose target no longer exists), matching the check in
+	// `MaybeDereferenceReceiver`.
+	if referencedValue == nil {
+		panic(&ReferencedValueChangedError{})
+	}
+	return applyTargetTypeAuthorization(
+		context,
+		(*referencedValue).StaticType(context),
+		reference.BorrowType(),
 	)
 }
 
@@ -6429,18 +6467,33 @@ var NativeGetTypeFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
+		// When `getType` is invoked through a reference, the receiver is kept as
+		// the reference (the bound function does not dereference it, see
+		// `getTypeFunction` and the VM's registration). Report the type as seen
+		// through the reference's view, rather than the concrete referenced
+		// value's type. Otherwise entitlements that the reference's borrow type
+		// strips from nested references (e.g. `&[&Int]` over an `[auth(E) &Int]`
+		// value) would be leaked through the returned `Type` value.
+		if reference, isReference := receiver.(ReferenceValue); isReference {
+			return NewTypeValue(context, referenceViewStaticType(context, reference))
+		}
+
 		return ValueGetType(context, receiver)
 	},
 )
 
 func getTypeFunction(context FunctionCreationContext, self Value, accessedReference ReferenceValue) FunctionValue {
+	// The receiver is kept as-is (not dereferenced), so that when `getType` is
+	// invoked through a reference, `NativeGetTypeFunction` can compute the type
+	// through the reference's view and avoid leaking entitlements hidden by the
+	// borrow type. For a non-reference receiver this has no effect.
 	return NewBoundHostFunctionValue(
 		context,
 		self,
 		accessedReference,
 		sema.GetTypeFunctionType,
 		NativeGetTypeFunction,
-	)
+	).WithDereferenceReceiver(false)
 }
 
 func ValueGetType(context InvocationContext, self Value) Value {

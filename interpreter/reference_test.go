@@ -7136,3 +7136,178 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		require.ErrorAs(t, err, &typeMismatchError)
 	})
 }
+
+func TestInterpretReferenceGetTypeStripsHiddenEntitlements(t *testing.T) {
+	t.Parallel()
+
+	// `getType()` invoked through a reference must report the type as seen through
+	// the reference's view: entitlements that the borrow type strips from nested
+	// references must not be leaked, while the concrete type structure is preserved.
+
+	check := func(t *testing.T, code, expected string) {
+		t.Helper()
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, code)
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue(expected), res)
+	}
+
+	t.Run("array element entitlement is not leaked", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): String {
+                var s = 1
+                let array: [auth(E) &Int] = [&s as auth(E) &Int]
+                let arrayRef = &array as &[&Int]
+                return arrayRef.getType().identifier
+            }
+        `, "[&Int]")
+	})
+
+	t.Run("dictionary value entitlement is not leaked", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): String {
+                var s = 1
+                let d: {String: auth(E) &Int} = {"a": &s as auth(E) &Int}
+                let dRef = &d as &{String: &Int}
+                return dRef.getType().identifier
+            }
+        `, "{String:&Int}")
+	})
+
+	t.Run("nested array entitlement is not leaked", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): String {
+                let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let outerRef: auth(E) &[auth(E) &Int] = &inner as auth(E) &[auth(E) &Int]
+                let top: [auth(E) &[auth(E) &Int]] = [outerRef]
+                let ref = &top as &[&[&Int]]
+                return ref.getType().identifier
+            }
+        `, "[&[&Int]]")
+	})
+
+	t.Run("upcast to AnyStruct element strips entitlement, preserves structure", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): String {
+                var s = 1
+                let array: [auth(E) &Int] = [&s as auth(E) &Int]
+                let anyRef = &array as &[AnyStruct]
+                return anyRef.getType().identifier
+            }
+        `, "[&Int]")
+	})
+
+	t.Run("concrete referenced type is preserved through weak borrow", func(t *testing.T) {
+		t.Parallel()
+		// Regression guard: `getType` through a reference must still reveal the
+		// concrete referenced type; only entitlements are stripped.
+		check(t, `
+            fun test(): String {
+                let ref = &1 as &AnyStruct
+                return ref.getType().identifier
+            }
+        `, "Int")
+	})
+}
+
+func TestInterpretReferenceIsInstanceStripsHiddenEntitlements(t *testing.T) {
+	t.Parallel()
+
+	// `isInstance` invoked through a reference must use the type as seen through
+	// the reference's view, mirroring `getType`: entitlements that the borrow type
+	// strips from nested references must not be observable (otherwise `isInstance`
+	// is a boolean oracle for the hidden entitlements and disagrees with `getType`).
+
+	check := func(t *testing.T, code string, expected ...bool) {
+		t.Helper()
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, code)
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		array, ok := res.(*interpreter.ArrayValue)
+		require.True(t, ok)
+
+		var actual []bool
+		array.Iterate(
+			inter,
+			func(element interpreter.Value) (resume bool) {
+				actual = append(actual, bool(element.(interpreter.BoolValue)))
+				return true
+			},
+			false,
+		)
+		require.Equal(t, expected, actual)
+	}
+
+	t.Run("array element entitlement is not observable", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): [Bool] {
+                var s = 1
+                let array: [auth(E) &Int] = [&s as auth(E) &Int]
+                let arrayRef = &array as &[&Int]
+                return [
+                    arrayRef.isInstance(Type<[auth(E) &Int]>()),
+                    arrayRef.isInstance(Type<[&Int]>())
+                ]
+            }
+        `, false, true)
+	})
+
+	t.Run("dictionary value entitlement is not observable", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): [Bool] {
+                var s = 1
+                let d: {String: auth(E) &Int} = {"a": &s as auth(E) &Int}
+                let dRef = &d as &{String: &Int}
+                return [
+                    dRef.isInstance(Type<{String: auth(E) &Int}>()),
+                    dRef.isInstance(Type<{String: &Int}>())
+                ]
+            }
+        `, false, true)
+	})
+
+	t.Run("nested array entitlement is not observable", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): [Bool] {
+                let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let outerRef: auth(E) &[auth(E) &Int] = &inner as auth(E) &[auth(E) &Int]
+                let top: [auth(E) &[auth(E) &Int]] = [outerRef]
+                let ref = &top as &[&[&Int]]
+                return [
+                    ref.isInstance(Type<[&[auth(E) &Int]]>()),
+                    ref.isInstance(Type<[&[&Int]]>())
+                ]
+            }
+        `, false, true)
+	})
+
+	t.Run("concrete referenced type is still matched through weak borrow", func(t *testing.T) {
+		t.Parallel()
+		// Regression guard: `isInstance` through a reference must still match the
+		// concrete referenced type; only entitlements are stripped.
+		check(t, `
+            fun test(): [Bool] {
+                let ref = &1 as &AnyStruct
+                return [
+                    ref.isInstance(Type<Int>()),
+                    ref.isInstance(Type<String>())
+                ]
+            }
+        `, true, false)
+	})
+}
