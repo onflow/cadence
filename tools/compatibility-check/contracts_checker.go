@@ -33,6 +33,8 @@ import (
 	"github.com/onflow/cadence/stdlib"
 	"github.com/onflow/cadence/tools/analysis"
 
+	evmstdlib "github.com/onflow/flow-go/fvm/evm/stdlib"
+	fvmruntime "github.com/onflow/flow-go/fvm/runtime"
 	"github.com/onflow/flow-go/fvm/systemcontracts"
 	"github.com/onflow/flow-go/model/flow"
 
@@ -66,7 +68,62 @@ func (c *ContractsChecker) CheckCSV(csvReader io.Reader) {
 		nil,
 	)
 
+	c.declareFVMDeclarations(analysisConfig)
+
 	c.analyze(analysisConfig, locations)
+}
+
+// declareFVMDeclarations wires the additional declarations that flow-go / FVM
+// inject into the Cadence environment, so that on-chain contracts which rely on
+// them (e.g. FlowFees uses getTransactionIndex, RandomBeaconHistory uses
+// randomSourceHistory, EVM uses InternalEVM) type-check as they do on-chain.
+//
+// The declarations are taken directly from flow-go's own definitions, so the
+// signatures cannot drift from what is actually injected on-chain. Passing a nil
+// environment to the value declarations is safe: only the value's host-function
+// closure captures it, and the checker never invokes it.
+func (c *ContractsChecker) declareFVMDeclarations(config *analysis.Config) {
+	sc := systemcontracts.SystemContractsForChain(c.chain.ChainID())
+
+	// InternalEVM is injected by FVM only at the EVM system contract's location.
+	evmLocation := common.AddressLocation{
+		Address: common.Address(sc.EVMContract.Address),
+		Name:    systemcontracts.ContractNameEVM,
+	}
+
+	// The InternalEVM contract type is reused from flow-go's exported definition;
+	// only the trivial standard library wrappers (Name/Type/Kind) are spelled out
+	// here, since flow-go does not export them.
+	internalEVMValue := stdlib.StandardLibraryValue{
+		Name: evmstdlib.InternalEVMContractName,
+		Type: evmstdlib.InternalEVMContractType,
+		Kind: common.DeclarationKindContract,
+	}
+	internalEVMType := stdlib.StandardLibraryType{
+		Name: evmstdlib.InternalEVMContractName,
+		Type: evmstdlib.InternalEVMContractType,
+		Kind: common.DeclarationKindContract,
+	}
+
+	config.ExtraValues = func(location common.Location) []stdlib.StandardLibraryValue {
+		// getTransactionIndex and randomSourceHistory are injected by FVM at the
+		// nil location, i.e. available to all contracts.
+		values := []stdlib.StandardLibraryValue{
+			fvmruntime.TransactionIndexDeclaration(nil),
+			fvmruntime.BlockRandomSourceDeclaration(nil),
+		}
+		if location == evmLocation {
+			values = append(values, internalEVMValue)
+		}
+		return values
+	}
+
+	config.ExtraTypes = func(location common.Location) []stdlib.StandardLibraryType {
+		if location == evmLocation {
+			return []stdlib.StandardLibraryType{internalEVMType}
+		}
+		return nil
+	}
 }
 
 func (c *ContractsChecker) readCSV(
