@@ -5747,10 +5747,42 @@ func AccountStorageLoad(
 
 	storageMapKey := StringStorageMapKey(identifier)
 
-	storable := invocationContext.RemoveStored(address, domain, storageMapKey)
+	// Read without removing, so the type check runs before the removal:
+	// read -> type-check -> remove.
+	// A type mismatch panics, and on that path storage must be left untouched;
+	// do not reorder to remove-then-check.
+	// (Remove-then-check would not actually lose a resource,
+	// since mutations are cached and written back only on success,
+	// but this order avoids a transient removed-but-not-returned state
+	// and the incorrect "resource loss on type mismatch" reports it invites.)
+	value := invocationContext.ReadStored(address, domain, storageMapKey)
 
-	if storable == nil {
+	if value == nil {
 		return Nil
+	}
+
+	// If there is a value stored for the given path,
+	// check that it satisfies the type given as the type argument,
+	// before removing it from storage.
+
+	valueStaticType := value.StaticType(invocationContext)
+
+	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
+		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
+
+		panic(&StoredValueTypeMismatchError{
+			ExpectedType: typeParameter,
+			ActualType:   valueSemaType,
+		})
+	}
+
+	// The type matches: now remove the value from storage and transfer it out.
+
+	storable := invocationContext.RemoveStored(address, domain, storageMapKey)
+	if storable == nil {
+		// Unreachable: the value was just read above, and nothing runs between
+		// the read and this removal that could mutate the storage map.
+		panic(errors.NewUnreachableError())
 	}
 
 	transferedValue := StoredValue(invocationContext, storable, invocationContext.Storage()).
@@ -5762,20 +5794,6 @@ func AccountStorageLoad(
 			nil,
 			true, // value is standalone because it was removed from parent container.
 		)
-
-	// If there is value stored for the given path,
-	// check that it satisfies the type given as the type argument.
-
-	valueStaticType := transferedValue.StaticType(invocationContext)
-
-	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
-		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
-
-		panic(&StoredValueTypeMismatchError{
-			ExpectedType: typeParameter,
-			ActualType:   valueSemaType,
-		})
-	}
 
 	return NewSomeValueNonCopying(invocationContext, transferedValue)
 }
