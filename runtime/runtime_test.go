@@ -14037,6 +14037,12 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
                     }
                 }
 
+                access(all) struct S: I {
+                    // 'foo' function has an inherited pre-condition.
+                    // It refers to the **same** contract inside the inherited code.
+                    access(all) fun test() {}
+                }
+
                 access(all) view fun someFunction(): Bool {
                     return true
                 }
@@ -14094,12 +14100,21 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
             import Foo from %s
 
             access(all) struct S: Foo.I {
+                // 'foo' function has an inherited pre-condition.
+                // It refers to an **imported** contract inside the inherited code.
                 access(all) fun test() {}
             }
 
             access(all) fun main() {
+                // 'S' struct is inheriting from a type (Foo.I) defined in an imported contract.
+                // So the pre-condition 'Foo.someFunction()' should refer to 'Foo' via a reference.
                 let s = S()
                 s.test()
+
+                // 'Foo.S' struct is inheriting from a type (Foo.I) defined in the same contract.
+                // So the pre-condition 'Foo.someFunction()' should refer to 'Foo' as the concrete type.
+                let fooS = Foo.S()
+                fooS.test()
             }`,
 			addressValue.ShortHexWithPrefix(),
 		)

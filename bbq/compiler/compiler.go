@@ -4723,10 +4723,10 @@ func (c *Compiler[_, _]) emitConvert(valueType, targetType sema.Type) {
 
 func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
 	// When compiling an inherited code, if we come across a concrete contract type,
-	// then use a reference-type to it.
-	// An inherited code can never refer to the currently compiling contract (i.e: circular imports),
-	// so it's always safe to treat an inherited contract-variable type as a reference type.
-	if c.isInheritedCode {
+	// then use a reference-type to it if the contract is imported.
+	// Non-imported contracts (i.e: the enclosing contract of the current program) should be
+	// used as the concrete type, not as a reference.
+	if c.isInheritedCode && c.isImportedContract(ty) {
 		ty = sema.ImportedType(c.Config.MemoryGauge, ty)
 	}
 
@@ -4743,6 +4743,16 @@ func (c *Compiler[_, _]) getOrAddType(ty sema.Type) uint16 {
 
 	c.typesInPool[cacheKey] = index
 	return index
+}
+
+func (c *Compiler[_, _]) isImportedContract(ty sema.Type) bool {
+	compositeType, isCompositeType := ty.(*sema.CompositeType)
+	if !isCompositeType || compositeType.Kind != common.CompositeKindContract {
+		return false
+	}
+
+	_, isImported := c.addedImports[compositeType.Location]
+	return isImported
 }
 
 func (c *Compiler[_, T]) addCompiledType(ty sema.Type, data T) uint16 {
