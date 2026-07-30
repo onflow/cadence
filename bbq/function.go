@@ -19,8 +19,11 @@
 package bbq
 
 type Function[E any] struct {
-	Name               string
-	QualifiedName      string
+	// TODO: Document what does each of these names holds
+	// e.g: is it just type qualified, addressed qualified, etc?
+	Name          string
+	QualifiedName string
+
 	Code               []E
 	ParameterCount     uint16
 	TypeParameterCount uint16

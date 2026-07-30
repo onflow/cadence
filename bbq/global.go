@@ -34,14 +34,10 @@ const (
 )
 
 type GlobalInfo struct {
-	Name string
-	// Need to maintain both "qualified" and "unqualified" names for a global,
-	// because when type-aliasing is used, imported global name becomes qualified.
-	// However, the same imported-global must use the unqualified name when linking.
-	// TODO: We can simplify this by always using qualified names for all imports.
-	QualifiedName string
-	Location      common.Location
-	Index         uint16
+	// Location-qualified canonical name
+	Name     string
+	Location common.Location
+	Index    uint16
 }
 
 type Global interface {
@@ -76,11 +72,9 @@ func NewFunctionGlobal[E any](
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &FunctionGlobal[E]{
 		GlobalInfo: GlobalInfo{
-			Name: name,
-			// For non-imported global, qualified-name is same the name
-			QualifiedName: name,
-			Location:      location,
-			Index:         index,
+			Name:     name,
+			Location: location,
+			Index:    index,
 		},
 	}
 }
@@ -110,11 +104,9 @@ func NewVariableGlobal[E any](
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &VariableGlobal[E]{
 		GlobalInfo: GlobalInfo{
-			Name: name,
-			// For non-imported global, qualified-name is same the name
-			QualifiedName: name,
-			Location:      location,
-			Index:         index,
+			Name:     name,
+			Location: location,
+			Index:    index,
 		},
 	}
 }
@@ -128,11 +120,9 @@ func NewContractGlobal(
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &ContractGlobal{
 		GlobalInfo: GlobalInfo{
-			Name: name,
-			// For non-imported global, qualified-name is same the name
-			QualifiedName: name,
-			Location:      location,
-			Index:         index,
+			Name:     name,
+			Location: location,
+			Index:    index,
 		},
 	}
 }
@@ -140,17 +130,15 @@ func NewContractGlobal(
 func NewImportedGlobal(
 	memoryGauge common.MemoryGauge,
 	name string,
-	qualifiedName string,
 	location common.Location,
 	index uint16,
 ) *ImportedGlobal {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &ImportedGlobal{
 		GlobalInfo: GlobalInfo{
-			Name:          name,
-			QualifiedName: qualifiedName,
-			Location:      location,
-			Index:         index,
+			Name:     name,
+			Location: location,
+			Index:    index,
 		},
 	}
 }

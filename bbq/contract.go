@@ -21,6 +21,8 @@ package bbq
 import "github.com/onflow/cadence/common"
 
 type Contract struct {
-	Name     string
+	// Location-qualified canonical name
+	Name string
+
 	Location common.Location
 }
