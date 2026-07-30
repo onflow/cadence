@@ -1999,7 +1999,7 @@ func newEnumLookup(
 
 	typeIdentifier := ast.NewIdentifier(
 		gauge,
-		commons.TypeQualifier(enumType),
+		enumType.Identifier,
 		ast.EmptyPosition,
 	)
 

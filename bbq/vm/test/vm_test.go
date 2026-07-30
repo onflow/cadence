@@ -113,7 +113,7 @@ func TestImperativeFib(t *testing.T) {
 	program := comp.Compile()
 
 	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 	result, err := vmInstance.InvokeExternally(
 		"fib",
@@ -569,7 +569,7 @@ func TestImport(t *testing.T) {
 		return elaboration.InterfaceType(typeID)
 	}
 
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
@@ -705,7 +705,7 @@ func TestImportError(t *testing.T) {
 	}
 	vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 	_, err = vmInstance.InvokeExternally("test")
 	RequireError(t, err)
@@ -1177,7 +1177,7 @@ func TestContractImport(t *testing.T) {
 			return interfaceType
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -1394,7 +1394,7 @@ func TestContractImport(t *testing.T) {
 		}
 		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -1521,7 +1521,7 @@ func TestContractImport(t *testing.T) {
 		}
 		program := comp.Compile()
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		_, err = vmInstance.InvokeExternally("main")
 		require.NoError(t, err)
@@ -1564,7 +1564,7 @@ func TestInitializeContract(t *testing.T) {
 	vmConfig := PrepareVMConfig(t, nil, programs)
 	vmInstance, contractValue := initializeContract(
 		t,
-		scriptLocation(),
+		location,
 		program,
 		vmConfig,
 	)
@@ -1608,7 +1608,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 
 		vmInstance, contractValue := initializeContract(
 			t,
-			scriptLocation(),
+			location,
 			program,
 			vmConfig,
 		)
@@ -1648,7 +1648,7 @@ func TestContractAccessDuringInit(t *testing.T) {
 
 		vmInstance, contractValue := initializeContract(
 			t,
-			scriptLocation(),
+			location,
 			program,
 			vmConfig,
 		)
@@ -1712,7 +1712,7 @@ func TestFunctionOrder(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -1778,7 +1778,7 @@ func TestFunctionOrder(t *testing.T) {
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmInstance, contractValue := initializeContract(
 			t,
-			scriptLocation(),
+			location,
 			program,
 			vmConfig,
 		)
@@ -1886,7 +1886,7 @@ func TestContractField(t *testing.T) {
 
 		program := comp.Compile()
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
@@ -1986,7 +1986,7 @@ func TestContractField(t *testing.T) {
 
 		program := comp.Compile()
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -2042,7 +2042,7 @@ func TestNativeFunctions(t *testing.T) {
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmConfig.BuiltinGlobalsProvider = NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(&logged)
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		_, err = vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -2068,7 +2068,7 @@ func TestNativeFunctions(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -2127,7 +2127,7 @@ func TestNativeFunctions(t *testing.T) {
 			return activation
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		_, err = vmInstance.InvokeExternally("test")
 		require.ErrorContains(t, err, "assertion failed: hello")
@@ -2488,8 +2488,9 @@ func TestTransaction(t *testing.T) {
 		err = vmInstance.InvokeTransaction(nil)
 		RequireError(t, err)
 
-		var conditionError *interpreter.ConditionError
-		assert.ErrorAs(t, err, &conditionError)
+		require.IsType(t, &interpreter.ConditionError{}, err)
+		conditionError := err.(*interpreter.ConditionError)
+
 		assert.Equal(
 			t,
 			ast.ConditionKindPre,
@@ -2570,8 +2571,9 @@ func TestTransaction(t *testing.T) {
 		err = vmInstance.InvokeTransaction(nil)
 		RequireError(t, err)
 
-		var conditionError *interpreter.ConditionError
-		assert.ErrorAs(t, err, &conditionError)
+		require.IsType(t, &interpreter.ConditionError{}, err)
+		conditionError := err.(*interpreter.ConditionError)
+
 		assert.Equal(
 			t,
 			ast.ConditionKindPost,
@@ -2711,7 +2713,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, vmInstance.StackSize())
@@ -3017,7 +3019,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			return interfaceType
 		}
 
-		scriptVM := vm.NewVM(scriptLocation(), program, vmConfig)
+		scriptVM := vm.NewVM(checker.Location, program, vmConfig)
 		implValue, err := scriptVM.InvokeExternally("test")
 		require.NoError(t, err)
 		require.Equal(t, 0, scriptVM.StackSize())
@@ -3140,7 +3142,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 			return interfaceType
 		}
 
-		scriptVM = vm.NewVM(scriptLocation(), program, vmConfig)
+		scriptVM = vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := scriptVM.InvokeExternally("test", implValue)
 		require.NoError(t, err)
@@ -3171,7 +3173,7 @@ func TestArrayLiteral(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		vmContext := vmInstance.Context()
 
@@ -3212,7 +3214,7 @@ func TestArrayLiteral(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -3239,7 +3241,7 @@ func TestArrayLiteral(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 		vmContext := vmInstance.Context()
 
 		result, err := vmInstance.InvokeExternally("test")
@@ -3276,7 +3278,7 @@ func TestDictionaryLiteral(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 		vmContext := vmInstance.Context()
 
 		result, err := vmInstance.InvokeExternally("test")
@@ -3623,10 +3625,11 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := NewTransactionLocationGenerator()
+		txLocationGenerator := NewTransactionLocationGenerator()
+		txLocation := txLocationGenerator()
 
-		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
-		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation, programs)
+		txVM := vm.NewVM(txLocation, txProgram, vmConfig)
 
 		result, err := txVM.InvokeExternally("main")
 		require.NoError(t, err)
@@ -3740,10 +3743,11 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := NewTransactionLocationGenerator()
+		txLocationGenerator := NewTransactionLocationGenerator()
+		txLocation := txLocationGenerator()
 
-		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
-		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation, programs)
+		txVM := vm.NewVM(txLocation, txProgram, vmConfig)
 
 		result, err := txVM.InvokeExternally("main")
 		require.NoError(t, err)
@@ -3864,10 +3868,11 @@ func TestDefaultFunctions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := NewTransactionLocationGenerator()
+		txLocationGenerator := NewTransactionLocationGenerator()
+		txLocation := txLocationGenerator()
 
-		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
-		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation, programs)
+		txVM := vm.NewVM(txLocation, txProgram, vmConfig)
 
 		result, err := txVM.InvokeExternally("main")
 		require.NoError(t, err)
@@ -6691,7 +6696,7 @@ func TestContractAccount(t *testing.T) {
 		}
 	}
 
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
@@ -6834,7 +6839,7 @@ func TestResourceOwner(t *testing.T) {
 		return stdlib.NewAccountValue(context, nil, address)
 	}
 
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
@@ -6954,7 +6959,7 @@ func TestResourceUUID(t *testing.T) {
 		return stdlib.NewAccountValue(context, nil, address)
 	}
 
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
@@ -7354,7 +7359,7 @@ func TestContractClosure(t *testing.T) {
 	}
 	vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 	result, err := vmInstance.InvokeExternally("test")
 	require.NoError(t, err)
@@ -8193,10 +8198,12 @@ func TestInheritedConditions(t *testing.T) {
 			contractsAddress.HexWithPrefix(),
 		)
 
-		txLocation := NewTransactionLocationGenerator()
-		txProgram := ParseCheckAndCompile(t, tx, txLocation(), programs)
+		txLocationGenerator := NewTransactionLocationGenerator()
+		txLocation := txLocationGenerator()
 
-		txVM := vm.NewVM(txLocation(), txProgram, vmConfig)
+		txProgram := ParseCheckAndCompile(t, tx, txLocation, programs)
+
+		txVM := vm.NewVM(txLocation, txProgram, vmConfig)
 		result, err := txVM.InvokeExternally("main")
 		require.NoError(t, err)
 
@@ -9238,7 +9245,7 @@ func TestMetering(t *testing.T) {
 	vmConfig.MemoryGauge = memoryGauge
 	vmConfig.ComputationGauge = computationGauge
 
-	vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+	vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 	result, err := vmInstance.InvokeExternally(
 		"fib",
@@ -10528,7 +10535,7 @@ func TestVMImportAliasing(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -10761,7 +10768,7 @@ func TestVMImportAliasing(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -10994,7 +11001,7 @@ func TestVMImportAliasing(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -11227,7 +11234,7 @@ func TestVMImportAliasing(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -11363,7 +11370,7 @@ func TestVMImportAliasing(t *testing.T) {
 			return nil
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -11566,7 +11573,7 @@ func TestVMImportAliasing(t *testing.T) {
 		}
 		vmConfig.BuiltinGlobalsProvider = VMBuiltinGlobalsProviderWithDefaultsAndPanic
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -11709,7 +11716,7 @@ func TestVMImportAliasing(t *testing.T) {
 			elaboration := fooChecker.Elaboration
 			return elaboration.InterfaceType(typeID)
 		}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -11810,7 +11817,7 @@ func TestVMImportAliasing(t *testing.T) {
 			elaboration := fooChecker.Elaboration
 			return elaboration.InterfaceType(typeID)
 		}
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
@@ -11927,7 +11934,7 @@ func TestVMImportAliasing(t *testing.T) {
 			return elaboration.InterfaceType(typeID)
 		}
 
-		vmInstance := vm.NewVM(scriptLocation(), program, vmConfig)
+		vmInstance := vm.NewVM(checker.Location, program, vmConfig)
 
 		result, err := vmInstance.InvokeExternally("test")
 		require.NoError(t, err)
