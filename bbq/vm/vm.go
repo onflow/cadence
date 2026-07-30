@@ -59,6 +59,7 @@ func NewVM(
 ) *VM {
 
 	context := NewContext(config)
+	context.location = location
 
 	vm := &VM{
 		context: context,
@@ -325,12 +326,21 @@ func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
 
 // InvokeExternally invokes a global function with the given arguments
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
+	canonicalName := commons.LocationQualifiedName(
+		vm.context.MemoryGauge,
+		vm.context.location,
+		name,
+	)
 
+	return vm.InvokeExternallyCanonical(canonicalName, arguments...)
+}
+
+func (vm *VM) InvokeExternallyCanonical(canonicalName string, arguments ...Value) (v Value, err error) {
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	functionValue, err := vm.getGlobalFunction(name)
+	functionValue, err := vm.getGlobalFunction(canonicalName)
 	if err != nil {
 		return nil, err
 	}
@@ -478,9 +488,9 @@ func (vm *VM) invokeExternally(
 	return vm.pop(), nil
 }
 
-func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*interpreter.CompositeValue, error) {
-	contractInitializer := commons.QualifiedName(contractName, commons.InitFunctionName)
-	value, err := vm.InvokeExternally(contractInitializer, arguments...)
+func (vm *VM) InitializeContract(typeID string, arguments ...Value) (*interpreter.CompositeValue, error) {
+	contractInitializer := commons.QualifiedName(typeID, commons.InitFunctionName)
+	value, err := vm.InvokeExternallyCanonical(contractInitializer, arguments...)
 	if err != nil {
 		return nil, err
 	}

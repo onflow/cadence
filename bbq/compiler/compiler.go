@@ -97,6 +97,9 @@ type Compiler[E, T any] struct {
 
 	addedImports map[common.Location]struct{}
 
+	// Maps import alias/name to the canonical name.
+	importAliases map[string]string
+
 	isInheritedCode bool
 }
 
@@ -190,30 +193,32 @@ func newCompiler[E, T any](
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
 		addedImports:        make(map[common.Location]struct{}),
+		importAliases:       make(map[string]string),
 	}
 }
 
-func (c *Compiler[E, _]) findGlobal(name string) bbq.Global {
-	global, ok := c.Globals[name]
+func (c *Compiler[E, _]) findGlobal(canonicalName string) bbq.Global {
+	global, ok := c.Globals[canonicalName]
 	if ok {
 		return global
 	}
 
+	// TODO: Now that names are canonical, is this really needed now?
 	// If failed to find, then try with type-qualified name.
 	// This is because contract functions/type-constructors can be accessed without the contract name.
 	// e.g: SomeContract.Foo() == Foo(), within `SomeContract`.
 	if !c.compositeTypeStack.isEmpty() {
 		enclosingContract := c.compositeTypeStack.bottom()
-		typeQualifiedName := commons.TypeQualifiedName(enclosingContract, name)
+		typeQualifiedName := c.canonicalName(enclosingContract, canonicalName)
 		global, ok = c.Globals[typeQualifiedName]
 		if ok {
 			return global
 		}
 	}
 
-	importedGlobal := c.importedGlobals.Find(name)
+	importedGlobal := c.importedGlobals.Find(canonicalName)
 	if importedGlobal == (GlobalImport{}) {
-		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", name))
+		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", canonicalName))
 	}
 
 	// Add the 'importedGlobal' to 'globals' when they are used for the first time.
@@ -297,13 +302,13 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string
 
 func (c *Compiler[E, _]) addFunction(
 	name string,
-	qualifiedName string,
+	canonicalName string,
 	parameterCount uint16,
 	functionType *sema.FunctionType,
 ) *function[E] {
 	function := c.newFunction(
 		name,
-		qualifiedName,
+		canonicalName,
 		parameterCount,
 		functionType,
 	)
@@ -346,7 +351,7 @@ func (c *Compiler[E, _]) addGlobalVariable(
 
 func (c *Compiler[E, _]) newFunction(
 	name string,
-	qualifiedName string,
+	canonicalName string,
 	parameterCount uint16,
 	functionType *sema.FunctionType,
 ) *function[E] {
@@ -356,7 +361,7 @@ func (c *Compiler[E, _]) newFunction(
 		c.Config.MemoryGauge,
 		c.currentFunction,
 		name,
-		qualifiedName,
+		canonicalName,
 		parameterCount,
 		functionTypeIndex,
 	)
@@ -797,7 +802,8 @@ func (c *Compiler[_, _]) initializeVariableGlobals(
 ) {
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
-		c.addGlobal(variableName, bbq.GlobalKindVariable)
+		canonicalVarName := c.canonicalName(enclosingType, variableName)
+		c.addGlobal(canonicalVarName, bbq.GlobalKindVariable)
 	}
 
 	for _, declaration := range enumCaseDecls {
@@ -805,7 +811,7 @@ func (c *Compiler[_, _]) initializeVariableGlobals(
 		// The enum case name is used as the global variable name.
 		// e.g: `enum E: UInt8 { case A; case B }` will reserve globals `E.A`, `E.B`.
 		enumCaseName := declaration.Identifier.Identifier
-		qualifiedName := commons.TypeQualifiedName(enclosingType, enumCaseName)
+		qualifiedName := c.canonicalName(enclosingType, enumCaseName)
 		c.addGlobal(qualifiedName, bbq.GlobalKindVariable)
 	}
 
@@ -841,7 +847,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
 			// must be also visited here. And must only visit them. e.g: Don't visit inits.
 			functionName := declaration.FunctionDeclaration.Identifier.Identifier
-			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			qualifiedName := c.canonicalName(enclosingType, functionName)
 			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
 		}
 	}
@@ -851,20 +857,20 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 	if enclosingType != nil {
 		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
 			functionName := boundFunction.Name
-			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			qualifiedName := c.canonicalName(enclosingType, functionName)
 			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
 		}
 
 		if enclosingType.GetCompositeKind().SupportsAttachments() {
 			functionName := sema.CompositeForEachAttachmentFunctionName
-			qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+			qualifiedName := c.canonicalName(enclosingType, functionName)
 			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
 		}
 	}
 
 	for _, declaration := range functionDecls {
 		functionName := declaration.Identifier.Identifier
-		qualifiedName := commons.TypeQualifiedName(enclosingType, functionName)
+		qualifiedName := c.canonicalName(enclosingType, functionName)
 		c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
 	}
 
@@ -887,19 +893,16 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// For contracts, a global with the type-name is used for the contract value
 			// (already reserved in `reserveGlobals` before getting here).
 			// Suffix the type-name.
-
-			constructorName = commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+			constructorName = c.canonicalName(compositeType, commons.InitFunctionName)
 
 		case common.CompositeKindEnum:
 			// For enums, a global with the type-name is used for the "lookup function".
 			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
 			// Suffix the type-name.
-
-			constructorName = commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+			constructorName = c.canonicalName(compositeType, commons.InitFunctionName)
 
 		default:
 			// For other composite types, the type-name is used for the constructor function.
-
 			constructorName = commons.TypeQualifier(compositeType)
 		}
 
@@ -963,7 +966,8 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		if transactionDecl.ParameterList != nil &&
 			len(transactionDecl.ParameterList.Parameters) > 0 {
 
-			c.addGlobal(commons.ProgramInitFunctionName, bbq.GlobalKindFunction)
+			initFunctionName := c.canonicalName(enclosingType, commons.ProgramInitFunctionName)
+			c.addGlobal(initFunctionName, bbq.GlobalKindFunction)
 		}
 	default:
 		panic(errors.NewUnexpectedError("multiple transaction declarations"))
@@ -1070,21 +1074,30 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 				functions,
 				newFunction,
 			)
-			// associate the function with the global for linking
-			global := c.Globals[function.qualifiedName]
+
 			// function expressions do not have globals
 			// see VisitFunctionExpression
 			if newFunction.IsAnonymous() {
 				continue
 			}
+
+			// associate the function with the global for linking
+			global := c.Globals[function.canonicalName]
 			if global == nil {
-				panic(errors.NewUnexpectedError("global not found for function %s", function.qualifiedName))
+				panic(errors.NewUnexpectedError(
+					"global not found for function %s",
+					function.canonicalName,
+				))
 			}
-			if functionGlobal, ok := global.(*bbq.FunctionGlobal[E]); ok {
-				functionGlobal.Function = &newFunction
-			} else {
-				panic(errors.NewUnexpectedError("wrong global type found for function %s", function.qualifiedName))
+
+			functionGlobal, ok := global.(*bbq.FunctionGlobal[E])
+			if !ok {
+				panic(errors.NewUnexpectedError(
+					"wrong global type found for function %s",
+					function.canonicalName,
+				))
 			}
+			functionGlobal.Function = &newFunction
 		}
 	}
 	return functions
@@ -1094,7 +1107,7 @@ func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
 	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQFunctionMemoryUsage)
 	return bbq.Function[E]{
 		Name:           function.name,
-		QualifiedName:  function.qualifiedName,
+		QualifiedName:  function.canonicalName,
 		Code:           function.code,
 		LocalCount:     function.localCount,
 		ParameterCount: function.parameterCount,
@@ -1138,13 +1151,20 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 			// associate the variable with the global for linking
 			global := c.Globals[variable.Name]
 			if global == nil {
-				panic(errors.NewUnexpectedError("global not found for global variable %s", variable.Name))
+				panic(errors.NewUnexpectedError(
+					"global not found for global variable %#q",
+					variable.Name,
+				))
 			}
-			if variableGlobal, ok := global.(*bbq.VariableGlobal[E]); ok {
-				variableGlobal.Variable = &variable
-			} else {
-				panic(errors.NewUnexpectedError("wrong global type found for global variable %s", variable.Name))
+
+			variableGlobal, ok := global.(*bbq.VariableGlobal[E])
+			if !ok {
+				panic(errors.NewUnexpectedError(
+					"wrong global type found for global variable %#q",
+					variable.Name,
+				))
 			}
+			variableGlobal.Variable = &variable
 
 			globalVariables = append(globalVariables, variable)
 		}
@@ -1169,11 +1189,12 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 
 		contractType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 		location := contractType.GetLocation()
-		name := contractType.GetIdentifier()
+
+		canonicalName := commons.TypeQualifier(contractType)
 
 		common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQContractMemoryUsage)
 		contract := bbq.Contract{
-			Name:     name,
+			Name:     canonicalName,
 			Location: location,
 		}
 		contracts = append(
@@ -2020,8 +2041,10 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 }
 
 func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclaration, variableName string) {
+	canonicalVarName := c.canonicalName(nil, variableName)
+
 	if declaration.Value == nil {
-		c.addGlobalVariable(variableName)
+		c.addGlobalVariable(canonicalVarName)
 		return
 	}
 
@@ -2034,7 +2057,7 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 	)
 
 	globalVariable := c.addGlobalVariableWithGetter(
-		variableName,
+		canonicalVarName,
 		variableGetterFunctionType,
 	)
 
@@ -2741,12 +2764,8 @@ func (c *Compiler[_, _]) VisitDictionaryExpression(dictionary *ast.DictionaryExp
 }
 
 func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExpression) (_ struct{}) {
-	c.emitVariableLoad(expression.Identifier.Identifier)
-	return
-}
-
-func (c *Compiler[_, _]) emitVariableLoad(name string) {
-
+	// 1) First lookup in local variables
+	name := expression.Identifier.Identifier
 	if c.currentInheritedConditionParamBinding != nil {
 		// If the current compiling code is inherited code, then bind the
 		// inherited parameter name to the implementation's parameter.
@@ -2768,6 +2787,7 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 		return
 	}
 
+	// 2) Secondly, lookup in closure variables.
 	upvalueIndex, ok := c.currentFunction.findOrAddUpvalue(name)
 	if ok {
 		c.emit(opcode.InstructionGetUpvalue{
@@ -2776,7 +2796,45 @@ func (c *Compiler[_, _]) emitVariableLoad(name string) {
 		return
 	}
 
-	c.emitGlobalLoad(name)
+	// 3) Finally, lookup in global namespace.
+	canonicalName := c.globalIdentifierCanonicalName(expression)
+	c.emitGlobalLoad(canonicalName)
+	return
+}
+
+func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.IdentifierExpression) string {
+	// A global identifier of a program can be:
+	//	- An import.
+	//  - A construct defined in the same program, whcih could be a:
+	//    - Type
+	//    - Function (including constructors).
+	//    - Variable.
+
+	// 1) Resolve from current program.
+
+	simpleName := expression.Identifier.Identifier
+
+	// 1.1) Types
+	variable, found := c.DesugaredElaboration.GetGlobalType(simpleName)
+	if found {
+		return commons.TypeQualifier(variable.Type)
+	}
+
+	// 1.2) Functions and variables
+	variable, found = c.DesugaredElaboration.GetGlobalValue(simpleName)
+	if found {
+		// use current program's location, since the global value
+		// belongs to the current program.
+		return c.canonicalName(nil, variable.Identifier)
+	}
+
+	// 2) Resolve from imported globals.
+	importedGlobalCanonicalName, found := c.importAliases[simpleName]
+	if found {
+		return importedGlobalCanonicalName
+	}
+
+	return simpleName
 }
 
 func (c *Compiler[_, _]) emitGlobalLoad(name string) {
@@ -2962,7 +3020,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 	if invocationType.IsConstructor {
-		funcName = commons.TypeQualifiedName(
+		funcName = c.canonicalName(
 			memberInfo.AccessedType,
 			funcName,
 		)
@@ -3032,7 +3090,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	}
 
 	// Load function value.
-	funcName = commons.TypeQualifiedName(
+	funcName = c.canonicalName(
 		accessedType,
 		funcName,
 	)
@@ -3297,7 +3355,7 @@ func (c *Compiler[_, _]) VisitMemberExpression(expression *ast.MemberExpression)
 
 		accessedEnumType := enumType(accessedTypeFunctionType)
 		if accessedEnumType != nil {
-			qualifiedName := commons.TypeQualifiedName(accessedEnumType, identifier)
+			qualifiedName := c.canonicalName(accessedEnumType, identifier)
 			c.emitGlobalLoad(qualifiedName)
 
 			return
@@ -3360,10 +3418,7 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 			if isDynamicMethodInvocation(accessedType) {
 				c.emitDynamicMethodLoad(memberName, accessedType)
 			} else {
-				memberName = commons.TypeQualifiedName(
-					accessedType,
-					memberName,
-				)
+				memberName = c.canonicalName(accessedType, memberName)
 				c.emitMethodLoad(memberName, accessedType)
 			}
 
@@ -3381,10 +3436,7 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 			// TODO: Avoid loading the receiver for constructors.
 			c.emit(opcode.InstructionDrop{})
 
-			memberName = commons.TypeQualifiedName(
-				accessedType,
-				memberName,
-			)
+			memberName = c.canonicalName(accessedType, memberName)
 			// Load function value
 			c.emitGlobalLoad(memberName)
 		}
@@ -3816,8 +3868,6 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	enclosingType := c.compositeTypeStack.top()
 	kind := enclosingType.GetCompositeKind()
 
-	typeName := commons.TypeQualifier(enclosingType)
-
 	var functionName string
 	switch kind {
 	case common.CompositeKindContract:
@@ -3825,14 +3875,14 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		// A global variable with the same name as contract is separately added.
 		// The VM will load the contract and assign to that global variable during imports resolution.
 		identifier := declaration.DeclarationIdentifier().Identifier
-		functionName = commons.QualifiedName(typeName, identifier)
+		functionName = c.canonicalName(enclosingType, identifier)
 	case common.CompositeKindEnum:
 		// Match the associated global variable for enums, `Enum.init()`.
-		functionName = commons.TypeQualifiedName(enclosingType, commons.InitFunctionName)
+		functionName = c.canonicalName(enclosingType, commons.InitFunctionName)
 	default:
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
-		functionName = typeName
+		functionName = commons.TypeQualifier(enclosingType)
 	}
 
 	parameterCount := 0
@@ -3881,6 +3931,8 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 			address = addressLocation.Address
 		}
 	}
+
+	typeName := commons.TypeQualifier(enclosingType)
 
 	if address == common.ZeroAddress {
 
@@ -4037,7 +4089,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 			}
 		}
 
-		functionName = commons.TypeQualifiedName(enclosingType, identifier)
+		functionName = c.canonicalName(enclosingType, identifier)
 
 	} else {
 		// Inner function
@@ -4225,8 +4277,18 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 	// TODO:
 	// aliases := c.DesugaredElaboration.elaboration.ImportDeclarationAliases(declaration)
 
-	for _, location := range resolvedLocations {
-		c.addGlobalsFromImportedProgram(location.Location)
+	for _, resolvedLocation := range resolvedLocations {
+		location := resolvedLocation.Location
+		c.addGlobalsFromImportedProgram(location)
+
+		// A program imports constructs using their simple name (e.g: `import Foo from 0x01`)
+		// But the actual imported compiled program use canonical-name for exported globals.
+		// Therefore, construct a mapping between simple-name and the canonical-name for imports.
+		for _, identifier := range resolvedLocation.Identifiers {
+			simpleName := identifier.Identifier
+			canonicalName := c.canonicalNameAt(location, simpleName)
+			c.importAliases[simpleName] = canonicalName
+		}
 	}
 
 	return
@@ -4362,7 +4424,7 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 	)
 
 	caseName := declaration.Identifier.Identifier
-	getterName := commons.TypeQualifiedName(compositeType, caseName)
+	getterName := c.canonicalName(compositeType, caseName)
 
 	globalVariable := c.addGlobalVariableWithGetter(
 		getterName,
@@ -4376,7 +4438,7 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 
 		// No parameters
 
-		constructorName := commons.TypeQualifiedName(compositeType, commons.InitFunctionName)
+		constructorName := c.canonicalName(compositeType, commons.InitFunctionName)
 		c.emitGlobalLoad(constructorName)
 
 		enumRawType := compositeType.EnumRawType
@@ -4756,7 +4818,7 @@ func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
 	if instructionIndex >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError(
 			"function %s is too large: instruction count exceeds the maximum of %d",
-			c.currentFunction.qualifiedName,
+			c.currentFunction.canonicalName,
 			math.MaxUint16-1,
 		))
 	}
@@ -4772,4 +4834,25 @@ func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
 		)
 		c.lastChangedPosition = c.currentPosition
 	}
+}
+
+func (c *Compiler[E, _]) canonicalName(enclosingType sema.Type, identifier string) string {
+	// If there is an enclosing type, then get the type-qualified name.
+	// Type-qualified name is already location-qualified.
+	if enclosingType != nil {
+		return commons.TypeQualifiedName(enclosingType, identifier)
+	}
+
+	// Otherwise, generate a location-qualified name.
+	return commons.LocationQualifiedName(
+		c.Config.MemoryGauge,
+		c.location,
+		identifier,
+	)
+}
+
+func (c *Compiler[E, _]) canonicalNameAt(location common.Location, identifier string) string {
+	memoryGauge := c.Config.MemoryGauge
+	id := location.TypeID(memoryGauge, identifier)
+	return string(id)
 }

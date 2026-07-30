@@ -54,6 +54,11 @@ func QualifiedName(typeName, functionName string) string {
 	return typeName + "." + functionName
 }
 
+func LocationQualifiedName(memoryGauge common.MemoryGauge, location common.Location, name string) string {
+	id := location.TypeID(memoryGauge, name)
+	return string(id)
+}
+
 // TypeQualifier returns the prefix to be appended to an identifier
 // (e.g: to a function name), to make it type-qualified.
 // For primitive types, the type-qualifier is the typeID itself.
@@ -91,7 +96,7 @@ func TypeQualifier(typ sema.Type) string {
 	case *sema.InclusiveRangeType:
 		return TypeQualifierInclusiveRange
 	default:
-		return typ.QualifiedString()
+		return string(typ.ID())
 	}
 }
 

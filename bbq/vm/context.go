@@ -38,6 +38,8 @@ import (
 type Context struct {
 	*Config
 
+	location common.Location
+
 	CapabilityControllerIterations              map[interpreter.AddressPath]int
 	mutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues

@@ -1867,7 +1867,7 @@ func TestInterpretInheritedConditionWithConflictingTransitiveImports(t *testing.
 			}
 
 			contractVM := vm.NewVM(contract.location, program, vmConfig)
-			contractValue, err := contractVM.InitializeContract(contract.location.Name)
+			contractValue, err := contractVM.InitializeContract(contract.location.ID())
 			require.NoError(t, err)
 
 			contractValues[contract.location] = contractValue

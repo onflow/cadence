@@ -648,6 +648,14 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		}
 	}
 
+	// recover panics (e.g. globals evaluation)
+	defer func() {
+		if r := recover(); r != nil {
+			internalErr := interpreter.AsCadenceError(r)
+			err = internalErr
+		}
+	}()
+
 	program := ParseCheckAndCompileCodeWithOptions(
 		t,
 		code,
@@ -666,14 +674,6 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 			vmConfig.ContractValueHandler = ContractValueHandler(program.Contracts[0].Name)
 		}
 	}
-
-	// recover panics from VM (e.g. globals evaluation)
-	defer func() {
-		if r := recover(); r != nil {
-			internalErr := interpreter.AsCadenceError(r)
-			err = internalErr
-		}
-	}()
 
 	programVM = vm.NewVM(
 		location,

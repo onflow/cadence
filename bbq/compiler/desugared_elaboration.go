@@ -418,6 +418,10 @@ func (e *DesugaredElaboration) GetGlobalType(name string) (*sema.Variable, bool)
 	return e.elaboration.GetGlobalType(name)
 }
 
+func (e *DesugaredElaboration) GetGlobalValue(name string) (*sema.Variable, bool) {
+	return e.elaboration.GetGlobalValue(name)
+}
+
 func (e *DesugaredElaboration) IsNestedResourceMoveExpression(expression ast.Expression) bool {
 	return e.elaboration.IsNestedResourceMoveExpression(expression)
 }
@@ -456,4 +460,8 @@ func (e *DesugaredElaboration) AttachmentRemoveTypes(statement *ast.RemoveStatem
 
 func (e *DesugaredElaboration) BinaryExpressionTypes(expression *ast.BinaryExpression) sema.BinaryExpressionTypes {
 	return e.elaboration.BinaryExpressionTypes(expression)
+}
+
+func (e *DesugaredElaboration) ExpressionTypes(expression ast.Expression) sema.ExpressionTypes {
+	return e.elaboration.ExpressionTypes(expression)
 }
