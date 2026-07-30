@@ -1711,6 +1711,253 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 	require.Equal(t, []string{`"p"`, `"q"`, `"b"`, `"a"`, `"y"`, `"x"`}, logs)
 }
 
+// TestInterpretInheritedConditionWithConflictingTransitiveImports tests that an identifier
+// in an inherited condition is resolved against the imports of the program that declares
+// the condition, and not by its source name alone.
+//
+// The program inherits two conditions that both refer to a contract named `Foo`,
+// but each resolves to a different contract: the condition inherited from `Definitions`
+// refers to `A.0000000000000001.Foo`, whereas the condition inherited from `Consumer`
+// refers to `A.0000000000000002.Foo`. Both are transitively available to the program,
+// so a lookup by source name alone can only ever resolve one of the two correctly.
+func TestInterpretInheritedConditionWithConflictingTransitiveImports(t *testing.T) {
+
+	t.Parallel()
+
+	fooLocationA := common.AddressLocation{
+		Address: common.MustBytesToAddress([]byte{0x1}),
+		Name:    "Foo",
+	}
+
+	fooLocationB := common.AddressLocation{
+		Address: common.MustBytesToAddress([]byte{0x2}),
+		Name:    "Foo",
+	}
+
+	definitionsLocation := common.AddressLocation{
+		Address: common.MustBytesToAddress([]byte{0x3}),
+		Name:    "Definitions",
+	}
+
+	consumerLocation := common.AddressLocation{
+		Address: common.MustBytesToAddress([]byte{0x4}),
+		Name:    "Consumer",
+	}
+
+	const fooCodeA = `
+        access(all) contract Foo {
+            access(all) view fun check(): Bool {
+                return true
+            }
+        }
+    `
+
+	// The inherited pre-condition refers to `Foo`, which here is `A.0000000000000001.Foo`.
+	const definitionsCode = `
+        import Foo from 0x1
+
+        access(all) contract Definitions {
+            access(all) struct interface I {
+                access(all) fun test() {
+                    pre {
+                        Foo.check(): "unexpected Foo"
+                    }
+                }
+            }
+        }
+    `
+
+	const fooCodeB = `
+        access(all) contract Foo {
+            access(all) view fun check(): Bool {
+                return false
+            }
+        }
+    `
+
+	// The inherited pre-condition refers to `Foo`, which here is `A.0000000000000002.Foo`.
+	const consumerCode = `
+        import Foo from 0x2
+
+        access(all) contract Consumer {
+            access(all) struct interface J {
+                access(all) fun test() {
+                    pre {
+                        !Foo.check(): "unexpected Foo"
+                    }
+                }
+            }
+
+            access(all) view fun check(): Bool {
+                return Foo.check()
+            }
+        }
+    `
+
+	const code = `
+        // Transitively imports A.0000000000000001.Foo
+        import Definitions from 0x3
+
+        // Transitively imports A.0000000000000002.Foo
+        import Consumer from 0x4
+
+        access(all) struct A: Definitions.I {
+            access(all) fun test() {}
+        }
+
+        access(all) struct B: Consumer.J {
+            access(all) fun test() {}
+        }
+
+        access(all) fun main(): Bool {
+            // Pulls in A.0000000000000002.Foo transitively
+            let result = Consumer.check()
+
+            // The inherited pre-condition must use A.0000000000000001.Foo
+            A().test()
+
+            // The inherited pre-condition must use A.0000000000000002.Foo
+            B().test()
+
+            return result
+        }
+    `
+
+	contracts := []struct {
+		code     string
+		location common.AddressLocation
+	}{
+		{code: fooCodeA, location: fooLocationA},
+		{code: definitionsCode, location: definitionsLocation},
+		{code: fooCodeB, location: fooLocationB},
+		{code: consumerCode, location: consumerLocation},
+	}
+
+	var (
+		invocationErr error
+		result        interpreter.Value
+	)
+
+	if *compile {
+		programs := CompiledPrograms{}
+
+		storage := NewUnmeteredInMemoryStorage()
+		vmConfig := test.PrepareVMConfig(t, vm.NewConfig(storage), programs)
+
+		contractValues := map[common.Location]*interpreter.CompositeValue{}
+		vmConfig.ContractValueHandler = func(_ *vm.Context, location common.Location) *interpreter.CompositeValue {
+			contractValue, ok := contractValues[location]
+			if !ok {
+				require.FailNow(t, fmt.Sprintf("missing contract value for location %s", location))
+			}
+			return contractValue
+		}
+
+		for _, contract := range contracts {
+			program := ParseCheckAndCompileCodeWithOptions(t,
+				contract.code,
+				contract.location,
+				ParseCheckAndCompileOptions{},
+				programs,
+			)
+
+			// Contract interfaces have no contract value
+			if len(program.Contracts) == 0 {
+				continue
+			}
+
+			contractVM := vm.NewVM(contract.location, program, vmConfig)
+			contractValue, err := contractVM.InitializeContract(contract.location.Name)
+			require.NoError(t, err)
+
+			contractValues[contract.location] = contractValue
+		}
+
+		result, invocationErr = test.CompileAndInvokeWithOptionsAndPrograms(t,
+			code,
+			"main",
+			test.CompilerAndVMOptions{
+				VMConfig: vmConfig,
+			},
+			programs,
+		)
+
+	} else {
+		checkers := map[common.Location]*sema.Checker{}
+
+		newCheckerConfig := func() *sema.Config {
+			return &sema.Config{
+				LocationHandler: SingleIdentifierLocationResolver(t),
+				ImportHandler: func(_ *sema.Checker, importedLocation common.Location, _ ast.Range) (sema.Import, error) {
+					importedChecker, ok := checkers[importedLocation]
+					if !ok {
+						return nil, fmt.Errorf("cannot find checker for location %s", importedLocation)
+					}
+
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			}
+		}
+
+		for _, contract := range contracts {
+			checker, err := ParseAndCheckWithOptions(t,
+				contract.code,
+				ParseAndCheckOptions{
+					Location:      contract.location,
+					CheckerConfig: newCheckerConfig(),
+				},
+			)
+			require.NoError(t, err)
+
+			checkers[contract.location] = checker
+		}
+
+		storage := NewUnmeteredInMemoryStorage()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, //nolint:staticcheck
+			code,
+			ParseCheckAndInterpretOptions{
+				InterpreterConfig: &interpreter.Config{
+					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+					Storage:              storage,
+					ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+						importedChecker, ok := checkers[location]
+						if !ok {
+							require.FailNow(t, fmt.Sprintf("cannot find checker for location %s", location))
+						}
+
+						program := interpreter.ProgramFromChecker(importedChecker)
+						subInterpreter, err := inter.NewSubInterpreter(program, location)
+						if err != nil {
+							panic(err)
+						}
+
+						return interpreter.InterpreterImport{
+							Interpreter: subInterpreter,
+						}
+					},
+				},
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					CheckerConfig: newCheckerConfig(),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		err = inter.Interpret()
+		require.NoError(t, err)
+
+		result, invocationErr = inter.Invoke("main")
+	}
+
+	require.NoError(t, invocationErr)
+
+	// `Consumer.check()` must resolve to `A.0000000000000002.Foo.check()`, which returns false
+	require.Equal(t, interpreter.FalseValue, result)
+}
+
 func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 
 	t.Parallel()
