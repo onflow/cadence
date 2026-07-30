@@ -49,8 +49,8 @@ type DesugaredElaboration struct {
 	returnStatementTypes              map[*ast.ReturnStatement]sema.ReturnStatementTypes
 	emitStatementEventTypes           map[*ast.EmitStatement]*sema.CompositeType
 	compositeTypes                    map[common.TypeID]*sema.CompositeType
-	arrayExpressionTypes              map[*ast.ArrayExpression]sema.ArrayExpressionTypes
-	functionExpressionFunctionTypes   map[*ast.FunctionExpression]*sema.FunctionType
+	arrayExpressionTypes            map[*ast.ArrayExpression]sema.ArrayExpressionTypes
+	functionExpressionFunctionTypes map[*ast.FunctionExpression]*sema.FunctionType
 }
 
 func NewDesugaredElaboration(elaboration *sema.Elaboration) *DesugaredElaboration {
@@ -420,6 +420,10 @@ func (e *DesugaredElaboration) GetGlobalType(name string) (*sema.Variable, bool)
 
 func (e *DesugaredElaboration) GetGlobalValue(name string) (*sema.Variable, bool) {
 	return e.elaboration.GetGlobalValue(name)
+}
+
+func (e *DesugaredElaboration) SetGlobalValue(name string, variable *sema.Variable) {
+	e.elaboration.SetGlobalValue(name, variable)
 }
 
 func (e *DesugaredElaboration) IsNestedResourceMoveExpression(expression ast.Expression) bool {

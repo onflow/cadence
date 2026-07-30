@@ -305,11 +305,23 @@ func (vm *VM) callerLocation() common.Location {
 	return vm.callstack[callstackLen-2].function.Executable.Location
 }
 
-func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
-	functionVariable := vm.globals.Find(name)
+// findGlobal finds a global of the current program,
+// given its name relative to the program (i.e: not location-qualified).
+func (vm *VM) findGlobal(name string) Variable {
+	context := vm.context
+	canonicalName := commons.LocationQualifiedName(
+		context.MemoryGauge,
+		context.location,
+		name,
+	)
+	return vm.globals.Find(canonicalName)
+}
+
+func (vm *VM) getGlobalFunction(canonicalName string) (FunctionValue, error) {
+	functionVariable := vm.globals.Find(canonicalName)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
-			name: name,
+			name: canonicalName,
 		}
 	}
 
@@ -351,13 +363,13 @@ func (vm *VM) InvokeExternallyCanonical(canonicalName string, arguments ...Value
 // Deprecated: InvokeExternallyUncheckedForTestingOnly invokes a global function with the given arguments,
 // without validating them.
 // NOTE: FOR TESTING PURPOSES ONLY! Use InvokeExternally instead
-func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
+func (vm *VM) InvokeExternallyUncheckedForTestingOnly(canonicalName string, arguments ...Value) (v Value, err error) {
 
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	functionValue, err := vm.getGlobalFunction(name)
+	functionValue, err := vm.getGlobalFunction(canonicalName)
 	if err != nil {
 		return nil, err
 	}
@@ -366,17 +378,17 @@ func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...
 }
 
 func (vm *VM) InvokeMethodExternally(
-	name string,
+	canonicalName string,
 	receiver interpreter.MemberAccessibleValue,
 	arguments ...Value,
 ) (
 	v Value,
 	err error,
 ) {
-	functionVariable := vm.globals.Find(name)
+	functionVariable := vm.globals.Find(canonicalName)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
-			name: name,
+			name: canonicalName,
 		}
 	}
 
@@ -551,9 +563,8 @@ func (vm *VM) InvokeTransactionWrapper() (*interpreter.SimpleCompositeValue, err
 
 func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	context := vm.context
-	globals := vm.globals
 
-	initializerVariable := globals.Find(commons.ProgramInitFunctionName)
+	initializerVariable := vm.findGlobal(commons.ProgramInitFunctionName)
 	if initializerVariable == nil {
 		if len(transactionArgs) > 0 {
 			return interpreter.ArgumentCountError{
@@ -581,7 +592,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 	// Transaction invocation happens on the concrete value.
 	var accessedReference interpreter.ReferenceValue = nil
 
-	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
+	prepareVariable := vm.findGlobal(commons.TransactionPrepareFunctionName)
 	if prepareVariable == nil {
 		if len(signers) > 0 {
 			return interpreter.ArgumentCountError{
@@ -614,7 +625,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeValue) error {
 	context := vm.context
 
-	executeVariable := vm.globals.Find(commons.TransactionExecuteFunctionName)
+	executeVariable := vm.findGlobal(commons.TransactionExecuteFunctionName)
 	if executeVariable == nil {
 		return nil
 	}
@@ -2488,11 +2499,11 @@ func (vm *VM) invokeFunction(
 	)
 }
 
-func (vm *VM) lookupFunction(location common.Location, name string) FunctionValue {
+func (vm *VM) lookupFunction(location common.Location, canonicalName string) FunctionValue {
 	context := vm.context
 
 	// First check in current program.
-	global := vm.globals.Find(name)
+	global := vm.globals.Find(canonicalName)
 	if global != nil {
 		value := global.GetValue(context)
 		return value.(FunctionValue)
@@ -2516,7 +2527,7 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
-	global = indexedGlobals.Find(name)
+	global = indexedGlobals.Find(canonicalName)
 	if global == nil {
 		return nil
 	}
@@ -2539,8 +2550,8 @@ func (vm *VM) Reset() {
 	vm.configureContext()
 }
 
-func (vm *VM) Global(name string) Value {
-	variable := vm.globals.Find(name)
+func (vm *VM) Global(simpleName string) Value {
+	variable := vm.findGlobal(simpleName)
 	if variable == nil {
 		return nil
 	}

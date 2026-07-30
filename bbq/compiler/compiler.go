@@ -3941,8 +3941,10 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	if address == common.ZeroAddress {
 
 		// Transaction wrapper composite values are simple composite values.
+		// NOTE: compare the plain identifier, not the type-qualifier,
+		// since the latter is location-qualified.
 		if _, ok := enclosingType.GetLocation().(common.TransactionLocation); ok &&
-			typeName == commons.TransactionWrapperCompositeName {
+			enclosingType.GetIdentifier() == commons.TransactionWrapperCompositeName {
 
 			c.emit(
 				opcode.InstructionNewSimpleComposite{
@@ -4376,9 +4378,12 @@ func (c *Compiler[_, _]) VisitTransactionDeclaration(declaration *ast.Transactio
 
 	const functionName = commons.ProgramInitFunctionName
 
+	// Must match the global reserved in `initializeFunctionGlobals`.
+	canonicalFunctionName := c.canonicalName(nil, functionName)
+
 	function := c.addFunction(
 		functionName,
-		functionName,
+		canonicalFunctionName,
 		uint16(parameterCount),
 		functionType,
 	)
@@ -4399,7 +4404,10 @@ func (c *Compiler[_, _]) VisitTransactionDeclaration(declaration *ast.Transactio
 			local := c.currentFunction.declareLocal(c.Config.MemoryGauge, modifiedParamName)
 			c.emitGetLocal(local.index)
 
-			global := c.findGlobal(parameter.Identifier.Identifier)
+			// The parameters were desugared into globals of the current program.
+			canonicalParamName := c.canonicalName(nil, parameter.Identifier.Identifier)
+			global := c.findGlobal(canonicalParamName)
+
 			c.emit(opcode.InstructionSetGlobal{
 				Global: global.GetGlobalInfo().Index,
 			})

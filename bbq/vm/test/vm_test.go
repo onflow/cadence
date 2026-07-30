@@ -2488,8 +2488,8 @@ func TestTransaction(t *testing.T) {
 		err = vmInstance.InvokeTransaction(nil)
 		RequireError(t, err)
 
-		require.IsType(t, &interpreter.ConditionError{}, err)
-		conditionError := err.(*interpreter.ConditionError)
+		var conditionError *interpreter.ConditionError
+		require.ErrorAs(t, err, &conditionError)
 
 		assert.Equal(
 			t,
@@ -2571,8 +2571,8 @@ func TestTransaction(t *testing.T) {
 		err = vmInstance.InvokeTransaction(nil)
 		RequireError(t, err)
 
-		require.IsType(t, &interpreter.ConditionError{}, err)
-		conditionError := err.(*interpreter.ConditionError)
+		var conditionError *interpreter.ConditionError
+		require.ErrorAs(t, err, &conditionError)
 
 		assert.Equal(
 			t,
@@ -9529,14 +9529,6 @@ func TestGetAuthAccount(t *testing.T) {
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 		// NOTE: default globals do not include `getAuthAccount`
 
-		var recovered any
-		defer func() {
-			recovered = recover()
-			require.IsType(t, errors.UnexpectedError{}, recovered)
-			unexpectedError := recovered.(errors.UnexpectedError)
-			require.ErrorContains(t, unexpectedError, "cannot find global declaration 'getAuthAccount'")
-		}()
-
 		_, err := CompileAndInvokeWithOptions(
 			t,
 			code,
@@ -9558,6 +9550,9 @@ func TestGetAuthAccount(t *testing.T) {
 			},
 		)
 		RequireError(t, err)
+		require.IsType(t, errors.UnexpectedError{}, err)
+		unexpectedError := err.(errors.UnexpectedError)
+		require.ErrorContains(t, unexpectedError, "cannot find global declaration 'getAuthAccount'")
 	})
 }
 

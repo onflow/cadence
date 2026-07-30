@@ -1633,9 +1633,13 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	if transaction.ParameterList != nil {
 		varDeclarations = make([]ast.Declaration, 0, len(transaction.ParameterList.Parameters))
 
-		for _, parameter := range transaction.ParameterList.Parameters {
+		transactionType := d.elaboration.elaboration.TransactionDeclarationType(transaction)
+		parameters := transactionType.Parameters
+
+		for index, parameter := range transaction.ParameterList.Parameters {
 			// Create global variables
 			// i.e: `var a: Type`
+
 			variableDecl := ast.NewVariableDeclaration(
 				d.memoryGauge,
 				ast.AccessSelf,
@@ -1651,6 +1655,17 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 			)
 
 			varDeclarations = append(varDeclarations, variableDecl)
+
+			variableName := parameter.Identifier.Identifier
+			d.elaboration.SetGlobalValue(
+				variableName,
+				&sema.Variable{
+					Identifier:      variableName,
+					Access:          sema.PrimitiveAccess(ast.AccessSelf),
+					DeclarationKind: common.DeclarationKindVariable,
+					Type:            parameters[index].TypeAnnotation.Type,
+				},
+			)
 		}
 	}
 
