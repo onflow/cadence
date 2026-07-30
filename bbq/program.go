@@ -21,9 +21,14 @@ package bbq
 import (
 	"github.com/onflow/cadence/bbq/constant"
 	"github.com/onflow/cadence/bbq/opcode"
+	"github.com/onflow/cadence/common"
 )
 
 type Program[E, T any] struct {
+	// Location is the location this program was compiled for.
+	// Global names are qualified with it, so it is needed to determine
+	// the global of a declaration from its name in the source.
+	Location  common.Location
 	Contracts []*Contract
 	Imports   []Import
 	Functions []Function[E]

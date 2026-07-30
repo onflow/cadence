@@ -687,6 +687,9 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 func ContractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
 	return func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
 		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
+		if location != nil {
+			contractInitializerName = string(location.TypeID(context, contractInitializerName))
+		}
 		contractInitializer := context.GetFunction(location, contractInitializerName)
 
 		compositeType, err := context.GetCompositeType(location, contractName, location.TypeID(context, contractName))

@@ -4342,6 +4342,166 @@ func TestFunctionPreConditions(t *testing.T) {
 	})
 }
 
+func TestVMCanonicalGlobalNamesInInheritedCode(t *testing.T) {
+	t.Parallel()
+
+	storage := NewUnmeteredInMemoryStorage()
+	programs := map[common.Location]*CompiledProgram{}
+	contractValues := map[common.Location]*interpreter.CompositeValue{}
+
+	vmConfig := vm.NewConfig(storage)
+	vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
+		program, ok := programs[location]
+		require.True(t, ok, "missing program for %s", location)
+		return program.Program
+	}
+	vmConfig.ContractValueHandler = func(
+		_ *vm.Context,
+		location common.Location,
+	) *interpreter.CompositeValue {
+		contractValue, ok := contractValues[location]
+		require.True(t, ok, "missing contract value for %s", location)
+		return contractValue
+	}
+	vmConfig.CompositeTypeHandler = CompiledProgramsCompositeTypeLoader(programs)
+	vmConfig.InterfaceTypeHandler = CompiledProgramsInterfaceTypeLoader(programs)
+	vmConfig.EntitlementTypeHandler = CompiledProgramsEntitlementTypeLoader(programs)
+	vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
+
+	firstFooLocation := common.NewAddressLocation(
+		nil,
+		common.MustBytesToAddress([]byte{0x1}),
+		"Foo",
+	)
+	secondFooLocation := common.NewAddressLocation(
+		nil,
+		common.MustBytesToAddress([]byte{0x2}),
+		"Foo",
+	)
+	definitionsLocation := common.NewAddressLocation(
+		nil,
+		common.MustBytesToAddress([]byte{0x3}),
+		"Definitions",
+	)
+	consumerLocation := common.NewAddressLocation(
+		nil,
+		common.MustBytesToAddress([]byte{0x4}),
+		"Consumer",
+	)
+
+	firstFooProgram := ParseCheckAndCompile(
+		t,
+		`
+          contract Foo {
+              view fun check(): Bool {
+                  return true
+              }
+          }
+        `,
+		firstFooLocation,
+		programs,
+	)
+	_, contractValues[firstFooLocation] = initializeContract(
+		t,
+		firstFooLocation,
+		firstFooProgram,
+		vmConfig,
+	)
+
+	secondFooProgram := ParseCheckAndCompile(
+		t,
+		`
+          contract Foo {
+              view fun check(): Bool {
+                  return false
+              }
+          }
+        `,
+		secondFooLocation,
+		programs,
+	)
+	_, contractValues[secondFooLocation] = initializeContract(
+		t,
+		secondFooLocation,
+		secondFooProgram,
+		vmConfig,
+	)
+
+	ParseCheckAndCompile(
+		t,
+		`
+          import Foo from 0x1
+
+          contract interface Definitions {
+              struct interface I {
+                  fun test() {
+                      pre {
+                          Foo.check(): "used the wrong Foo contract"
+                      }
+                  }
+              }
+          }
+        `,
+		definitionsLocation,
+		programs,
+	)
+
+	consumerProgram := ParseCheckAndCompile(
+		t,
+		`
+          import Foo from 0x2
+
+          contract Consumer {
+              view fun check(): Bool {
+                  return Foo.check()
+              }
+          }
+        `,
+		consumerLocation,
+		programs,
+	)
+	_, contractValues[consumerLocation] = initializeContract(
+		t,
+		consumerLocation,
+		consumerProgram,
+		vmConfig,
+	)
+
+	// Consumer is deliberately imported first. With a flat, unqualified global
+	// namespace, its transitive Foo import would claim the name `Foo`, and the
+	// inherited condition from Definitions would then load the wrong contract.
+	_, err := CompileAndInvokeWithOptionsAndPrograms(
+		t,
+		`
+          import Consumer from 0x4
+          import Definitions from 0x3
+
+          struct A: Definitions.I {
+              fun test() {}
+          }
+
+          fun main() {
+              Consumer.check()
+              A().test()
+          }
+        `,
+		"main",
+		CompilerAndVMOptions{
+			ParseCheckAndCompileOptions: ParseCheckAndCompileOptions{
+				ParseAndCheckOptions: &ParseAndCheckOptions{
+					Location: common.ScriptLocation{0x1},
+					CheckerConfig: &sema.Config{
+						LocationHandler: SingleIdentifierLocationResolver(t),
+					},
+				},
+			},
+			VMConfig: vmConfig,
+		},
+		programs,
+	)
+	require.NoError(t, err)
+}
+
 func TestFunctionPostConditions(t *testing.T) {
 
 	t.Parallel()
@@ -9714,23 +9874,20 @@ func TestAttachments(t *testing.T) {
 				activation.Set(
 					stdlib.VMSignatureAlgorithmConstructor.Name,
 					compiler.GlobalImport{
-						Name:          stdlib.VMSignatureAlgorithmConstructor.Name,
-						QualifiedName: stdlib.VMSignatureAlgorithmConstructor.Name,
+						Name: stdlib.VMSignatureAlgorithmConstructor.Name,
 					},
 				)
 				activation.Set(
 					validator.Name,
 					compiler.GlobalImport{
-						Name:          validator.Name,
-						QualifiedName: validator.Name,
+						Name: validator.Name,
 					},
 				)
 				for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
 					activation.Set(
 						v.Name,
 						compiler.GlobalImport{
-							Name:          v.Name,
-							QualifiedName: v.Name,
+							Name: v.Name,
 						},
 					)
 				}
@@ -10024,20 +10181,17 @@ func TestInjectedContract(t *testing.T) {
 		BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[compiler.GlobalImport] {
 			assert.Equal(t, TestLocation, location)
 			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-			activation.Set(
-				"B",
-				compiler.NewGlobalImport("B"),
-			)
-			activation.Set(
-				"B.c",
-				compiler.NewGlobalImport("B.c"),
-			)
+			bName := string(TestLocation.TypeID(nil, "B"))
+			cName := string(TestLocation.TypeID(nil, "B.c"))
+			activation.Set(bName, compiler.NewGlobalImport(bName))
+			activation.Set(cName, compiler.NewGlobalImport(cName))
 			return activation
 		},
 	}
 
+	cName := string(TestLocation.TypeID(nil, "B.c"))
 	cValue := vm.NewNativeFunctionValue(
-		"B.c",
+		cName,
 		cType,
 		func(
 			context interpreter.NativeFunctionContext,
@@ -10063,11 +10217,12 @@ func TestInjectedContract(t *testing.T) {
 
 		bVariable := &interpreter.SimpleVariable{}
 		bVariable.InitializeWithValue(bValue)
-		activation.Set("B", bVariable)
+		bName := string(TestLocation.TypeID(nil, "B"))
+		activation.Set(bName, bVariable)
 
 		cVariable := &interpreter.SimpleVariable{}
 		cVariable.InitializeWithValue(cValue)
-		activation.Set("B.c", cVariable)
+		activation.Set(cName, cVariable)
 
 		return activation
 	}
@@ -10927,6 +11082,31 @@ func TestVMImportAliasing(t *testing.T) {
 		}
 
 		program := comp.Compile()
+
+		fooContractName := string(fooLocation.TypeID(nil, "Foo"))
+		barContractName := string(barLocation.TypeID(nil, "Foo"))
+		require.ElementsMatch(
+			t,
+			[]bbq.Import{
+				{
+					Location: fooLocation,
+					Name:     fooContractName,
+				},
+				{
+					Location: fooLocation,
+					Name:     fooContractName + ".value",
+				},
+				{
+					Location: barLocation,
+					Name:     barContractName,
+				},
+				{
+					Location: barLocation,
+					Name:     barContractName + ".value",
+				},
+			},
+			program.Imports,
+		)
 
 		vmConfig = vm.NewConfig(NewUnmeteredInMemoryStorage())
 		vmConfig.ImportHandler = func(location common.Location) *bbq.InstructionProgram {
@@ -12231,6 +12411,7 @@ func TestInitializerFunctionType(t *testing.T) {
 	require.NoError(t, err)
 
 	result, err := programVM.InvokeExternally("getTypeOfConstructorS")
+	require.NoError(t, err)
 	if err == nil {
 		require.Equal(t, 0, programVM.StackSize())
 	}
@@ -12238,6 +12419,7 @@ func TestInitializerFunctionType(t *testing.T) {
 	assert.Equal(t, common.TypeID("view fun():S.test.S"), metaType.Type.ID())
 
 	result, err = programVM.InvokeExternally("getTypeOfConstructorT")
+	require.NoError(t, err)
 	if err == nil {
 		require.Equal(t, 0, programVM.StackSize())
 	}

@@ -74,7 +74,7 @@ func LinkGlobals(
 			variable.InitializeWithValue(value)
 			// Linker matches the compiled function index with the linked function index
 			globals[index] = variable
-			indexedGlobals.Set(function.QualifiedName, variable)
+			indexedGlobals.Set(typedGlobal.Name, variable)
 		case *bbq.VariableGlobal[opcode.Instruction]:
 			variable := typedGlobal.Variable
 			simpleVariable := &interpreter.SimpleVariable{}
@@ -94,7 +94,7 @@ func LinkGlobals(
 			}
 			// Linker matches the compiled variable index with the linked variable index
 			globals[index] = simpleVariable
-			indexedGlobals.Set(variable.Name, simpleVariable)
+			indexedGlobals.Set(typedGlobal.Name, simpleVariable)
 		case *bbq.ContractGlobal:
 			contract := typedGlobal.Contract
 			contractVariable := interpreter.NewContractVariableWithGetter(
@@ -105,7 +105,9 @@ func LinkGlobals(
 			)
 			// Linker matches the compiled contract index with the linked contract index
 			globals[index] = contractVariable
-			indexedGlobals.Set(contract.Name, contractVariable)
+			// GlobalInfo.Name is canonical; Contract.Name is only the
+			// source-level declaration identifier.
+			indexedGlobals.Set(typedGlobal.Name, contractVariable)
 		case *bbq.ImportedGlobal:
 			importedGlobal := linkImportedGlobal(
 				memoryGauge,
@@ -180,9 +182,7 @@ func linkImportedGlobal(
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
-	// When linking/finding the global in the imported program,
-	// use the unqualified-name.
-	// Because
+	// Compiler, linker, and VM all use the same canonical global name.
 	global := indexedGlobals.Find(importedGlobal.Name)
 	if global == nil {
 		panic(LinkerError{

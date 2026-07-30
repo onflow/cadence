@@ -1997,9 +1997,12 @@ func newEnumLookup(
 	elaboration *DesugaredElaboration,
 ) *ast.FunctionDeclaration {
 
+	// Use the type name as declared in the source.
+	// The compiler derives the global name of the lookup function
+	// from the enum type, via the function's type.
 	typeIdentifier := ast.NewIdentifier(
 		gauge,
-		commons.TypeQualifier(enumType),
+		enumType.Identifier,
 		ast.EmptyPosition,
 	)
 

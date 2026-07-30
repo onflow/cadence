@@ -50,6 +50,10 @@ type VM struct {
 
 	context *Context
 	globals *activations.Activation[Variable]
+
+	// program provides the declaration metadata needed to resolve
+	// source-level names of VM entry points to global names.
+	program *bbq.InstructionProgram
 }
 
 func NewVM(
@@ -62,6 +66,7 @@ func NewVM(
 
 	vm := &VM{
 		context: context,
+		program: program,
 	}
 
 	vm.configureContext()
@@ -323,14 +328,35 @@ func (vm *VM) getGlobalFunction(name string) (FunctionValue, error) {
 	return functionValue, nil
 }
 
-// InvokeExternally invokes a global function with the given arguments
+// globalName returns the name of the global that a declaration
+// of the current program is registered under.
+// Globals are qualified by the location of the program that declares them,
+// so that same-named declarations of different programs never share a global.
+// NOTE: The program's own location is used, not the location the VM was created
+// with, because the global names were determined when the program was compiled.
+func (vm *VM) globalName(name string) string {
+	location := vm.program.Location
+	if location == nil {
+		return name
+	}
+	return string(location.TypeID(vm.context.MemoryGauge, name))
+}
+
+// InvokeExternally invokes a function declared by the current program
+// with the given arguments.
+// The name is the name of the function as it appears in the source,
+// e.g. `main` for a script, or `Foo.bar` for a function of contract `Foo`.
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
+	return vm.invokeGlobalExternally(vm.globalName(name), arguments)
+}
+
+func (vm *VM) invokeGlobalExternally(globalName string, arguments []Value) (v Value, err error) {
 
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	functionValue, err := vm.getGlobalFunction(name)
+	functionValue, err := vm.getGlobalFunction(globalName)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +373,7 @@ func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...
 		err = internalErr
 	})
 
-	functionValue, err := vm.getGlobalFunction(name)
+	functionValue, err := vm.getGlobalFunction(vm.globalName(name))
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +506,21 @@ func (vm *VM) invokeExternally(
 
 func (vm *VM) InitializeContract(contractName string, arguments ...Value) (*interpreter.CompositeValue, error) {
 	contractInitializer := commons.QualifiedName(contractName, commons.InitFunctionName)
-	value, err := vm.InvokeExternally(contractInitializer, arguments...)
+
+	// A VM may be created with a location different from the contract's
+	// declaration location. Derive the initializer name from the contract
+	// metadata instead of qualifying it with the VM's current location.
+	for _, contract := range vm.program.Contracts {
+		if contract.Name == contractName && contract.Location != nil {
+			contractInitializer = string(contract.Location.TypeID(
+				vm.context.MemoryGauge,
+				contractInitializer,
+			))
+			break
+		}
+	}
+
+	value, err := vm.invokeGlobalExternally(contractInitializer, arguments)
 	if err != nil {
 		return nil, err
 	}
@@ -543,7 +583,9 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	context := vm.context
 	globals := vm.globals
 
-	initializerVariable := globals.Find(commons.ProgramInitFunctionName)
+	initializerVariable := globals.Find(
+		vm.globalName(commons.ProgramInitFunctionName),
+	)
 	if initializerVariable == nil {
 		if len(transactionArgs) > 0 {
 			return interpreter.ArgumentCountError{
@@ -571,7 +613,9 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 	// Transaction invocation happens on the concrete value.
 	var accessedReference interpreter.ReferenceValue = nil
 
-	prepareVariable := vm.globals.Find(commons.TransactionPrepareFunctionName)
+	prepareVariable := vm.globals.Find(
+		vm.globalName(commons.TransactionPrepareFunctionName),
+	)
 	if prepareVariable == nil {
 		if len(signers) > 0 {
 			return interpreter.ArgumentCountError{
@@ -604,7 +648,9 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeValue) error {
 	context := vm.context
 
-	executeVariable := vm.globals.Find(commons.TransactionExecuteFunctionName)
+	executeVariable := vm.globals.Find(
+		vm.globalName(commons.TransactionExecuteFunctionName),
+	)
 	if executeVariable == nil {
 		return nil
 	}

@@ -91,17 +91,9 @@ func TypeQualifier(typ sema.Type) string {
 	case *sema.InclusiveRangeType:
 		return TypeQualifierInclusiveRange
 	default:
-		return typ.QualifiedString()
-	}
-}
-
-func LocationQualifier(typ sema.Type) string {
-	switch typ := typ.(type) {
-	case *sema.ReferenceType:
-		return LocationQualifier(typ.Type)
-	case *sema.IntersectionType:
-		return LocationQualifier(typ.Types[0])
-	default:
+		// Use the canonical type ID for all nominal types. For located types,
+		// this includes the declaration location (e.g. `A.01.Foo`) and prevents
+		// same-named types from different programs from sharing a BBQ global.
 		return string(typ.ID())
 	}
 }
