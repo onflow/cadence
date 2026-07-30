@@ -1102,6 +1102,11 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 			)
 			enumLookupFuncType := sema.EnumLookupFunctionType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
+
+			// TODO: Instead of appending as a top level function,
+			// see if this can be added as a member of the enclosing container,
+			// similar to how struct constructors are placed.
+			// The caveat is that this needs to be marked as a static-function somehow.
 			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
 		} else {
 			d.addEmptyInitializer(initializerFuncType, &desugaredMembers)
@@ -1999,7 +2004,7 @@ func newEnumLookup(
 
 	typeIdentifier := ast.NewIdentifier(
 		gauge,
-		enumType.Identifier,
+		enumType.QualifiedIdentifier(),
 		ast.EmptyPosition,
 	)
 
