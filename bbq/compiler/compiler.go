@@ -1961,7 +1961,7 @@ func (c *Compiler[_, _]) compileVariableDeclaration(
 		c.mustEmitTransferAndConvert(secondValueType, firstValueType)
 
 		// Store second value in first value's variable.
-		c.emitVariableStore(firstValue.Identifier.Identifier)
+		c.emitVariableStore(firstValue)
 
 	case *ast.MemberExpression:
 		// Evaluate the first value's parent once, and store in a temp-local.
@@ -2105,7 +2105,7 @@ func (c *Compiler[_, _]) compileAssignment(
 	case *ast.IdentifierExpression:
 		c.compileExpression(value)
 		c.mustEmitTransferAndConvert(valueType, targetType)
-		c.emitVariableStore(target.Identifier.Identifier)
+		c.emitVariableStore(target)
 
 	case *ast.MemberExpression:
 		c.compileExpression(target.Expression)
@@ -2344,8 +2344,7 @@ func (c *Compiler[_, _]) compileSwapSet(
 	case *ast.IdentifierExpression:
 		c.emitGetLocal(valueIndex)
 		// NOTE: Assign to the original target. Do NOT use targetIndex here, because it is a temporary.
-		name := sideExpression.Identifier.Identifier
-		c.emitVariableStore(name)
+		c.emitVariableStore(sideExpression)
 
 	case *ast.MemberExpression:
 		c.emitGetLocal(targetIndex)
@@ -2867,13 +2866,16 @@ func (c *Compiler[_, _]) emitDynamicMethodLoad(methodName string, receiverType s
 	})
 }
 
-func (c *Compiler[_, _]) emitVariableStore(name string) {
+func (c *Compiler[_, _]) emitVariableStore(expression *ast.IdentifierExpression) {
+	// 1) First lookup in local variables
+	name := expression.Identifier.Identifier
 	local := c.currentFunction.findLocal(name)
 	if local != nil {
 		c.emitSetLocal(local.index)
 		return
 	}
 
+	// 2) Secondly, lookup in closure variables.
 	upvalueIndex, ok := c.currentFunction.findOrAddUpvalue(name)
 	if ok {
 		c.emit(opcode.InstructionSetUpvalue{
@@ -2882,7 +2884,9 @@ func (c *Compiler[_, _]) emitVariableStore(name string) {
 		return
 	}
 
-	global := c.findGlobal(name)
+	// 3) Finally, lookup in global namespace.
+	canonicalName := c.globalIdentifierCanonicalName(expression)
+	global := c.findGlobal(canonicalName)
 	c.emit(opcode.InstructionSetGlobal{
 		Global: global.GetGlobalInfo().Index,
 	})
