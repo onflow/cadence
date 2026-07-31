@@ -10419,9 +10419,6 @@ func TestFunctionInclusiveRangeConstruction(t *testing.T) {
 
 func TestVMImportAliasing(t *testing.T) {
 
-	// TODO: Enable
-	t.SkipNow()
-
 	t.Parallel()
 
 	t.Run("basic", func(t *testing.T) {

@@ -19,6 +19,8 @@
 package compiler
 
 import (
+	"sync"
+
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
@@ -54,14 +56,17 @@ type DesugaredElaboration struct {
 	returnStatementTypes              map[*ast.ReturnStatement]sema.ReturnStatementTypes
 	emitStatementEventTypes           map[*ast.EmitStatement]*sema.CompositeType
 	compositeTypes                    map[common.TypeID]*sema.CompositeType
-	arrayExpressionTypes            map[*ast.ArrayExpression]sema.ArrayExpressionTypes
-	functionExpressionFunctionTypes map[*ast.FunctionExpression]*sema.FunctionType
+	arrayExpressionTypes              map[*ast.ArrayExpression]sema.ArrayExpressionTypes
+	functionExpressionFunctionTypes   map[*ast.FunctionExpression]*sema.FunctionType
 
 	// importAliases maps an import's simple name to its canonical (location-qualified) name.
 	// Each elaboration has its own alias map, so that inherited code resolves identifiers
 	// against the imports of the program that declared the inherited code,
 	// not the program currently being compiled.
 	importAliases map[string]string
+
+	allImportAliasesOnce sync.Once
+	allImportAliases     map[string]string
 }
 
 func NewDesugaredElaboration(elaboration *sema.Elaboration, location common.Location) *DesugaredElaboration {
@@ -406,6 +411,26 @@ func (e *DesugaredElaboration) InterfaceTypeDeclaration(interfaceType *sema.Inte
 
 func (e *DesugaredElaboration) AllImportDeclarationsResolvedLocations() map[*ast.ImportDeclaration][]sema.ResolvedLocation {
 	return e.elaboration.AllImportDeclarationsResolvedLocations()
+}
+
+// AllImportAliases returns a flat map from original import name to alias
+// across all import declarations. Returns nil if no aliases exist.
+// The result is memoized.
+func (e *DesugaredElaboration) AllImportAliases() map[string]string {
+	e.allImportAliasesOnce.Do(func() {
+		allResolvedLocations := e.elaboration.AllImportDeclarationsResolvedLocations()
+		for importDecl := range allResolvedLocations { // nolint:maprange
+			perDecl := e.elaboration.ImportDeclarationAliases(importDecl)
+			for original, alias := range perDecl { // nolint:maprange
+				if e.allImportAliases == nil {
+					e.allImportAliases = make(map[string]string)
+				}
+				e.allImportAliases[original] = alias
+			}
+		}
+	})
+
+	return e.allImportAliases
 }
 
 // OriginalElaboration returns the underlying elaboration.

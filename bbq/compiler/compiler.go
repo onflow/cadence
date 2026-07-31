@@ -4276,8 +4276,7 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 
 	}
 
-	// TODO:
-	// aliases := c.DesugaredElaboration.elaboration.ImportDeclarationAliases(declaration)
+	aliases := c.DesugaredElaboration.elaboration.ImportDeclarationAliases(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {
 		location := resolvedLocation.Location
@@ -4286,10 +4285,18 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		// A program imports constructs using their simple name (e.g: `import Foo from 0x01`)
 		// But the actual imported compiled program use canonical-name for exported globals.
 		// Therefore, construct a mapping between simple-name and the canonical-name for imports.
+		//
+		// If the import uses an alias (e.g: `import Foo as Bar from 0x01`),
+		// map the alias name instead, since that is what the code uses.
 		for _, identifier := range resolvedLocation.Identifiers {
-			simpleName := identifier.Identifier
-			canonicalName := c.canonicalNameAt(location, simpleName)
-			c.DesugaredElaboration.SetImportAlias(simpleName, canonicalName)
+			originalName := identifier.Identifier
+			canonicalName := c.canonicalNameAt(location, originalName)
+
+			name := originalName
+			if alias, ok := aliases[originalName]; ok {
+				name = alias
+			}
+			c.DesugaredElaboration.SetImportAlias(name, canonicalName)
 		}
 
 	}
@@ -4343,15 +4350,18 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 	// aliases to already be populated so identifiers resolve correctly
 	// against that program's imports.
 	var importedElaboration *DesugaredElaboration
+	var importAliases map[string]string
+
 	if c.Config.ElaborationResolver != nil {
-		resolved, err := c.Config.ElaborationResolver(location)
+		var err error
+		importedElaboration, err = c.Config.ElaborationResolver(location)
 		if err != nil {
 			panic(err)
 		}
 
-		if resolved != nil && resolved.importAliases == nil {
-			resolved.importAliases = make(map[string]string)
-			importedElaboration = resolved
+		if importedElaboration != nil && importedElaboration.importAliases == nil {
+			importedElaboration.importAliases = make(map[string]string)
+			importAliases = importedElaboration.AllImportAliases()
 		}
 	}
 
@@ -4359,9 +4369,19 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 	// on the imported elaboration from the same iteration.
 	for _, impt := range importedProgram.Imports {
 		if importedElaboration != nil && impt.Location != nil {
-			canonicalName := c.canonicalNameAt(impt.Location, impt.Name)
-			importedElaboration.SetImportAlias(impt.Name, canonicalName)
+			originalName := impt.Name
+			canonicalName := c.canonicalNameAt(impt.Location, originalName)
+
+			// If the imported program uses an alias for this import
+			// (e.g. `import X as Y`), map the alias since that is
+			// what the inherited code uses.
+			simpleName := originalName
+			if alias, ok := importAliases[originalName]; ok {
+				simpleName = alias
+			}
+			importedElaboration.SetImportAlias(simpleName, canonicalName)
 		}
+
 		c.addGlobalsFromImportedProgram(impt.Location)
 	}
 }
