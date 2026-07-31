@@ -97,9 +97,6 @@ type Compiler[E, T any] struct {
 
 	addedImports map[common.Location]struct{}
 
-	// Maps import alias/name to the canonical name.
-	importAliases map[string]string
-
 	isInheritedCode bool
 }
 
@@ -179,7 +176,7 @@ func newCompiler[E, T any](
 
 	return &Compiler[E, T]{
 		Program:              program.Program,
-		DesugaredElaboration: NewDesugaredElaboration(program.Elaboration),
+		DesugaredElaboration: NewDesugaredElaboration(program.Elaboration, location),
 		Config:               config,
 		location:             location,
 		Globals:              make(map[string]bbq.Global),
@@ -193,7 +190,6 @@ func newCompiler[E, T any](
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
 		addedImports:        make(map[common.Location]struct{}),
-		importAliases:       make(map[string]string),
 	}
 }
 
@@ -2828,7 +2824,7 @@ func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.Identifie
 	}
 
 	// 2) Resolve from imported globals.
-	importedGlobalCanonicalName, found := c.importAliases[simpleName]
+	importedGlobalCanonicalName, found := c.DesugaredElaboration.ImportAlias(simpleName)
 	if found {
 		return importedGlobalCanonicalName
 	}
@@ -4293,8 +4289,9 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		for _, identifier := range resolvedLocation.Identifiers {
 			simpleName := identifier.Identifier
 			canonicalName := c.canonicalNameAt(location, simpleName)
-			c.importAliases[simpleName] = canonicalName
+			c.DesugaredElaboration.SetImportAlias(simpleName, canonicalName)
 		}
+
 	}
 
 	return
@@ -4340,8 +4337,31 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 
 	c.addedImports[location] = struct{}{}
 
-	// Recursively add transitive imports.
+	// Resolve the imported elaboration so we can populate its import aliases.
+	// When inherited code (e.g. interface conditions) is later compiled,
+	// the compiler swaps to the inherited elaboration and needs its
+	// aliases to already be populated so identifiers resolve correctly
+	// against that program's imports.
+	var importedElaboration *DesugaredElaboration
+	if c.Config.ElaborationResolver != nil {
+		resolved, err := c.Config.ElaborationResolver(location)
+		if err != nil {
+			panic(err)
+		}
+
+		if resolved != nil && resolved.importAliases == nil {
+			resolved.importAliases = make(map[string]string)
+			importedElaboration = resolved
+		}
+	}
+
+	// Recursively add transitive imports, and populate aliases
+	// on the imported elaboration from the same iteration.
 	for _, impt := range importedProgram.Imports {
+		if importedElaboration != nil && impt.Location != nil {
+			canonicalName := c.canonicalNameAt(impt.Location, impt.Name)
+			importedElaboration.SetImportAlias(impt.Name, canonicalName)
+		}
 		c.addGlobalsFromImportedProgram(impt.Location)
 	}
 }
@@ -4760,6 +4780,15 @@ func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = stmtElaboration
 
+		// Swap the compiler's location to the inherited program's location.
+		// This ensures that canonical names for non-imported globals
+		// (defined in the inherited program) are constructed with the
+		// correct location, rather than the current program's location.
+		prevLocation := c.location
+		if stmtElaboration.location != nil {
+			c.location = stmtElaboration.location
+		}
+
 		prevIsInheritedCode := c.isInheritedCode
 		c.isInheritedCode = true
 
@@ -4768,6 +4797,7 @@ func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement
 
 		defer func() {
 			c.DesugaredElaboration = prevElaboration
+			c.location = prevLocation
 			c.currentInheritedConditionParamBinding = prevInheritedConditionParamBinding
 			c.isInheritedCode = prevIsInheritedCode
 		}()

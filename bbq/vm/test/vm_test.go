@@ -1267,9 +1267,9 @@ func TestContractImport(t *testing.T) {
 		barCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			switch location {
 			case fooLocation:
-				return compiler.NewDesugaredElaboration(fooChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(fooChecker.Elaboration, location), nil
 			case barLocation:
-				return compiler.NewDesugaredElaboration(barChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(barChecker.Elaboration, location), nil
 			default:
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
@@ -2638,7 +2638,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 		)
 		importCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			if location == contractLocation {
-				return compiler.NewDesugaredElaboration(importedChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(importedChecker.Elaboration, location), nil
 			}
 
 			return nil, fmt.Errorf("cannot find elaboration for %s", location)
@@ -2863,9 +2863,9 @@ func TestInterfaceMethodCall(t *testing.T) {
 		bazCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			switch location {
 			case fooLocation:
-				return compiler.NewDesugaredElaboration(fooChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(fooChecker.Elaboration, location), nil
 			case barLocation:
-				return compiler.NewDesugaredElaboration(barChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(barChecker.Elaboration, location), nil
 			default:
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}
@@ -11455,9 +11455,9 @@ func TestVMImportAliasing(t *testing.T) {
 		barCompiler.Config.ElaborationResolver = func(location common.Location) (*compiler.DesugaredElaboration, error) {
 			switch location {
 			case fooLocation:
-				return compiler.NewDesugaredElaboration(fooChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(fooChecker.Elaboration, location), nil
 			case barLocation:
-				return compiler.NewDesugaredElaboration(barChecker.Elaboration), nil
+				return compiler.NewDesugaredElaboration(barChecker.Elaboration, location), nil
 			default:
 				return nil, fmt.Errorf("cannot find elaboration for %s", location)
 			}

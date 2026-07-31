@@ -1744,6 +1744,11 @@ func TestInterpretInheritedConditionWithConflictingTransitiveImports(t *testing.
 		Name:    "Consumer",
 	}
 
+	wrapperLocation := common.AddressLocation{
+		Address: common.MustBytesToAddress([]byte{0x5}),
+		Name:    "Wrapper",
+	}
+
 	const fooCodeA = `
         access(all) contract Foo {
             access(all) view fun check(): Bool {
@@ -1794,6 +1799,19 @@ func TestInterpretInheritedConditionWithConflictingTransitiveImports(t *testing.
         }
     `
 
+	// Wrapper re-exports Definitions.I through its own struct interface K.
+	// This adds a second level of transitive imports:
+	//   Script -> Wrapper -> Definitions -> Foo(0x01)
+	// The alias population must recurse through Wrapper into Definitions
+	// so that the inherited condition's `Foo` still resolves to 0x01.Foo.
+	const wrapperCode = `
+        import Definitions from 0x3
+
+        access(all) contract interface Wrapper {
+            access(all) struct interface K: Definitions.I {}
+        }
+    `
+
 	const code = `
         // Transitively imports A.0000000000000001.Foo
         import Definitions from 0x3
@@ -1801,11 +1819,20 @@ func TestInterpretInheritedConditionWithConflictingTransitiveImports(t *testing.
         // Transitively imports A.0000000000000002.Foo
         import Consumer from 0x4
 
+        // Transitively imports Definitions (and thus Foo from 0x01) through a second level
+        import Wrapper from 0x5
+
         access(all) struct A: Definitions.I {
             access(all) fun test() {}
         }
 
         access(all) struct B: Consumer.J {
+            access(all) fun test() {}
+        }
+
+        // Inherits Definitions.I's pre-condition through Wrapper.K,
+        // testing that import aliases are populated recursively.
+        access(all) struct C: Wrapper.K {
             access(all) fun test() {}
         }
 
@@ -1819,6 +1846,10 @@ func TestInterpretInheritedConditionWithConflictingTransitiveImports(t *testing.
             // The inherited pre-condition must use A.0000000000000002.Foo
             B().test()
 
+            // The inherited pre-condition (from Definitions.I via Wrapper.K)
+            // must use A.0000000000000001.Foo, resolved through two transitive levels.
+            C().test()
+
             return result
         }
     `
@@ -1831,6 +1862,7 @@ func TestInterpretInheritedConditionWithConflictingTransitiveImports(t *testing.
 		{code: definitionsCode, location: definitionsLocation},
 		{code: fooCodeB, location: fooLocationB},
 		{code: consumerCode, location: consumerLocation},
+		{code: wrapperCode, location: wrapperLocation},
 	}
 
 	var (

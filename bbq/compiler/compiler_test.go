@@ -4243,7 +4243,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 		&compiler.Config{
 			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				if location == checker.Location {
-					return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+					return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 				}
 
 				return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -4733,7 +4733,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
-						return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+						return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 					}
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -4955,7 +4955,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
-						return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+						return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 					}
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -5408,7 +5408,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
-						return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+						return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 					}
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -6368,7 +6368,7 @@ func TestCompileTransaction(t *testing.T) {
 		&compiler.Config{
 			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				if location == checker.Location {
-					return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+					return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 				}
 
 				return nil, fmt.Errorf("cannot find elaboration for: %s", location)

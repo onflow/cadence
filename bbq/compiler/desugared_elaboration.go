@@ -29,6 +29,11 @@ type DesugaredElaboration struct {
 	// since that would make it easy to mistakenly modify the original elaboration.
 	elaboration *sema.Elaboration
 
+	// location is the location of the program this elaboration belongs to.
+	// Used to construct location-qualified canonical names for globals
+	// defined in the same program.
+	location common.Location
+
 	// Holds the elaborations associated with inherited codes.
 	// e.g:
 	//  - inherited pre-/post-conditions.
@@ -51,11 +56,18 @@ type DesugaredElaboration struct {
 	compositeTypes                    map[common.TypeID]*sema.CompositeType
 	arrayExpressionTypes            map[*ast.ArrayExpression]sema.ArrayExpressionTypes
 	functionExpressionFunctionTypes map[*ast.FunctionExpression]*sema.FunctionType
+
+	// importAliases maps an import's simple name to its canonical (location-qualified) name.
+	// Each elaboration has its own alias map, so that inherited code resolves identifiers
+	// against the imports of the program that declared the inherited code,
+	// not the program currently being compiled.
+	importAliases map[string]string
 }
 
-func NewDesugaredElaboration(elaboration *sema.Elaboration) *DesugaredElaboration {
+func NewDesugaredElaboration(elaboration *sema.Elaboration, location common.Location) *DesugaredElaboration {
 	return &DesugaredElaboration{
 		elaboration:               elaboration,
+		location:                  location,
 		inheritedCodeElaborations: map[ast.Element]*DesugaredElaboration{},
 	}
 }
@@ -424,6 +436,21 @@ func (e *DesugaredElaboration) GetGlobalValue(name string) (*sema.Variable, bool
 
 func (e *DesugaredElaboration) SetGlobalValue(name string, variable *sema.Variable) {
 	e.elaboration.SetGlobalValue(name, variable)
+}
+
+func (e *DesugaredElaboration) SetImportAlias(simpleName string, canonicalName string) {
+	if e.importAliases == nil {
+		e.importAliases = make(map[string]string)
+	}
+	e.importAliases[simpleName] = canonicalName
+}
+
+func (e *DesugaredElaboration) ImportAlias(simpleName string) (string, bool) {
+	if e.importAliases == nil {
+		return "", false
+	}
+	canonicalName, ok := e.importAliases[simpleName]
+	return canonicalName, ok
 }
 
 func (e *DesugaredElaboration) IsNestedResourceMoveExpression(expression ast.Expression) bool {
