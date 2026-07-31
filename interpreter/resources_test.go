@@ -2746,7 +2746,8 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 
 		// Explicitly initialize the contracts, if it's the VM.
 		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
-			_, err = vmInvokable.InitializeContract("base")
+			contractType := RequireGlobalType(t, inter, "base")
+			_, err = vmInvokable.InitializeContract(contractType.ID())
 			require.NoError(t, err)
 		}
 

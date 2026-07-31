@@ -1055,7 +1055,9 @@ func TestInterpretImportAliasOtherMember(t *testing.T) {
 		}
 
 		importVM := vm.NewVM(myContractLocation, importedProgram, vmConfig)
-		myContractValue, err := importVM.InitializeContract("MyContract")
+		typeID := myContractLocation.TypeID(nil, "MyContract")
+
+		myContractValue, err := importVM.InitializeContract(typeID)
 		require.NoError(t, err)
 
 		result, invocationErr = test.CompileAndInvokeWithOptionsAndPrograms(t,
@@ -1898,8 +1900,11 @@ func TestInterpretInheritedConditionWithConflictingTransitiveImports(t *testing.
 				continue
 			}
 
+			contractName := contract.location.Name
+			contractTypeID := contract.location.TypeID(nil, contractName)
+
 			contractVM := vm.NewVM(contract.location, program, vmConfig)
-			contractValue, err := contractVM.InitializeContract(contract.location.ID())
+			contractValue, err := contractVM.InitializeContract(contractTypeID)
 			require.NoError(t, err)
 
 			contractValues[contract.location] = contractValue

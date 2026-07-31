@@ -363,7 +363,12 @@ func (vm *VM) InvokeExternallyCanonical(canonicalName string, arguments ...Value
 // Deprecated: InvokeExternallyUncheckedForTestingOnly invokes a global function with the given arguments,
 // without validating them.
 // NOTE: FOR TESTING PURPOSES ONLY! Use InvokeExternally instead
-func (vm *VM) InvokeExternallyUncheckedForTestingOnly(canonicalName string, arguments ...Value) (v Value, err error) {
+func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
+	canonicalName := commons.LocationQualifiedName(
+		vm.context.MemoryGauge,
+		vm.context.location,
+		name,
+	)
 
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
@@ -500,8 +505,8 @@ func (vm *VM) invokeExternally(
 	return vm.pop(), nil
 }
 
-func (vm *VM) InitializeContract(typeID string, arguments ...Value) (*interpreter.CompositeValue, error) {
-	contractInitializer := commons.QualifiedName(typeID, commons.InitFunctionName)
+func (vm *VM) InitializeContract(typeID sema.TypeID, arguments ...Value) (*interpreter.CompositeValue, error) {
+	contractInitializer := commons.QualifiedName(string(typeID), commons.InitFunctionName)
 	value, err := vm.InvokeExternallyCanonical(contractInitializer, arguments...)
 	if err != nil {
 		return nil, err

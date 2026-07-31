@@ -55,6 +55,10 @@ func QualifiedName(typeName, functionName string) string {
 }
 
 func LocationQualifiedName(memoryGauge common.MemoryGauge, location common.Location, name string) string {
+	if location == nil {
+		return name
+	}
+
 	id := location.TypeID(memoryGauge, name)
 	return string(id)
 }

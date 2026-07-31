@@ -1363,10 +1363,12 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 
 		// Explicitly initialize the contracts, if it's the VM.
 		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
-			_, err = vmInvokable.InitializeContract("C1")
+			c1Type := RequireGlobalType(t, inter, "C1")
+			_, err = vmInvokable.InitializeContract(c1Type.ID())
 			require.NoError(t, err)
 
-			_, err = vmInvokable.InitializeContract("C2")
+			c2Type := RequireGlobalType(t, inter, "C2")
+			_, err = vmInvokable.InitializeContract(c2Type.ID())
 			require.NoError(t, err)
 		}
 

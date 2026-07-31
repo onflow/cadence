@@ -689,7 +689,13 @@ func ContractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
 		contractInitializer := context.GetFunction(location, contractInitializerName)
 
-		compositeType, err := context.GetCompositeType(location, contractName, location.TypeID(context, contractName))
+		// contractName is already location-qualified (e.g. "S.test.C"),
+		// so use it directly as the typeID rather than re-qualifying with location.
+		compositeType, err := context.GetCompositeType(
+			location,
+			contractName,
+			common.TypeID(contractName),
+		)
 		if err != nil {
 			panic(err)
 		}

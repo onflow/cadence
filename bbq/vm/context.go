@@ -38,6 +38,7 @@ import (
 type Context struct {
 	*Config
 
+	// location of the entry-point program.
 	location common.Location
 
 	CapabilityControllerIterations              map[interpreter.AddressPath]int
@@ -90,6 +91,7 @@ func NewContext(config *Config) *Context {
 func (c *Context) newReusing() *Context {
 	newContext := NewContext(c.Config)
 
+	newContext.location = c.location
 	newContext.semaTypeCache = c.semaTypeCache
 	newContext.linkedGlobalsCache = c.linkedGlobalsCache
 
@@ -323,8 +325,7 @@ func (c *Context) GetValueOfVariable(name string) interpreter.Value {
 }
 
 func (c *Context) GetLocation() common.Location {
-	//TODO
-	return nil
+	return c.location
 }
 
 // InvokeFunction function invokes a given function value with the given arguments.

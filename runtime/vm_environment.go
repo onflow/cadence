@@ -417,7 +417,7 @@ func (e *vmEnvironment) LoadContractValue(
 
 	// NOTE: invocation.Address is not needed here, as the initializer of the contract
 	// instantiates a new contract value with the address of the contract already (newCompositeAt)
-	contract, err = vm.InitializeContract(string(contractTypeID), invocation.ConstructorArguments...)
+	contract, err = vm.InitializeContract(contractTypeID, invocation.ConstructorArguments...)
 
 	return
 }
