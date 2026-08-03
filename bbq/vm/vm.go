@@ -2563,6 +2563,12 @@ func (vm *VM) Global(simpleName string) Value {
 	return variable.GetValue(vm.context)
 }
 
+// TODO: Remove this method and refactor and repurpose `Config.BuiltinGlobalsProvider`
+// method to be able to use for any location, not just built-in/nil location.
+func (vm *VM) SetGlobal(name string, variable Variable) {
+	vm.globals.Set(name, variable)
+}
+
 // LocationRange returns the location of the currently executing instruction.
 // This is an expensive operation and must be only used on-demand.
 func (vm *VM) LocationRange() interpreter.LocationRange {
