@@ -59,14 +59,19 @@ type DesugaredElaboration struct {
 	arrayExpressionTypes              map[*ast.ArrayExpression]sema.ArrayExpressionTypes
 	functionExpressionFunctionTypes   map[*ast.FunctionExpression]*sema.FunctionType
 
-	// importAliases maps an import's simple name to its canonical (location-qualified) name.
-	// Each elaboration has its own alias map, so that inherited code resolves identifiers
+	// importCanonicalNames maps an import's simple name to its canonical (location-qualified) name.
+	// The key of this map is the identifier of the import, or the alias if present.
+	// Each elaboration has its own mapping, so that inherited code resolves identifiers
 	// against the imports of the program that declared the inherited code,
 	// not the program currently being compiled.
-	importAliases map[string]string
+	importCanonicalNames map[string]string
 
-	allImportAliasesOnce sync.Once
+	// Return all aliases defined for the program of this elaboration.
+	// i.e: calls `ImportDeclarationAliases` for all imports of this program.
+	// Maps the actual name (key) to the alias (value).
+	// Used for constructing the canonical names for imports (importCanonicalNames).
 	allImportAliases     map[string]string
+	allImportAliasesOnce sync.Once
 }
 
 func NewDesugaredElaboration(elaboration *sema.Elaboration, location common.Location) *DesugaredElaboration {
@@ -464,17 +469,17 @@ func (e *DesugaredElaboration) SetGlobalValue(name string, variable *sema.Variab
 }
 
 func (e *DesugaredElaboration) SetImportAlias(simpleName string, canonicalName string) {
-	if e.importAliases == nil {
-		e.importAliases = make(map[string]string)
+	if e.importCanonicalNames == nil {
+		e.importCanonicalNames = make(map[string]string)
 	}
-	e.importAliases[simpleName] = canonicalName
+	e.importCanonicalNames[simpleName] = canonicalName
 }
 
 func (e *DesugaredElaboration) ImportAlias(simpleName string) (string, bool) {
-	if e.importAliases == nil {
+	if e.importCanonicalNames == nil {
 		return "", false
 	}
-	canonicalName, ok := e.importAliases[simpleName]
+	canonicalName, ok := e.importCanonicalNames[simpleName]
 	return canonicalName, ok
 }
 

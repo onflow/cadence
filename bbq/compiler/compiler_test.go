@@ -4272,7 +4272,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// 	`Test` type's constructor
 	// Not interested in the content of the constructor.
-	const concreteTypeConstructorName = "Test"
+	concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 	constructor := program.Functions[concreteTypeConstructorIndex]
 	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
@@ -4281,7 +4281,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// `Test` type's `test` function.
 
-	const concreteTypeTestFuncName = "Test.test"
+	concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 	concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
 	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
@@ -4338,7 +4338,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// 	`IA` type's `test` function
 
-	const interfaceTypeTestFuncName = "IA.test"
+	interfaceTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "IA.test")
 	interfaceTypeTestFunc := program.Functions[interfaceFunctionIndex]
 	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
 
@@ -4763,7 +4763,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// 	`Test` type's constructor
 		// Not interested in the content of the constructor.
-		const concreteTypeConstructorName = "Test"
+		concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 		constructor := program.Functions[concreteTypeConstructorIndex]
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
@@ -4780,7 +4780,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			resultIndex
 		)
 
-		const concreteTypeTestFuncName = "Test.test"
+		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
@@ -4984,7 +4984,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// 	`Test` type's constructor
 		// Not interested in the content of the constructor.
-		const concreteTypeConstructorName = "Test"
+		concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 		constructor := program.Functions[concreteTypeConstructorIndex]
 		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
 
@@ -5002,7 +5002,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			resultIndex
 		)
 
-		const concreteTypeTestFuncName = "Test.test"
+		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
@@ -5275,7 +5275,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			selfIndex = iota
 		)
 
-		const concreteTypeTestFuncName = "D.Vault.getBalance"
+		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, dLocation, "D.Vault.getBalance")
 		concreteTypeTestFunc := dProgram.Functions[concreteTypeFunctionIndex]
 		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
 
@@ -5374,11 +5374,11 @@ func TestCompileFunctionConditions(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: aLocation,
-					Name:     "A.TestStruct",
+					Name:     "A.0000000000000001.A.TestStruct",
 				},
 				{
 					Location: aLocation,
-					Name:     "A.TestStruct.test",
+					Name:     "A.0000000000000001.A.TestStruct.test",
 				},
 				{
 					Location: nil,
@@ -6444,16 +6444,21 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Transaction constructor
 	// Not interested in the content of the constructor.
+	txLocation := common.TransactionLocation{}
+	qualifiedTransactionName := commons.LocationQualifiedName(nil, txLocation, commons.TransactionWrapperCompositeName)
+	qualifiedPrepareName := commons.LocationQualifiedName(nil, txLocation, commons.TransactionPrepareFunctionName)
+	qualifiedExecuteName := commons.LocationQualifiedName(nil, txLocation, commons.TransactionExecuteFunctionName)
+
 	constructor := program.Functions[transactionInitFunctionIndex]
 	require.Equal(t,
-		commons.TransactionWrapperCompositeName,
+		qualifiedTransactionName,
 		constructor.QualifiedName,
 	)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+transactionInitFunctionIndex,
-		comp.Globals[commons.TransactionWrapperCompositeName].GetGlobalInfo().Index,
+		comp.Globals[qualifiedTransactionName].GetGlobalInfo().Index,
 	)
 
 	transactionType := &interpreter.CompositeStaticType{
@@ -6481,14 +6486,14 @@ func TestCompileTransaction(t *testing.T) {
 
 	prepareFunction := program.Functions[prepareFunctionIndex]
 	require.Equal(t,
-		commons.TransactionPrepareFunctionName,
+		qualifiedPrepareName,
 		prepareFunction.QualifiedName,
 	)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+prepareFunctionIndex,
-		comp.Globals[commons.TransactionPrepareFunctionName].GetGlobalInfo().Index,
+		comp.Globals[qualifiedPrepareName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -6540,12 +6545,12 @@ func TestCompileTransaction(t *testing.T) {
 	//    }
 
 	executeFunction := program.Functions[executeFunctionIndex]
-	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
+	require.Equal(t, qualifiedExecuteName, executeFunction.QualifiedName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+executeFunctionIndex,
-		comp.Globals[commons.TransactionExecuteFunctionName].GetGlobalInfo().Index,
+		comp.Globals[qualifiedExecuteName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -6684,9 +6689,10 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	// Program init function
+	qualifiedInitName := commons.LocationQualifiedName(nil, txLocation, commons.ProgramInitFunctionName)
 	initFunction := program.Functions[programInitFunctionIndex]
 	require.Equal(t,
-		commons.ProgramInitFunctionName,
+		qualifiedInitName,
 		initFunction.QualifiedName,
 	)
 
@@ -8829,11 +8835,11 @@ func TestCompileImports(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: aLocation,
-					Name:     "A",
+					Name:     "A.0000000000000001.A",
 				},
 				{
 					Location: aLocation,
-					Name:     "A.test",
+					Name:     "A.0000000000000001.A.test",
 				},
 			},
 			bProgram.Imports,
@@ -8900,7 +8906,7 @@ func TestCompileImports(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: aLocation,
-					Name:     "A.Foo",
+					Name:     "A.0000000000000001.A.Foo",
 				},
 			},
 			bProgram.Imports,
@@ -8934,15 +8940,15 @@ func TestCompileImports(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: bLocation,
-					Name:     "B.Bar",
+					Name:     "A.0000000000000001.B.Bar",
 				},
 				{
 					Location: bLocation,
-					Name:     "B.Bar.getFoo",
+					Name:     "A.0000000000000001.B.Bar.getFoo",
 				},
 				{
 					Location: aLocation,
-					Name:     "A.Foo.test",
+					Name:     "A.0000000000000001.A.Foo.test",
 				},
 			},
 			cProgram.Imports,
@@ -12547,7 +12553,7 @@ func TestCompileImportEnumCase(t *testing.T) {
 		[]bbq.Import{
 			{
 				Location: aLocation,
-				Name:     "A.E.X",
+				Name:     "A.0000000000000001.A.E.X",
 			},
 		},
 		bProgram.Imports,
@@ -12804,7 +12810,7 @@ func TestCompileInjectedContract(t *testing.T) {
 
 	aTestFunction := functions[3]
 
-	require.Equal(t, aTestFunction.QualifiedName, "A.test")
+	require.Equal(t, aTestFunction.QualifiedName, "S.test.A.test")
 
 	bStaticType = &interpreter.CompositeStaticType{
 		QualifiedIdentifier: "B",
@@ -13027,7 +13033,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 8)
 
 	defaultDestroyEventConstructor := functions[5]
-	require.Equal(t, "Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
+	require.Equal(t, "A.0000000000000001.Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
 
 	const (
 		xIndex = iota
@@ -13105,7 +13111,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 12)
 
 	defaultDestroyEventEmittingFunction := functions[8]
-	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.QualifiedName)
+	require.Equal(t, "A.0000000000000001.Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.QualifiedName)
 
 	const inheritedEventConstructorIndex = 10
 	const selfDefinedABCEventConstructorIndex = 13
@@ -13256,11 +13262,11 @@ func TestCompileImportAlias(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: importLocation,
-					Name:     "Foo",
+					Name:     "A.0000000000000001.Foo",
 				},
 				{
 					Location: importLocation,
-					Name:     "Foo.hello",
+					Name:     "A.0000000000000001.Foo.hello",
 				},
 			},
 			program.Imports,
@@ -13271,22 +13277,19 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			[]bbq.GlobalInfo{
 				{
-					Location:      nil,
-					Name:          "test",
-					QualifiedName: "test",
-					Index:         0,
+					Location: nil,
+					Name:     "S.test.test",
+					Index:    0,
 				},
 				{
-					Location:      importLocation,
-					Name:          "Foo",
-					QualifiedName: "A.0000000000000001.Foo",
-					Index:         1,
+					Location: importLocation,
+					Name:     "A.0000000000000001.Foo",
+					Index:    1,
 				},
 				{
-					Location:      importLocation,
-					Name:          "Foo.hello",
-					QualifiedName: "A.0000000000000001.Foo.hello",
-					Index:         2,
+					Location: importLocation,
+					Name:     "A.0000000000000001.Foo.hello",
+					Index:    2,
 				},
 			},
 			program.Globals,
@@ -13343,7 +13346,7 @@ func TestCompileImportAlias(t *testing.T) {
 			[]bbq.Import{
 				{
 					Location: importLocation,
-					Name:     "FooInterface.defaultHello",
+					Name:     "A.0000000000000001.FooInterface.defaultHello",
 				},
 			},
 			program.Imports,
@@ -13354,46 +13357,39 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			[]bbq.GlobalInfo{
 				{
-					Location:      nil,
-					Name:          "Bar",
-					QualifiedName: "Bar",
-					Index:         0,
+					Location: nil,
+					Name:     "A.0000000000000001.Bar",
+					Index:    0,
 				},
 				{
-					Location:      nil,
-					Name:          "Bar.getType",
-					QualifiedName: "Bar.getType",
-					Index:         1,
+					Location: nil,
+					Name:     "A.0000000000000001.Bar.getType",
+					Index:    1,
 				},
 				{
-					Location:      nil,
-					Name:          "Bar.isInstance",
-					QualifiedName: "Bar.isInstance",
-					Index:         2,
+					Location: nil,
+					Name:     "A.0000000000000001.Bar.isInstance",
+					Index:    2,
 				},
 				{
-					Location:      nil,
-					Name:          "Bar.forEachAttachment",
-					QualifiedName: "Bar.forEachAttachment",
-					Index:         3,
+					Location: nil,
+					Name:     "A.0000000000000001.Bar.forEachAttachment",
+					Index:    3,
 				},
 				{
-					Location:      nil,
-					Name:          "Bar.hello",
-					QualifiedName: "Bar.hello",
-					Index:         4,
+					Location: nil,
+					Name:     "A.0000000000000001.Bar.hello",
+					Index:    4,
 				},
 				{
-					Location:      nil,
-					Name:          "Bar.defaultHello",
-					QualifiedName: "Bar.defaultHello",
-					Index:         5,
+					Location: nil,
+					Name:     "A.0000000000000001.Bar.defaultHello",
+					Index:    5,
 				},
 				{
-					Location:      importLocation,
-					Name:          "FooInterface.defaultHello",
-					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
-					Index:         6,
+					Location: importLocation,
+					Name:     "A.0000000000000001.FooInterface.defaultHello",
+					Index:    6,
 				},
 			},
 			program.Globals,
@@ -14186,19 +14182,17 @@ func TestCompileReferenceMethod(t *testing.T) {
 		[]bbq.Global{
 			&bbq.FunctionGlobal[opcode.Instruction]{
 				GlobalInfo: bbq.GlobalInfo{
-					Index:         0,
-					Location:      nil,
-					Name:          "test",
-					QualifiedName: "test",
+					Index:    0,
+					Location: nil,
+					Name:     "S.test.test",
 				},
 				Function: &functions[0],
 			},
 			&bbq.ImportedGlobal{
 				GlobalInfo: bbq.GlobalInfo{
-					Index:         1,
-					Location:      nil,
-					Name:          "$ArrayVariableSized.map",
-					QualifiedName: "$ArrayVariableSized.map",
+					Index:    1,
+					Location: nil,
+					Name:     "$ArrayVariableSized.map",
 				},
 			},
 		},
@@ -14399,7 +14393,7 @@ func TestCompileInheritedStatementEndingControlFlow(t *testing.T) {
 
 	program := ParseCheckAndCompile(t, bContract, bLocation, programs)
 
-	const testFunctionQualifiedName = "B.Test.test"
+	testFunctionQualifiedName := commons.LocationQualifiedName(nil, bLocation, "B.Test.test")
 	var testFunction *bbq.Function[opcode.Instruction]
 	for i, function := range program.Functions {
 		if function.QualifiedName == testFunctionQualifiedName {

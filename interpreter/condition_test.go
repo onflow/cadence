@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
@@ -999,8 +1000,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 					if *compile {
 						vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-						vmConfig.ContractValueHandler = compilerUtils.ContractValueHandler(
-							"TestImpl",
+					vmConfig.ContractValueHandler = compilerUtils.ContractValueHandler(
+						commons.LocationQualifiedName(nil, TestLocation, "TestImpl"),
 							interpreter.NewUnmeteredIntValueFromInt64(value),
 						)
 						vmConfig.OnEventEmitted = onEmitEvents

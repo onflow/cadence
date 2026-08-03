@@ -258,7 +258,7 @@ func (c *Compiler[E, _]) addUsedImportedGlobal(
 	return global
 }
 
-func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) bbq.Global {
+func (c *Compiler[E, _]) addGlobal(canonicalName string, kind bbq.GlobalKind) bbq.Global {
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
@@ -268,16 +268,16 @@ func (c *Compiler[E, _]) addGlobal(name string, kind bbq.GlobalKind) bbq.Global 
 
 	switch kind {
 	case bbq.GlobalKindFunction:
-		global = bbq.NewFunctionGlobal[E](c.Config.MemoryGauge, name, nil, uint16(count))
+		global = bbq.NewFunctionGlobal[E](c.Config.MemoryGauge, canonicalName, nil, uint16(count))
 	case bbq.GlobalKindVariable:
-		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, name, nil, uint16(count))
+		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, canonicalName, nil, uint16(count))
 	case bbq.GlobalKindContract:
-		global = bbq.NewContractGlobal(c.Config.MemoryGauge, name, nil, uint16(count))
+		global = bbq.NewContractGlobal(c.Config.MemoryGauge, canonicalName, nil, uint16(count))
 	default:
 		panic(errors.NewDefaultUserError("unsupported global kind %#q", kind.String()))
 	}
 
-	c.Globals[name] = global
+	c.Globals[canonicalName] = global
 
 	return global
 }
@@ -807,8 +807,8 @@ func (c *Compiler[_, _]) initializeVariableGlobals(
 		// The enum case name is used as the global variable name.
 		// e.g: `enum E: UInt8 { case A; case B }` will reserve globals `E.A`, `E.B`.
 		enumCaseName := declaration.Identifier.Identifier
-		qualifiedName := c.canonicalName(enclosingType, enumCaseName)
-		c.addGlobal(qualifiedName, bbq.GlobalKindVariable)
+		canonicalCaseName := c.canonicalName(enclosingType, enumCaseName)
+		c.addGlobal(canonicalCaseName, bbq.GlobalKindVariable)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -843,8 +843,8 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
 			// must be also visited here. And must only visit them. e.g: Don't visit inits.
 			functionName := declaration.FunctionDeclaration.Identifier.Identifier
-			qualifiedName := c.canonicalName(enclosingType, functionName)
-			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
+			functionCanonicalName := c.canonicalName(enclosingType, functionName)
+			c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction)
 		}
 	}
 
@@ -859,15 +859,15 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 
 		if enclosingType.GetCompositeKind().SupportsAttachments() {
 			functionName := sema.CompositeForEachAttachmentFunctionName
-			qualifiedName := c.canonicalName(enclosingType, functionName)
-			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
+			functionCanonicalName := c.canonicalName(enclosingType, functionName)
+			c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction)
 		}
 	}
 
 	for _, declaration := range functionDecls {
 		functionName := declaration.Identifier.Identifier
-		qualifiedName := c.canonicalName(enclosingType, functionName)
-		c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
+		functionCanonicalName := c.canonicalName(enclosingType, functionName)
+		c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -882,27 +882,27 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 
 		// Reserve a global for contract the constructor function.
 
-		var constructorName string
+		var canonicalConstructorName string
 
 		switch declaration.CompositeKind {
 		case common.CompositeKindContract:
 			// For contracts, a global with the type-name is used for the contract value
 			// (already reserved in `reserveGlobals` before getting here).
 			// Suffix the type-name.
-			constructorName = c.canonicalName(compositeType, commons.InitFunctionName)
+			canonicalConstructorName = c.canonicalName(compositeType, commons.InitFunctionName)
 
 		case common.CompositeKindEnum:
 			// For enums, a global with the type-name is used for the "lookup function".
 			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
 			// Suffix the type-name.
-			constructorName = c.canonicalName(compositeType, commons.InitFunctionName)
+			canonicalConstructorName = c.canonicalName(compositeType, commons.InitFunctionName)
 
 		default:
 			// For other composite types, the type-name is used for the constructor function.
-			constructorName = commons.TypeQualifier(compositeType)
+			canonicalConstructorName = commons.TypeQualifier(compositeType)
 		}
 
-		c.addGlobal(constructorName, bbq.GlobalKindFunction)
+		c.addGlobal(canonicalConstructorName, bbq.GlobalKindFunction)
 
 		members := declaration.Members
 
@@ -937,9 +937,8 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 	for _, declaration := range attachmentDecls {
 		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 		// Reserve a global for the constructor function.
-
-		constructorName := commons.TypeQualifier(compositeType)
-		c.addGlobal(constructorName, bbq.GlobalKindFunction)
+		constructorCanonicalName := commons.TypeQualifier(compositeType)
+		c.addGlobal(constructorCanonicalName, bbq.GlobalKindFunction)
 
 		members := declaration.Members
 
@@ -962,8 +961,8 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		if transactionDecl.ParameterList != nil &&
 			len(transactionDecl.ParameterList.Parameters) > 0 {
 
-			initFunctionName := c.canonicalName(enclosingType, commons.ProgramInitFunctionName)
-			c.addGlobal(initFunctionName, bbq.GlobalKindFunction)
+			initFunctionCanonicalName := c.canonicalName(enclosingType, commons.ProgramInitFunctionName)
+			c.addGlobal(initFunctionCanonicalName, bbq.GlobalKindFunction)
 		}
 	default:
 		panic(errors.NewUnexpectedError("multiple transaction declarations"))
@@ -4359,8 +4358,8 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 			panic(err)
 		}
 
-		if importedElaboration != nil && importedElaboration.importAliases == nil {
-			importedElaboration.importAliases = make(map[string]string)
+		if importedElaboration != nil && importedElaboration.importCanonicalNames == nil {
+			importedElaboration.importCanonicalNames = make(map[string]string)
 			importAliases = importedElaboration.AllImportAliases()
 		}
 	}
@@ -4805,9 +4804,7 @@ func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement
 		// (defined in the inherited program) are constructed with the
 		// correct location, rather than the current program's location.
 		prevLocation := c.location
-		if stmtElaboration.location != nil {
-			c.location = stmtElaboration.location
-		}
+		c.location = stmtElaboration.location
 
 		prevIsInheritedCode := c.isInheritedCode
 		c.isInheritedCode = true
