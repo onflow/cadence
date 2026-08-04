@@ -305,13 +305,13 @@ func (c *Compiler[_, _]) addImportedGlobal(location common.Location, simpleName 
 }
 
 func (c *Compiler[E, _]) addFunction(
-	name string,
+	simpleName string,
 	canonicalName string,
 	parameterCount uint16,
 	functionType *sema.FunctionType,
 ) *function[E] {
 	function := c.newFunction(
-		name,
+		simpleName,
 		canonicalName,
 		parameterCount,
 		functionType,
@@ -326,7 +326,7 @@ func (c *Compiler[E, _]) addGlobalVariableWithGetter(
 	functionType *sema.FunctionType,
 ) *globalVariable[E] {
 	function := c.newFunction(
-		canonicalName,
+		simpleName,
 		canonicalName,
 		0,
 		functionType,
@@ -358,7 +358,7 @@ func (c *Compiler[E, _]) addGlobalVariable(
 }
 
 func (c *Compiler[E, _]) newFunction(
-	name string,
+	simpleName string,
 	canonicalName string,
 	parameterCount uint16,
 	functionType *sema.FunctionType,
@@ -368,7 +368,7 @@ func (c *Compiler[E, _]) newFunction(
 	return newFunction[E](
 		c.Config.MemoryGauge,
 		c.currentFunction,
-		name,
+		simpleName,
 		canonicalName,
 		parameterCount,
 		functionTypeIndex,
@@ -894,27 +894,37 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 
 		// Reserve a global for contract the constructor function.
 
-		var canonicalConstructorName string
+		var (
+			simpleConstructorName    string
+			canonicalConstructorName string
+		)
 
 		switch declaration.CompositeKind {
 		case common.CompositeKindContract:
 			// For contracts, a global with the type-name is used for the contract value
 			// (already reserved in `reserveGlobals` before getting here).
 			// Suffix the type-name.
-			canonicalConstructorName = c.canonicalName(compositeType, commons.InitFunctionName)
+			simpleConstructorName = commons.InitFunctionName
+			canonicalConstructorName = c.canonicalName(compositeType, simpleConstructorName)
 
 		case common.CompositeKindEnum:
 			// For enums, a global with the type-name is used for the "lookup function".
 			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
 			// Suffix the type-name.
-			canonicalConstructorName = c.canonicalName(compositeType, commons.InitFunctionName)
+			simpleConstructorName = commons.InitFunctionName
+			canonicalConstructorName = c.canonicalName(compositeType, simpleConstructorName)
 
 		default:
 			// For other composite types, the type-name is used for the constructor function.
+			simpleConstructorName = declaration.Identifier.Identifier
 			canonicalConstructorName = commons.TypeQualifier(compositeType)
 		}
 
-		c.addGlobal(declaration.Identifier.Identifier, canonicalConstructorName, bbq.GlobalKindFunction)
+		c.addGlobal(
+			simpleConstructorName,
+			canonicalConstructorName,
+			bbq.GlobalKindFunction,
+		)
 
 		members := declaration.Members
 
@@ -1113,7 +1123,7 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
 	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQFunctionMemoryUsage)
 	return bbq.Function[E]{
-		SimpleName:     function.name,
+		SimpleName:     function.simpleName,
 		CanonicalName:  function.canonicalName,
 		Code:           function.code,
 		LocalCount:     function.localCount,
@@ -3882,21 +3892,26 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	enclosingType := c.compositeTypeStack.top()
 	kind := enclosingType.GetCompositeKind()
 
-	var functionName string
+	var (
+		functionSimpleName    string
+		functionCanonicalName string
+	)
 	switch kind {
 	case common.CompositeKindContract:
 		// For contracts, add the initializer as `init()`.
 		// A global variable with the same name as contract is separately added.
 		// The VM will load the contract and assign to that global variable during imports resolution.
-		identifier := declaration.DeclarationIdentifier().Identifier
-		functionName = c.canonicalName(enclosingType, identifier)
+		functionSimpleName = declaration.DeclarationIdentifier().Identifier
+		functionCanonicalName = c.canonicalName(enclosingType, functionSimpleName)
 	case common.CompositeKindEnum:
 		// Match the associated global variable for enums, `Enum.init()`.
-		functionName = c.canonicalName(enclosingType, commons.InitFunctionName)
+		functionSimpleName = commons.InitFunctionName
+		functionCanonicalName = c.canonicalName(enclosingType, functionSimpleName)
 	default:
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
-		functionName = commons.TypeQualifier(enclosingType)
+		functionSimpleName = enclosingType.GetIdentifier()
+		functionCanonicalName = commons.TypeQualifier(enclosingType)
 	}
 
 	parameterCount := 0
@@ -3912,8 +3927,8 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	functionType := c.DesugaredElaboration.FunctionDeclarationFunctionType(declaration.FunctionDeclaration)
 
 	function := c.addFunction(
-		functionName,
-		functionName,
+		functionSimpleName,
+		functionCanonicalName,
 		uint16(parameterCount),
 		functionType,
 	)

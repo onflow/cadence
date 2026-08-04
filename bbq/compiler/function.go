@@ -30,7 +30,7 @@ import (
 
 type function[E any] struct {
 	enclosing      *function[E]
-	name           string
+	simpleName     string
 	canonicalName  string
 	code           []E
 	locals         *activations.Activations[*local]
@@ -56,7 +56,7 @@ type function[E any] struct {
 func newFunction[E any](
 	memoryGauge common.MemoryGauge,
 	enclosing *function[E],
-	name string,
+	simpleName string,
 	canonicalName string,
 	parameterCount uint16,
 	functionTypeIndex uint16,
@@ -64,7 +64,7 @@ func newFunction[E any](
 	common.UseMemory(memoryGauge, common.CompilerFunctionMemoryUsage)
 	return &function[E]{
 		enclosing:      enclosing,
-		name:           name,
+		simpleName:     simpleName,
 		canonicalName:  canonicalName,
 		locals:         activations.NewActivations[*local](memoryGauge),
 		parameterCount: parameterCount,

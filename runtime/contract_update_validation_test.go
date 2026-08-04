@@ -3877,7 +3877,7 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		assert.NotNil(t, runtimeInterface2.Programs[contractLocation])
 
 		expectedGets := locationAccessCounts{
-			contractLocation: 1,
+			contractLocation: ifCompile(2, 1),
 		}
 		if *compile {
 			expectedGets[txLocation] = 2
