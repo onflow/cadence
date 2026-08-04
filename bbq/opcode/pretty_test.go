@@ -45,11 +45,11 @@ func TestPrettyInstructionWithResolvableOperands(t *testing.T) {
 		},
 		Functions: []bbq.Function[opcode.Instruction]{
 			{
-				Name:          "myFunction",
-				QualifiedName: "MyContract.myFunction",
+				SimpleName:    "myFunction",
+				CanonicalName: "MyContract.myFunction",
 			},
 			{
-				Name: "anonFunc",
+				SimpleName: "anonFunc",
 			},
 		},
 	}
@@ -198,11 +198,11 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		},
 		Functions: []bbq.Function[opcode.Instruction]{
 			{
-				Name:          "myFunction",
-				QualifiedName: "MyContract.myFunction",
+				SimpleName:    "myFunction",
+				CanonicalName: "MyContract.myFunction",
 			},
 			{
-				Name: "anonFunc",
+				SimpleName: "anonFunc",
 			},
 		},
 	}

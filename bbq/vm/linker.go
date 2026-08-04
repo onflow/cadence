@@ -65,7 +65,7 @@ func LinkGlobals(
 
 			if function.IsNative() {
 				// Look-up using the unqualified name, in the common-builtin functions.
-				value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
+				value = IndexedCommonBuiltinTypeBoundFunctions[function.SimpleName]
 			} else {
 				value = functionValueFromBBQFunction(executable, function)
 			}
@@ -74,7 +74,7 @@ func LinkGlobals(
 			variable.InitializeWithValue(value)
 			// Linker matches the compiled function index with the linked function index
 			globals[index] = variable
-			indexedGlobals.Set(function.QualifiedName, variable)
+			indexedGlobals.Set(function.CanonicalName, variable)
 		case *bbq.VariableGlobal[opcode.Instruction]:
 			variable := typedGlobal.Variable
 			simpleVariable := &interpreter.SimpleVariable{}

@@ -34,10 +34,10 @@ const (
 )
 
 type GlobalInfo struct {
-	// Unqualified identifier as it appears in source code.
+	// SimpleName is the unqualified identifier as it appears in source code.
 	// Only needed to support string/wildcard imports in tests.
 	SimpleName string
-	// Location-qualified canonical name
+	// CanonicalName is the location-qualified canonical name
 	CanonicalName string
 	Location      common.Location
 	Index         uint16

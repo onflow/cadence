@@ -263,7 +263,7 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 		defer func() {
 			vm.context.ReportInvokeTrace(
 				function.FunctionType(vm.context).String(),
-				function.Function.QualifiedName,
+				function.Function.CanonicalName,
 				time.Since(startTime),
 			)
 		}()
@@ -2688,7 +2688,7 @@ func printInstructionError(
 ) {
 	var builder strings.Builder
 
-	builder.WriteString(fmt.Sprintf("-- %s -- \n", function.QualifiedName))
+	builder.WriteString(fmt.Sprintf("-- %s -- \n", function.CanonicalName))
 
 	for index, instruction := range function.Code {
 		if index == instructionIndex {

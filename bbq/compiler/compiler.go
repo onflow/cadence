@@ -1113,8 +1113,8 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
 	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQFunctionMemoryUsage)
 	return bbq.Function[E]{
-		Name:           function.name,
-		QualifiedName:  function.canonicalName,
+		SimpleName:     function.name,
+		CanonicalName:  function.canonicalName,
 		Code:           function.code,
 		LocalCount:     function.localCount,
 		ParameterCount: function.parameterCount,
@@ -4376,7 +4376,7 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 	}
 
 	for _, function := range importedProgram.Functions {
-		c.addImportedGlobal(location, function.Name, function.QualifiedName)
+		c.addImportedGlobal(location, function.SimpleName, function.CanonicalName)
 	}
 
 	c.addedImports[location] = struct{}{}

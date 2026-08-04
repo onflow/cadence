@@ -4274,7 +4274,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 	// Not interested in the content of the constructor.
 	concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 	constructor := program.Functions[concreteTypeConstructorIndex]
-	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
+	require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
@@ -4283,7 +4283,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 	concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
@@ -4340,7 +4340,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	interfaceTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "IA.test")
 	interfaceTypeTestFunc := program.Functions[interfaceFunctionIndex]
-	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
+	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.CanonicalName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].GetGlobalInfo().Index)
@@ -4765,7 +4765,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Not interested in the content of the constructor.
 		concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
+		require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
@@ -4782,7 +4782,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
@@ -4986,7 +4986,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Not interested in the content of the constructor.
 		concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
+		require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
@@ -5004,7 +5004,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
@@ -5277,7 +5277,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, dLocation, "D.Vault.getBalance")
 		concreteTypeTestFunc := dProgram.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
 
 		// Would be equivalent to:
 		// ```
@@ -6452,7 +6452,7 @@ func TestCompileTransaction(t *testing.T) {
 	constructor := program.Functions[transactionInitFunctionIndex]
 	require.Equal(t,
 		qualifiedTransactionName,
-		constructor.QualifiedName,
+		constructor.CanonicalName,
 	)
 
 	// Also check if the globals are linked properly.
@@ -6487,7 +6487,7 @@ func TestCompileTransaction(t *testing.T) {
 	prepareFunction := program.Functions[prepareFunctionIndex]
 	require.Equal(t,
 		qualifiedPrepareName,
-		prepareFunction.QualifiedName,
+		prepareFunction.CanonicalName,
 	)
 
 	// Also check if the globals are linked properly.
@@ -6545,7 +6545,7 @@ func TestCompileTransaction(t *testing.T) {
 	//    }
 
 	executeFunction := program.Functions[executeFunctionIndex]
-	require.Equal(t, qualifiedExecuteName, executeFunction.QualifiedName)
+	require.Equal(t, qualifiedExecuteName, executeFunction.CanonicalName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
@@ -6693,7 +6693,7 @@ func TestCompileTransaction(t *testing.T) {
 	initFunction := program.Functions[programInitFunctionIndex]
 	require.Equal(t,
 		qualifiedInitName,
-		initFunction.QualifiedName,
+		initFunction.CanonicalName,
 	)
 
 	assert.Equal(t,
@@ -12810,7 +12810,7 @@ func TestCompileInjectedContract(t *testing.T) {
 
 	aTestFunction := functions[3]
 
-	require.Equal(t, aTestFunction.QualifiedName, "S.test.A.test")
+	require.Equal(t, aTestFunction.CanonicalName, "S.test.A.test")
 
 	bStaticType = &interpreter.CompositeStaticType{
 		QualifiedIdentifier: "B",
@@ -13033,7 +13033,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 8)
 
 	defaultDestroyEventConstructor := functions[5]
-	require.Equal(t, "A.0000000000000001.Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
+	require.Equal(t, "A.0000000000000001.Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.SimpleName)
 
 	const (
 		xIndex = iota
@@ -13111,7 +13111,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 12)
 
 	defaultDestroyEventEmittingFunction := functions[8]
-	require.Equal(t, "A.0000000000000001.Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.QualifiedName)
+	require.Equal(t, "A.0000000000000001.Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.CanonicalName)
 
 	const inheritedEventConstructorIndex = 10
 	const selfDefinedABCEventConstructorIndex = 13
@@ -14046,7 +14046,7 @@ func TestConstructorAsFunction(t *testing.T) {
 
 	testFunction := functions[0]
 
-	assert.Equal(t, "test", testFunction.Name)
+	assert.Equal(t, "test", testFunction.SimpleName)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -14407,7 +14407,7 @@ func TestCompileInheritedStatementEndingControlFlow(t *testing.T) {
 	testFunctionQualifiedName := commons.LocationQualifiedName(nil, bLocation, "B.Test.test")
 	var testFunction *bbq.Function[opcode.Instruction]
 	for i, function := range program.Functions {
-		if function.QualifiedName == testFunctionQualifiedName {
+		if function.CanonicalName == testFunctionQualifiedName {
 			testFunction = &program.Functions[i]
 			break
 		}

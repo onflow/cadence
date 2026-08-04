@@ -19,8 +19,10 @@
 package compiler
 
 type globalVariable[E any] struct {
+	// SimpleName is the unqualified identifier as it appears in source code.
 	// Only needed to support string/wildcard imports in tests.
-	SimpleName    string
+	SimpleName string
+	// CanonicalName is the location-qualified canonical name
 	CanonicalName string
 	Getter        *function[E]
 }

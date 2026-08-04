@@ -42,11 +42,11 @@ func (p *Program[E, T]) GetFunctionName(index uint16) string {
 		panic("function index out of bounds")
 	}
 	function := p.Functions[index]
-	if function.QualifiedName != "" {
-		return function.QualifiedName
+	if function.CanonicalName != "" {
+		return function.CanonicalName
 	}
-	if function.Name != "" {
-		return function.Name
+	if function.SimpleName != "" {
+		return function.SimpleName
 	}
 	return "<anonymous>"
 }
