@@ -146,13 +146,17 @@ func NewInstructionCompilerWithConfig(
 type GlobalImport struct {
 	Location common.Location
 
+	// Unqualified identifier as it appears in source code.
+	// Only needed to support string/wildcard imports in tests.
+	SimpleName string
+
 	// Location-qualified canonical name
-	Name string
+	CanonicalName string
 }
 
-func NewGlobalImport(name string) GlobalImport {
+func NewGlobalImport(canonicalName string) GlobalImport {
 	return GlobalImport{
-		Name: name,
+		CanonicalName: canonicalName,
 	}
 }
 
@@ -224,27 +228,30 @@ func (c *Compiler[E, _]) findGlobal(canonicalName string) bbq.Global {
 	// If a global is found in imported globals, that means the index is not set.
 	// So set an index and add it to the 'globals'.
 	return c.addUsedImportedGlobal(
-		importedGlobal.Name,
+		importedGlobal.SimpleName,
+		importedGlobal.CanonicalName,
 		importedGlobal.Location,
 	)
 }
 
 func (c *Compiler[E, _]) addUsedImportedGlobal(
-	name string,
+	simpleName string,
+	canonicalName string,
 	location common.Location,
 ) bbq.Global {
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
-		panic(errors.NewUnexpectedError("invalid global declaration '%s'", name))
+		panic(errors.NewUnexpectedError("invalid global declaration '%s'", canonicalName))
 	}
 
 	global := bbq.NewImportedGlobal(
 		c.Config.MemoryGauge,
-		name,
+		simpleName,
+		canonicalName,
 		location,
 		uint16(count),
 	)
-	c.Globals[name] = global
+	c.Globals[canonicalName] = global
 
 	// Also add it to the usedImportedGlobals.
 	// This is later used to export the imports, which is eventually used by the linker.
@@ -258,7 +265,7 @@ func (c *Compiler[E, _]) addUsedImportedGlobal(
 	return global
 }
 
-func (c *Compiler[E, _]) addGlobal(canonicalName string, kind bbq.GlobalKind) bbq.Global {
+func (c *Compiler[E, _]) addGlobal(simpleName string, canonicalName string, kind bbq.GlobalKind) bbq.Global {
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
@@ -268,11 +275,11 @@ func (c *Compiler[E, _]) addGlobal(canonicalName string, kind bbq.GlobalKind) bb
 
 	switch kind {
 	case bbq.GlobalKindFunction:
-		global = bbq.NewFunctionGlobal[E](c.Config.MemoryGauge, canonicalName, nil, uint16(count))
+		global = bbq.NewFunctionGlobal[E](c.Config.MemoryGauge, simpleName, canonicalName, nil, uint16(count))
 	case bbq.GlobalKindVariable:
-		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, canonicalName, nil, uint16(count))
+		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, simpleName, canonicalName, nil, uint16(count))
 	case bbq.GlobalKindContract:
-		global = bbq.NewContractGlobal(c.Config.MemoryGauge, canonicalName, nil, uint16(count))
+		global = bbq.NewContractGlobal(c.Config.MemoryGauge, simpleName, canonicalName, nil, uint16(count))
 	default:
 		panic(errors.NewDefaultUserError("unsupported global kind %#q", kind.String()))
 	}
@@ -282,16 +289,17 @@ func (c *Compiler[E, _]) addGlobal(canonicalName string, kind bbq.GlobalKind) bb
 	return global
 }
 
-func (c *Compiler[_, _]) addImportedGlobal(location common.Location, name string) {
-	existing := c.importedGlobals.Find(name)
+func (c *Compiler[_, _]) addImportedGlobal(location common.Location, simpleName string, canonicalName string) {
+	existing := c.importedGlobals.Find(canonicalName)
 	if existing != (GlobalImport{}) {
 		return
 	}
 	c.importedGlobals.Set(
-		name,
+		canonicalName,
 		GlobalImport{
-			Location: location,
-			Name:     name,
+			Location:      location,
+			SimpleName:    simpleName,
+			CanonicalName: canonicalName,
 		},
 	)
 }
@@ -313,19 +321,21 @@ func (c *Compiler[E, _]) addFunction(
 }
 
 func (c *Compiler[E, _]) addGlobalVariableWithGetter(
-	name string,
+	simpleName string,
+	canonicalName string,
 	functionType *sema.FunctionType,
 ) *globalVariable[E] {
 	function := c.newFunction(
-		name,
-		name,
+		canonicalName,
+		canonicalName,
 		0,
 		functionType,
 	)
 
 	globalVariable := &globalVariable[E]{
-		Name:   name,
-		Getter: function,
+		SimpleName:    simpleName,
+		CanonicalName: canonicalName,
+		Getter:        function,
 	}
 
 	c.globalVariables = append(c.globalVariables, globalVariable)
@@ -334,10 +344,12 @@ func (c *Compiler[E, _]) addGlobalVariableWithGetter(
 }
 
 func (c *Compiler[E, _]) addGlobalVariable(
-	name string,
+	simpleName string,
+	canonicalName string,
 ) *globalVariable[E] {
 	globalVariable := &globalVariable[E]{
-		Name: name,
+		SimpleName:    simpleName,
+		CanonicalName: canonicalName,
 	}
 
 	c.globalVariables = append(c.globalVariables, globalVariable)
@@ -725,14 +737,14 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	// associate the contract with the global for linking
 	// can't do this in exportContracts because it's called before initializeAllGlobals
 	for _, contract := range contracts {
-		global := c.Globals[contract.Name]
+		global := c.Globals[contract.CanonicalName]
 		if contractGlobal, ok := global.(*bbq.ContractGlobal); ok {
 			if contractGlobal.GlobalInfo.Location != nil && global == nil {
-				panic(errors.NewUnexpectedError("global not found for contract %s", contract.Name))
+				panic(errors.NewUnexpectedError("global not found for contract %s", contract.CanonicalName))
 			}
 			contractGlobal.Contract = contract
 		} else {
-			panic(errors.NewUnexpectedError("wrong global type found for contract %s", contract.Name))
+			panic(errors.NewUnexpectedError("wrong global type found for contract %s", contract.CanonicalName))
 		}
 	}
 
@@ -769,7 +781,7 @@ func (c *Compiler[_, _]) initializeAllGlobals(
 	// Reserve globals for the contract values before everything.
 	// Contract values must be always start at the zero-th index.
 	for _, contract := range contract {
-		c.addGlobal(contract.Name, bbq.GlobalKindContract)
+		c.addGlobal(contract.SimpleName, contract.CanonicalName, bbq.GlobalKindContract)
 	}
 
 	c.initializeVariableGlobals(
@@ -799,7 +811,7 @@ func (c *Compiler[_, _]) initializeVariableGlobals(
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
 		canonicalVarName := c.canonicalName(enclosingType, variableName)
-		c.addGlobal(canonicalVarName, bbq.GlobalKindVariable)
+		c.addGlobal(variableName, canonicalVarName, bbq.GlobalKindVariable)
 	}
 
 	for _, declaration := range enumCaseDecls {
@@ -808,7 +820,7 @@ func (c *Compiler[_, _]) initializeVariableGlobals(
 		// e.g: `enum E: UInt8 { case A; case B }` will reserve globals `E.A`, `E.B`.
 		enumCaseName := declaration.Identifier.Identifier
 		canonicalCaseName := c.canonicalName(enclosingType, enumCaseName)
-		c.addGlobal(canonicalCaseName, bbq.GlobalKindVariable)
+		c.addGlobal(enumCaseName, canonicalCaseName, bbq.GlobalKindVariable)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -844,7 +856,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// must be also visited here. And must only visit them. e.g: Don't visit inits.
 			functionName := declaration.FunctionDeclaration.Identifier.Identifier
 			functionCanonicalName := c.canonicalName(enclosingType, functionName)
-			c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction)
+			c.addGlobal(functionName, functionCanonicalName, bbq.GlobalKindFunction)
 		}
 	}
 
@@ -854,20 +866,20 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
 			functionName := boundFunction.Name
 			qualifiedName := c.canonicalName(enclosingType, functionName)
-			c.addGlobal(qualifiedName, bbq.GlobalKindFunction)
+			c.addGlobal(functionName, qualifiedName, bbq.GlobalKindFunction)
 		}
 
 		if enclosingType.GetCompositeKind().SupportsAttachments() {
 			functionName := sema.CompositeForEachAttachmentFunctionName
 			functionCanonicalName := c.canonicalName(enclosingType, functionName)
-			c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction)
+			c.addGlobal(functionName, functionCanonicalName, bbq.GlobalKindFunction)
 		}
 	}
 
 	for _, declaration := range functionDecls {
 		functionName := declaration.Identifier.Identifier
 		functionCanonicalName := c.canonicalName(enclosingType, functionName)
-		c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction)
+		c.addGlobal(functionName, functionCanonicalName, bbq.GlobalKindFunction)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -902,7 +914,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			canonicalConstructorName = commons.TypeQualifier(compositeType)
 		}
 
-		c.addGlobal(canonicalConstructorName, bbq.GlobalKindFunction)
+		c.addGlobal(declaration.Identifier.Identifier, canonicalConstructorName, bbq.GlobalKindFunction)
 
 		members := declaration.Members
 
@@ -938,7 +950,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		compositeType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
 		// Reserve a global for the constructor function.
 		constructorCanonicalName := commons.TypeQualifier(compositeType)
-		c.addGlobal(constructorCanonicalName, bbq.GlobalKindFunction)
+		c.addGlobal(declaration.Identifier.Identifier, constructorCanonicalName, bbq.GlobalKindFunction)
 
 		members := declaration.Members
 
@@ -962,7 +974,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			len(transactionDecl.ParameterList.Parameters) > 0 {
 
 			initFunctionCanonicalName := c.canonicalName(enclosingType, commons.ProgramInitFunctionName)
-			c.addGlobal(initFunctionCanonicalName, bbq.GlobalKindFunction)
+			c.addGlobal(commons.ProgramInitFunctionName, initFunctionCanonicalName, bbq.GlobalKindFunction)
 		}
 	default:
 		panic(errors.NewUnexpectedError("multiple transaction declarations"))
@@ -1016,8 +1028,8 @@ func (c *Compiler[E, _]) exportGlobals() []bbq.Global {
 			panic(errors.NewUnexpectedError(
 				"duplicate global index %d. existing global: %#q, new global %#q",
 				index,
-				existingGlobal.GetGlobalInfo().Name,
-				global.GetGlobalInfo().Name,
+				existingGlobal.GetGlobalInfo().CanonicalName,
+				global.GetGlobalInfo().CanonicalName,
 			))
 		}
 
@@ -1045,8 +1057,8 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 		for _, importedGlobal := range c.usedImportedGlobals {
 			globalInfo := importedGlobal.GetGlobalInfo()
 			bbqImport := bbq.Import{
-				Location: globalInfo.Location,
-				Name:     globalInfo.Name,
+				Location:      globalInfo.Location,
+				CanonicalName: globalInfo.CanonicalName,
 			}
 			exportedImports = append(exportedImports, bbqImport)
 		}
@@ -1139,16 +1151,17 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 			}
 
 			variable := bbq.Variable[E]{
-				Name:   variable.Name,
-				Getter: getter,
+				CanonicalName: variable.CanonicalName,
+				SimpleName:    variable.SimpleName,
+				Getter:        getter,
 			}
 
 			// associate the variable with the global for linking
-			global := c.Globals[variable.Name]
+			global := c.Globals[variable.CanonicalName]
 			if global == nil {
 				panic(errors.NewUnexpectedError(
 					"global not found for global variable %#q",
-					variable.Name,
+					variable.CanonicalName,
 				))
 			}
 
@@ -1156,7 +1169,7 @@ func (c *Compiler[E, _]) exportGlobalVariables() []bbq.Variable[E] {
 			if !ok {
 				panic(errors.NewUnexpectedError(
 					"wrong global type found for global variable %#q",
-					variable.Name,
+					variable.CanonicalName,
 				))
 			}
 			variableGlobal.Variable = &variable
@@ -1189,8 +1202,9 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 
 		common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQContractMemoryUsage)
 		contract := bbq.Contract{
-			Name:     canonicalName,
-			Location: location,
+			SimpleName:    declaration.Identifier.Identifier,
+			CanonicalName: canonicalName,
+			Location:      location,
 		}
 		contracts = append(
 			contracts,
@@ -2039,7 +2053,7 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 	canonicalVarName := c.canonicalName(nil, variableName)
 
 	if declaration.Value == nil {
-		c.addGlobalVariable(canonicalVarName)
+		c.addGlobalVariable(variableName, canonicalVarName)
 		return
 	}
 
@@ -2052,6 +2066,7 @@ func (c *Compiler[_, _]) compileGlobalVariable(declaration *ast.VariableDeclarat
 	)
 
 	globalVariable := c.addGlobalVariableWithGetter(
+		variableName,
 		canonicalVarName,
 		variableGetterFunctionType,
 	)
@@ -2823,7 +2838,7 @@ func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.Identifie
 	}
 
 	// 2) Resolve from imported globals.
-	importedGlobalCanonicalName, found := c.DesugaredElaboration.ImportAlias(simpleName)
+	importedGlobalCanonicalName, found := c.DesugaredElaboration.ImportCanonicalName(simpleName)
 	if found {
 		return importedGlobalCanonicalName
 	}
@@ -4287,20 +4302,43 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		//
 		// If the import uses an alias (e.g: `import Foo as Bar from 0x01`),
 		// map the alias name instead, since that is what the code uses.
-		for _, identifier := range resolvedLocation.Identifiers {
-			originalName := identifier.Identifier
-			canonicalName := c.canonicalNameAt(location, originalName)
 
-			name := originalName
-			if alias, ok := aliases[originalName]; ok {
-				name = alias
+		if len(resolvedLocation.Identifiers) > 0 {
+			for _, identifier := range resolvedLocation.Identifiers {
+				originalName := identifier.Identifier
+				canonicalName := c.canonicalNameAt(location, originalName)
+
+				name := originalName
+				if alias, ok := aliases[originalName]; ok {
+					name = alias
+				}
+				c.DesugaredElaboration.SetImportCanonicalName(name, canonicalName)
 			}
-			c.DesugaredElaboration.SetImportAlias(name, canonicalName)
+		} else {
+			// Wildcard import (e.g: `import "imported"`).
+			// Set up canonical names mapping for all exported globals from the imported program.
+			c.populateWildcardImportCanonicalNames(location)
 		}
 
 	}
 
 	return
+}
+
+func (c *Compiler[_, _]) populateWildcardImportCanonicalNames(location common.Location) {
+	if location == nil {
+		return
+	}
+
+	importedProgram := c.Config.ImportHandler(location)
+
+	for _, global := range importedProgram.Globals {
+		info := global.GetGlobalInfo()
+		if info.SimpleName == "" {
+			continue
+		}
+		c.DesugaredElaboration.SetImportCanonicalName(info.SimpleName, info.CanonicalName)
+	}
 }
 
 func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location) {
@@ -4319,13 +4357,13 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 	// Add a global variable for the imported contract value.
 	contracts := importedProgram.Contracts
 	for _, contract := range contracts {
-		c.addImportedGlobal(location, contract.Name)
+		c.addImportedGlobal(location, contract.SimpleName, contract.CanonicalName)
 	}
 
 	for _, variable := range importedProgram.Variables {
-		name := variable.Name
+		canonicalName := variable.CanonicalName
 
-		if _, ok := c.Globals[name]; !ok {
+		if _, ok := c.Globals[canonicalName]; !ok {
 			// All global-variables of imports must be initialized when the current program is initialized.
 			// Therefore, add all global **variables** as "used" globals-variables, so they are always added
 			// to the compiled program.
@@ -4333,12 +4371,12 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 			//
 			// Only add them if they are not already added.
 			// e.g: Could have more than one path to a transitive import.
-			c.addUsedImportedGlobal(name, location)
+			c.addUsedImportedGlobal(variable.SimpleName, canonicalName, location)
 		}
 	}
 
 	for _, function := range importedProgram.Functions {
-		c.addImportedGlobal(location, function.QualifiedName)
+		c.addImportedGlobal(location, function.Name, function.QualifiedName)
 	}
 
 	c.addedImports[location] = struct{}{}
@@ -4368,7 +4406,7 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 	// on the imported elaboration from the same iteration.
 	for _, impt := range importedProgram.Imports {
 		if importedElaboration != nil && impt.Location != nil {
-			originalName := impt.Name
+			originalName := impt.CanonicalName
 			canonicalName := c.canonicalNameAt(impt.Location, originalName)
 
 			// If the imported program uses an alias for this import
@@ -4378,7 +4416,7 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 			if alias, ok := importAliases[originalName]; ok {
 				simpleName = alias
 			}
-			importedElaboration.SetImportAlias(simpleName, canonicalName)
+			importedElaboration.SetImportCanonicalName(simpleName, canonicalName)
 		}
 
 		c.addGlobalsFromImportedProgram(impt.Location)
@@ -4478,6 +4516,7 @@ func (c *Compiler[_, _]) compileEnumCaseDeclaration(
 	getterName := c.canonicalName(compositeType, caseName)
 
 	globalVariable := c.addGlobalVariableWithGetter(
+		caseName,
 		getterName,
 		variableGetterFunctionType,
 	)

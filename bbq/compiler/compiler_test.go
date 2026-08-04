@@ -5373,16 +5373,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: aLocation,
-					Name:     "A.0000000000000001.A.TestStruct",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.TestStruct",
 				},
 				{
-					Location: aLocation,
-					Name:     "A.0000000000000001.A.TestStruct.test",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.TestStruct.test",
 				},
 				{
-					Location: nil,
-					Name:     "$failPreCondition",
+					Location:      nil,
+					CanonicalName: "$failPreCondition",
 				},
 			},
 			dProgram.Imports,
@@ -8834,12 +8834,12 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: aLocation,
-					Name:     "A.0000000000000001.A",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A",
 				},
 				{
-					Location: aLocation,
-					Name:     "A.0000000000000001.A.test",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.test",
 				},
 			},
 			bProgram.Imports,
@@ -8905,8 +8905,8 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: aLocation,
-					Name:     "A.0000000000000001.A.Foo",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.Foo",
 				},
 			},
 			bProgram.Imports,
@@ -8939,16 +8939,16 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: bLocation,
-					Name:     "A.0000000000000001.B.Bar",
+					Location:      bLocation,
+					CanonicalName: "A.0000000000000001.B.Bar",
 				},
 				{
-					Location: bLocation,
-					Name:     "A.0000000000000001.B.Bar.getFoo",
+					Location:      bLocation,
+					CanonicalName: "A.0000000000000001.B.Bar.getFoo",
 				},
 				{
-					Location: aLocation,
-					Name:     "A.0000000000000001.A.Foo.test",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.Foo.test",
 				},
 			},
 			cProgram.Imports,
@@ -12552,8 +12552,8 @@ func TestCompileImportEnumCase(t *testing.T) {
 		t,
 		[]bbq.Import{
 			{
-				Location: aLocation,
-				Name:     "A.0000000000000001.A.E.X",
+				Location:      aLocation,
+				CanonicalName: "A.0000000000000001.A.E.X",
 			},
 		},
 		bProgram.Imports,
@@ -12869,10 +12869,10 @@ func TestCompileInjectedContract(t *testing.T) {
 	assert.Equal(t,
 		[]bbq.Import{
 			{
-				Name: "B",
+				CanonicalName: "B",
 			},
 			{
-				Name: "B.c",
+				CanonicalName: "B.c",
 			},
 		},
 		program.Imports,
@@ -13261,12 +13261,12 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo",
+					Location:      importLocation,
+					CanonicalName: "A.0000000000000001.Foo",
 				},
 				{
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo.hello",
+					Location:      importLocation,
+					CanonicalName: "A.0000000000000001.Foo.hello",
 				},
 			},
 			program.Imports,
@@ -13277,19 +13277,22 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			[]bbq.GlobalInfo{
 				{
-					Location: nil,
-					Name:     "S.test.test",
-					Index:    0,
+					Location:      nil,
+					SimpleName:    "test",
+					CanonicalName: "S.test.test",
+					Index:         0,
 				},
 				{
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo",
-					Index:    1,
+					Location:      importLocation,
+					SimpleName:    "Foo",
+					CanonicalName: "A.0000000000000001.Foo",
+					Index:         1,
 				},
 				{
-					Location: importLocation,
-					Name:     "A.0000000000000001.Foo.hello",
-					Index:    2,
+					Location:      importLocation,
+					SimpleName:    "hello",
+					CanonicalName: "A.0000000000000001.Foo.hello",
+					Index:         2,
 				},
 			},
 			program.Globals,
@@ -13345,8 +13348,8 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: importLocation,
-					Name:     "A.0000000000000001.FooInterface.defaultHello",
+					Location:      importLocation,
+					CanonicalName: "A.0000000000000001.FooInterface.defaultHello",
 				},
 			},
 			program.Imports,
@@ -13357,39 +13360,46 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			[]bbq.GlobalInfo{
 				{
-					Location: nil,
-					Name:     "A.0000000000000001.Bar",
-					Index:    0,
+					Location:      nil,
+					SimpleName:    "Bar",
+					CanonicalName: "A.0000000000000001.Bar",
+					Index:         0,
 				},
 				{
-					Location: nil,
-					Name:     "A.0000000000000001.Bar.getType",
-					Index:    1,
+					Location:      nil,
+					SimpleName:    "getType",
+					CanonicalName: "A.0000000000000001.Bar.getType",
+					Index:         1,
 				},
 				{
-					Location: nil,
-					Name:     "A.0000000000000001.Bar.isInstance",
-					Index:    2,
+					Location:      nil,
+					SimpleName:    "isInstance",
+					CanonicalName: "A.0000000000000001.Bar.isInstance",
+					Index:         2,
 				},
 				{
-					Location: nil,
-					Name:     "A.0000000000000001.Bar.forEachAttachment",
-					Index:    3,
+					Location:      nil,
+					SimpleName:    "forEachAttachment",
+					CanonicalName: "A.0000000000000001.Bar.forEachAttachment",
+					Index:         3,
 				},
 				{
-					Location: nil,
-					Name:     "A.0000000000000001.Bar.hello",
-					Index:    4,
+					Location:      nil,
+					SimpleName:    "hello",
+					CanonicalName: "A.0000000000000001.Bar.hello",
+					Index:         4,
 				},
 				{
-					Location: nil,
-					Name:     "A.0000000000000001.Bar.defaultHello",
-					Index:    5,
+					Location:      nil,
+					SimpleName:    "defaultHello",
+					CanonicalName: "A.0000000000000001.Bar.defaultHello",
+					Index:         5,
 				},
 				{
-					Location: importLocation,
-					Name:     "A.0000000000000001.FooInterface.defaultHello",
-					Index:    6,
+					Location:      importLocation,
+					SimpleName:    "defaultHello",
+					CanonicalName: "A.0000000000000001.FooInterface.defaultHello",
+					Index:         6,
 				},
 			},
 			program.Globals,
@@ -14182,17 +14192,18 @@ func TestCompileReferenceMethod(t *testing.T) {
 		[]bbq.Global{
 			&bbq.FunctionGlobal[opcode.Instruction]{
 				GlobalInfo: bbq.GlobalInfo{
-					Index:    0,
-					Location: nil,
-					Name:     "S.test.test",
+					Index:         0,
+					Location:      nil,
+					SimpleName:    "test",
+					CanonicalName: "S.test.test",
 				},
 				Function: &functions[0],
 			},
 			&bbq.ImportedGlobal{
 				GlobalInfo: bbq.GlobalInfo{
-					Index:    1,
-					Location: nil,
-					Name:     "$ArrayVariableSized.map",
+					Index:         1,
+					Location:      nil,
+					CanonicalName: "$ArrayVariableSized.map",
 				},
 			},
 		},

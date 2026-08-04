@@ -60,13 +60,13 @@ type DesugaredElaboration struct {
 	functionExpressionFunctionTypes   map[*ast.FunctionExpression]*sema.FunctionType
 
 	// importCanonicalNames maps an import's simple name to its canonical (location-qualified) name.
-	// The key of this map is the identifier of the import, or the alias if present.
+	// The key of this map (the simple name) is the identifier of the import, or the alias if present.
 	// Each elaboration has its own mapping, so that inherited code resolves identifiers
 	// against the imports of the program that declared the inherited code,
 	// not the program currently being compiled.
 	importCanonicalNames map[string]string
 
-	// Return all aliases defined for the program of this elaboration.
+	// allImportAliases contains all aliases defined for the program of this elaboration.
 	// i.e: calls `ImportDeclarationAliases` for all imports of this program.
 	// Maps the actual name (key) to the alias (value).
 	// Used for constructing the canonical names for imports (importCanonicalNames).
@@ -468,14 +468,14 @@ func (e *DesugaredElaboration) SetGlobalValue(name string, variable *sema.Variab
 	e.elaboration.SetGlobalValue(name, variable)
 }
 
-func (e *DesugaredElaboration) SetImportAlias(simpleName string, canonicalName string) {
+func (e *DesugaredElaboration) SetImportCanonicalName(simpleName string, canonicalName string) {
 	if e.importCanonicalNames == nil {
 		e.importCanonicalNames = make(map[string]string)
 	}
 	e.importCanonicalNames[simpleName] = canonicalName
 }
 
-func (e *DesugaredElaboration) ImportAlias(simpleName string) (string, bool) {
+func (e *DesugaredElaboration) ImportCanonicalName(simpleName string) (string, bool) {
 	if e.importCanonicalNames == nil {
 		return "", false
 	}

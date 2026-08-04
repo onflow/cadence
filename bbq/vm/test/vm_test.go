@@ -1677,7 +1677,7 @@ func initializeContract(
 	require.True(tb, len(program.Contracts) > 0)
 	contract := program.Contracts[0]
 
-	contractValue, err := vmInstance.InitializeContract(contract.Name)
+	contractValue, err := vmInstance.InitializeContract(common.TypeID(contract.CanonicalName))
 	require.NoError(tb, err)
 
 	return vmInstance, contractValue
@@ -9721,20 +9721,20 @@ func TestAttachments(t *testing.T) {
 				activation.Set(
 					stdlib.VMSignatureAlgorithmConstructor.Name,
 					compiler.GlobalImport{
-						Name: stdlib.VMSignatureAlgorithmConstructor.Name,
+						CanonicalName: stdlib.VMSignatureAlgorithmConstructor.Name,
 					},
 				)
 				activation.Set(
 					validator.Name,
 					compiler.GlobalImport{
-						Name: validator.Name,
+						CanonicalName: validator.Name,
 					},
 				)
 				for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
 					activation.Set(
 						v.Name,
 						compiler.GlobalImport{
-							Name: v.Name,
+							CanonicalName: v.Name,
 						},
 					)
 				}

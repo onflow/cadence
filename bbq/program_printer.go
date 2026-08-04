@@ -222,9 +222,9 @@ func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
 
 	for index, impt := range imports {
 
-		name := impt.Name
+		name := impt.CanonicalName
 		if impt.Location != nil {
-			name = string(impt.Location.TypeID(nil, impt.Name))
+			name = string(impt.Location.TypeID(nil, impt.CanonicalName))
 		}
 
 		_, _ = fmt.Fprintf(

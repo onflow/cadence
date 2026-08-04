@@ -21,8 +21,11 @@ package bbq
 import "github.com/onflow/cadence/common"
 
 type Contract struct {
+	// Unqualified identifier as it appears in source code.
+	// Only needed to support string/wildcard imports in tests.
+	SimpleName string
 	// Location-qualified canonical name
-	Name string
+	CanonicalName string
 
 	Location common.Location
 }

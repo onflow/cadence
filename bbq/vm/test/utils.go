@@ -671,7 +671,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	if vmConfig.ContractValueHandler == nil {
 		// TODO: generalize this
 		if len(program.Contracts) == 1 {
-			vmConfig.ContractValueHandler = ContractValueHandler(program.Contracts[0].Name)
+			vmConfig.ContractValueHandler = ContractValueHandler(program.Contracts[0].CanonicalName)
 		}
 	}
 

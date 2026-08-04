@@ -19,6 +19,8 @@
 package compiler
 
 type globalVariable[E any] struct {
-	Name   string
-	Getter *function[E]
+	// Only needed to support string/wildcard imports in tests.
+	SimpleName    string
+	CanonicalName string
+	Getter        *function[E]
 }

@@ -19,6 +19,8 @@
 package bbq
 
 type Variable[E any] struct {
-	Name   string
-	Getter *Function[E]
+	// Only needed to support string/wildcard imports in tests.
+	SimpleName    string
+	CanonicalName string
+	Getter        *Function[E]
 }
