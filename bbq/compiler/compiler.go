@@ -4348,10 +4348,13 @@ func (c *Compiler[_, _]) populateWildcardImportCanonicalNames(location common.Lo
 	importedProgram := c.Config.ImportHandler(location)
 
 	for _, global := range importedProgram.Globals {
-		info := global.GetGlobalInfo()
-		if info.SimpleName == "" {
+		// Only add globals defined in the program itself to the canonical name mappings.
+		// i.e: Do not include imports as canonical global names of the program.
+		if _, isImport := global.(*bbq.ImportedGlobal); isImport {
 			continue
 		}
+
+		info := global.GetGlobalInfo()
 		c.DesugaredElaboration.SetImportCanonicalName(info.SimpleName, info.CanonicalName)
 	}
 }
