@@ -19,8 +19,6 @@
 package compiler
 
 import (
-	"sync"
-
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/sema"
@@ -65,13 +63,6 @@ type DesugaredElaboration struct {
 	// against the imports of the program that declared the inherited code,
 	// not the program currently being compiled.
 	importCanonicalNames map[string]string
-
-	// allImportAliases contains all aliases defined for the program of this elaboration.
-	// i.e: calls `ImportDeclarationAliases` for all imports of this program.
-	// Maps the actual name (key) to the alias (value).
-	// Used for constructing the canonical names for imports (importCanonicalNames).
-	allImportAliases     map[string]string
-	allImportAliasesOnce sync.Once
 }
 
 func NewDesugaredElaboration(elaboration *sema.Elaboration, location common.Location) *DesugaredElaboration {
@@ -416,26 +407,6 @@ func (e *DesugaredElaboration) InterfaceTypeDeclaration(interfaceType *sema.Inte
 
 func (e *DesugaredElaboration) AllImportDeclarationsResolvedLocations() map[*ast.ImportDeclaration][]sema.ResolvedLocation {
 	return e.elaboration.AllImportDeclarationsResolvedLocations()
-}
-
-// AllImportAliases returns a flat map from original import name to alias
-// across all import declarations. Returns nil if no aliases exist.
-// The result is memoized.
-func (e *DesugaredElaboration) AllImportAliases() map[string]string {
-	e.allImportAliasesOnce.Do(func() {
-		allResolvedLocations := e.elaboration.AllImportDeclarationsResolvedLocations()
-		for importDecl := range allResolvedLocations { // nolint:maprange
-			perDecl := e.elaboration.ImportDeclarationAliases(importDecl)
-			for original, alias := range perDecl { // nolint:maprange
-				if e.allImportAliases == nil {
-					e.allImportAliases = make(map[string]string)
-				}
-				e.allImportAliases[original] = alias
-			}
-		}
-	})
-
-	return e.allImportAliases
 }
 
 // OriginalElaboration returns the underlying elaboration.

@@ -2824,7 +2824,7 @@ func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExp
 func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.IdentifierExpression) string {
 	// A global identifier of a program can be:
 	//	- An import.
-	//  - A construct defined in the same program, whcih could be a:
+	//  - A construct defined in the same program, which could be a:
 	//    - Type
 	//    - Function (including constructors).
 	//    - Variable.
@@ -4334,7 +4334,6 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 			// Set up canonical names mapping for all exported globals from the imported program.
 			c.populateWildcardImportCanonicalNames(location)
 		}
-
 	}
 
 	return
@@ -4399,44 +4398,7 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 
 	c.addedImports[location] = struct{}{}
 
-	// Resolve the imported elaboration so we can populate its import aliases.
-	// When inherited code (e.g. interface conditions) is later compiled,
-	// the compiler swaps to the inherited elaboration and needs its
-	// aliases to already be populated so identifiers resolve correctly
-	// against that program's imports.
-	var importedElaboration *DesugaredElaboration
-	var importAliases map[string]string
-
-	if c.Config.ElaborationResolver != nil {
-		var err error
-		importedElaboration, err = c.Config.ElaborationResolver(location)
-		if err != nil {
-			panic(err)
-		}
-
-		if importedElaboration != nil && importedElaboration.importCanonicalNames == nil {
-			importedElaboration.importCanonicalNames = make(map[string]string)
-			importAliases = importedElaboration.AllImportAliases()
-		}
-	}
-
-	// Recursively add transitive imports, and populate aliases
-	// on the imported elaboration from the same iteration.
 	for _, impt := range importedProgram.Imports {
-		if importedElaboration != nil && impt.Location != nil {
-			originalName := impt.CanonicalName
-			canonicalName := c.canonicalNameAt(impt.Location, originalName)
-
-			// If the imported program uses an alias for this import
-			// (e.g. `import X as Y`), map the alias since that is
-			// what the inherited code uses.
-			simpleName := originalName
-			if alias, ok := importAliases[originalName]; ok {
-				simpleName = alias
-			}
-			importedElaboration.SetImportCanonicalName(simpleName, canonicalName)
-		}
-
 		c.addGlobalsFromImportedProgram(impt.Location)
 	}
 }
