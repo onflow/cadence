@@ -72,6 +72,22 @@ func prettyInstructions(
 	return pretty
 }
 
+func referencedGlobalCanonicalNames(
+	code []opcode.Instruction,
+	program *bbq.InstructionProgram,
+) []string {
+	var names []string
+	for _, instr := range code {
+		switch i := instr.(type) {
+		case opcode.InstructionGetGlobal:
+			names = append(names, program.Globals[i.Global].GetGlobalInfo().CanonicalName)
+		case opcode.InstructionGetMethod:
+			names = append(names, program.Globals[i.Method].GetGlobalInfo().CanonicalName)
+		}
+	}
+	return names
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
@@ -8952,6 +8968,326 @@ func TestCompileImports(t *testing.T) {
 				},
 			},
 			cProgram.Imports,
+		)
+	})
+
+	t.Run("transitive import with conflicting names", func(t *testing.T) {
+		t.Parallel()
+
+		// Two different contracts share the name `Foo` at different addresses.
+		// Two interfaces each import a different `Foo` and define a struct interface
+		// with an inherited precondition that calls Foo.check().
+		// A contract conforms to both interfaces (via two structs S1 and S2).
+		// The compiler must resolve `Foo` in each inherited precondition to the
+		// correct Foo based on the interface that defines it.
+
+		programs := CompiledPrograms{}
+
+		fooAAddress := common.MustBytesToAddress([]byte{1})
+		fooBAddress := common.MustBytesToAddress([]byte{2})
+		definitionsAAddress := common.MustBytesToAddress([]byte{3})
+		definitionsBAddress := common.MustBytesToAddress([]byte{4})
+		consumerAddress := common.MustBytesToAddress([]byte{5})
+
+		fooALocation := common.NewAddressLocation(nil, fooAAddress, "Foo")
+		fooBLocation := common.NewAddressLocation(nil, fooBAddress, "Foo")
+		definitionsALocation := common.NewAddressLocation(nil, definitionsAAddress, "DefinitionsA")
+		definitionsBLocation := common.NewAddressLocation(nil, definitionsBAddress, "DefinitionsB")
+		consumerLocation := common.NewAddressLocation(nil, consumerAddress, "Consumer")
+
+		// 0x1.Foo
+		_ = ParseCheckAndCompile(t,
+			`
+            contract Foo {
+                view fun check(): Bool {
+                    return true
+                }
+            }
+        `,
+			fooALocation,
+			programs,
+		)
+
+		// 0x2.Foo (same name, different contract)
+		_ = ParseCheckAndCompile(t,
+			`
+            contract Foo {
+                view fun check(): Bool {
+                    return false
+                }
+            }
+        `,
+			fooBLocation,
+			programs,
+		)
+
+		// 0x3.DefinitionsA: imports Foo from 0x1, defines an interface with an inherited precondition.
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Foo from %[1]s
+
+            contract interface DefinitionsA {
+                struct interface I {
+                    fun test() {
+                        pre {
+                            Foo.check()
+                        }
+                    }
+                }
+            }
+        `, fooAAddress.HexWithPrefix()),
+			definitionsALocation,
+			programs,
+		)
+
+		// 0x6.DefinitionsB: imports Foo from 0x2, defines an interface with an inherited precondition.
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Foo from %[1]s
+
+            contract interface DefinitionsB {
+                struct interface I {
+                    fun test() {
+                        pre {
+                            Foo.check()
+                        }
+                    }
+                }
+            }
+        `, fooBAddress.HexWithPrefix()),
+			definitionsBLocation,
+			programs,
+		)
+
+		// 0x4.Consumer: conforms to both interfaces.
+		// S1's inherited precondition must resolve Foo to 0x1's Foo.
+		// S2's inherited precondition must resolve Foo to 0x2's Foo.
+		consumerProgram := ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import DefinitionsA from %[1]s
+            import DefinitionsB from %[2]s
+
+            contract Consumer {
+                struct S1: DefinitionsA.I {
+                    fun test() {}
+                }
+
+                struct S2: DefinitionsB.I {
+                    fun test() {}
+                }
+            }
+        `, definitionsAAddress.HexWithPrefix(), definitionsBAddress.HexWithPrefix()),
+			consumerLocation,
+			programs,
+		)
+
+		// S1's inherited precondition resolves Foo to 0x1's Foo (via DefinitionsA).
+		// S2's inherited precondition resolves Foo to 0x2's Foo (via DefinitionsB).
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				// S1's inherited precondition -> 0x1's Foo
+				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo"},
+				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo.check"},
+				// Synthetic precondition-fail function (emitted after S1's precondition)
+				{Location: nil, CanonicalName: "$failPreCondition"},
+				// S2's inherited precondition -> 0x2's Foo
+				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo"},
+				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo.check"},
+			},
+			consumerProgram.Imports,
+		)
+
+		// Assert the bytecode of S1.test and S2.test references the correct Foo.
+		// S1.test's inherited precondition must reference 0x1's Foo;
+		// S2.test's inherited precondition must reference 0x2's Foo.
+		s1Test := consumerProgram.Functions[7]
+		assert.Equal(t, "A.0000000000000005.Consumer.S1.test", s1Test.CanonicalName)
+		assert.Equal(t,
+			[]string{
+				"A.0000000000000001.Foo",       // GetGlobal: load 0x1's Foo contract value
+				"A.0000000000000001.Foo.check", // GetMethod: get 0x1's Foo.check
+				"$failPreCondition",            // GetGlobal: load $failPreCondition
+			},
+			referencedGlobalCanonicalNames(s1Test.Code, consumerProgram),
+		)
+
+		s2Test := consumerProgram.Functions[12]
+		assert.Equal(t, "A.0000000000000005.Consumer.S2.test", s2Test.CanonicalName)
+		assert.Equal(t,
+			[]string{
+				"A.0000000000000002.Foo",       // GetGlobal: load 0x2's Foo contract value
+				"A.0000000000000002.Foo.check", // GetMethod: get 0x2's Foo.check
+				"$failPreCondition",            // GetGlobal: load $failPreCondition
+			},
+			referencedGlobalCanonicalNames(s2Test.Code, consumerProgram),
+		)
+	})
+	t.Run("deeply nested transitive import with conflicting names", func(t *testing.T) {
+		t.Parallel()
+
+		// Same as above, but one of the interfaces is reached through an extra hop:
+		// Consumer -> Wrapper (0x5) -> DefinitionsA (0x3) -> Foo@0x1.
+		// The other interface is reached directly: Consumer -> DefinitionsB (0x6) -> Foo@0x2.
+		// The compiler must resolve `Foo` in each inherited precondition to the
+		// correct Foo across the (possibly deeper) transitive chain.
+
+		programs := CompiledPrograms{}
+
+		fooAAddress := common.MustBytesToAddress([]byte{1})
+		fooBAddress := common.MustBytesToAddress([]byte{2})
+		definitionsAAddress := common.MustBytesToAddress([]byte{3})
+		definitionsBAddress := common.MustBytesToAddress([]byte{4})
+		consumerAddress := common.MustBytesToAddress([]byte{5})
+		wrapperAddress := common.MustBytesToAddress([]byte{6})
+
+		fooALocation := common.NewAddressLocation(nil, fooAAddress, "Foo")
+		fooBLocation := common.NewAddressLocation(nil, fooBAddress, "Foo")
+		definitionsALocation := common.NewAddressLocation(nil, definitionsAAddress, "DefinitionsA")
+		definitionsBLocation := common.NewAddressLocation(nil, definitionsBAddress, "DefinitionsB")
+		consumerLocation := common.NewAddressLocation(nil, consumerAddress, "Consumer")
+		wrapperLocation := common.NewAddressLocation(nil, wrapperAddress, "Wrapper")
+
+		// 0x1.Foo
+		_ = ParseCheckAndCompile(t,
+			`
+            contract Foo {
+                view fun check(): Bool {
+                    return true
+                }
+            }
+        `,
+			fooALocation,
+			programs,
+		)
+
+		// 0x2.Foo (same name, different contract)
+		_ = ParseCheckAndCompile(t,
+			`
+            contract Foo {
+                view fun check(): Bool {
+                    return false
+                }
+            }
+        `,
+			fooBLocation,
+			programs,
+		)
+
+		// 0x3.DefinitionsA
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Foo from %[1]s
+
+            contract interface DefinitionsA {
+                struct interface I {
+                    fun test() {
+                        pre {
+                            Foo.check()
+                        }
+                    }
+                }
+            }
+        `, fooAAddress.HexWithPrefix()),
+			definitionsALocation,
+			programs,
+		)
+
+		// 0x5.Wrapper: re-exports DefinitionsA.I as Wrapper.K
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import DefinitionsA from %[1]s
+
+            contract interface Wrapper {
+                struct interface K: DefinitionsA.I {
+                    fun test()
+                }
+            }
+        `, definitionsAAddress.HexWithPrefix()),
+			wrapperLocation,
+			programs,
+		)
+
+		// 0x6.DefinitionsB
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Foo from %[1]s
+
+            contract interface DefinitionsB {
+                struct interface I {
+                    fun test() {
+                        pre {
+                            Foo.check()
+                        }
+                    }
+                }
+            }
+        `, fooBAddress.HexWithPrefix()),
+			definitionsBLocation,
+			programs,
+		)
+
+		// 0x4.Consumer: S1 conforms to Wrapper.K (deep hop), S2 conforms to DefinitionsB.I (direct).
+		consumerProgram := ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Wrapper from %[1]s
+            import DefinitionsB from %[2]s
+
+            contract Consumer {
+                struct S1: Wrapper.K {
+                    fun test() {}
+                }
+
+                struct S2: DefinitionsB.I {
+                    fun test() {}
+                }
+            }
+        `, wrapperAddress.HexWithPrefix(), definitionsBAddress.HexWithPrefix()),
+			consumerLocation,
+			programs,
+		)
+
+		// S1's inherited precondition resolves Foo to 0x1's Foo
+		// across Wrapper -> DefinitionsA.
+		// S2's inherited precondition resolves Foo to 0x2's Foo via DefinitionsB.
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				// S1's inherited precondition -> 0x1's Foo (deep)
+				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo"},
+				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo.check"},
+				// Synthetic precondition-fail function (emitted after S1's precondition)
+				{Location: nil, CanonicalName: "$failPreCondition"},
+				// S2's inherited precondition -> 0x2's Foo
+				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo"},
+				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo.check"},
+			},
+			consumerProgram.Imports,
+		)
+
+		// Assert the bytecode of S1.test and S2.test references the correct Foo.
+		// S1.test's inherited precondition must reference 0x1's Foo (across the
+		// Wrapper -> DefinitionsA hop); S2.test's must reference 0x2's Foo.
+		s1Test := consumerProgram.Functions[7]
+		assert.Equal(t, "A.0000000000000005.Consumer.S1.test", s1Test.CanonicalName)
+		assert.Equal(t,
+			[]string{
+				"A.0000000000000001.Foo",       // GetGlobal: load 0x1's Foo contract value
+				"A.0000000000000001.Foo.check", // GetMethod: get 0x1's Foo.check
+				"$failPreCondition",            // GetGlobal: load $failPreCondition
+			},
+			referencedGlobalCanonicalNames(s1Test.Code, consumerProgram),
+		)
+
+		s2Test := consumerProgram.Functions[12]
+		assert.Equal(t, "A.0000000000000005.Consumer.S2.test", s2Test.CanonicalName)
+		assert.Equal(t,
+			[]string{
+				"A.0000000000000002.Foo",       // GetGlobal: load 0x2's Foo contract value
+				"A.0000000000000002.Foo.check", // GetMethod: get 0x2's Foo.check
+				"$failPreCondition",            // GetGlobal: load $failPreCondition
+			},
+			referencedGlobalCanonicalNames(s2Test.Code, consumerProgram),
 		)
 	})
 }
