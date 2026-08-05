@@ -9965,10 +9965,11 @@ func TestDynamicMethodInvocationViaOptionalChaining(t *testing.T) {
 }
 
 func TestInjectedContract(t *testing.T) {
-
-	t.SkipNow()
-
 	t.Parallel()
+
+	// Mimics injecting a contract at the built-in location (e.g: InternalEVM contract).
+	// i.e: location is nil.
+	var contractBLocation common.Location = nil
 
 	cType := &sema.FunctionType{
 		Parameters: []sema.Parameter{
@@ -9982,7 +9983,7 @@ func TestInjectedContract(t *testing.T) {
 	}
 
 	bType := &sema.CompositeType{
-		Location:   TestLocation,
+		Location:   contractBLocation,
 		Identifier: "B",
 		Kind:       common.CompositeKindContract,
 	}
@@ -10089,7 +10090,7 @@ func TestInjectedContract(t *testing.T) {
 	vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
-		if location == TestLocation && string(typeID) == canonicalTypeName {
+		if location == contractBLocation && string(typeID) == canonicalTypeName {
 			return bType
 		}
 
