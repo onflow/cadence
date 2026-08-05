@@ -34,9 +34,6 @@ const (
 )
 
 type GlobalInfo struct {
-	// SimpleName is the unqualified identifier as it appears in source code.
-	// Only needed to support string/wildcard imports in tests.
-	SimpleName string
 	// CanonicalName is the location-qualified canonical name
 	CanonicalName string
 	Location      common.Location
@@ -68,7 +65,6 @@ type ImportedGlobal struct {
 
 func NewFunctionGlobal[E any](
 	memoryGauge common.MemoryGauge,
-	simpleName string,
 	canonicalName string,
 	location common.Location,
 	index uint16,
@@ -76,7 +72,6 @@ func NewFunctionGlobal[E any](
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &FunctionGlobal[E]{
 		GlobalInfo: GlobalInfo{
-			SimpleName:    simpleName,
 			CanonicalName: canonicalName,
 			Location:      location,
 			Index:         index,
@@ -102,7 +97,6 @@ func (g ImportedGlobal) GetGlobalInfo() GlobalInfo {
 
 func NewVariableGlobal[E any](
 	memoryGauge common.MemoryGauge,
-	simpleName string,
 	canonicalName string,
 	location common.Location,
 	index uint16,
@@ -110,7 +104,6 @@ func NewVariableGlobal[E any](
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &VariableGlobal[E]{
 		GlobalInfo: GlobalInfo{
-			SimpleName:    simpleName,
 			CanonicalName: canonicalName,
 			Location:      location,
 			Index:         index,
@@ -120,7 +113,6 @@ func NewVariableGlobal[E any](
 
 func NewContractGlobal(
 	memoryGauge common.MemoryGauge,
-	simpleName string,
 	canonicalName string,
 	location common.Location,
 	index uint16,
@@ -128,7 +120,6 @@ func NewContractGlobal(
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &ContractGlobal{
 		GlobalInfo: GlobalInfo{
-			SimpleName:    simpleName,
 			CanonicalName: canonicalName,
 			Location:      location,
 			Index:         index,
@@ -138,7 +129,6 @@ func NewContractGlobal(
 
 func NewImportedGlobal(
 	memoryGauge common.MemoryGauge,
-	simpleName string,
 	canonicalName string,
 	location common.Location,
 	index uint16,
@@ -146,7 +136,6 @@ func NewImportedGlobal(
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &ImportedGlobal{
 		GlobalInfo: GlobalInfo{
-			SimpleName:    simpleName,
 			CanonicalName: canonicalName,
 			Location:      location,
 			Index:         index,

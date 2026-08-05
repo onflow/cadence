@@ -26,6 +26,7 @@ import (
 type Program[E, T any] struct {
 	Contracts []*Contract
 	Imports   []Import
+	Exports   []Export
 	Functions []Function[E]
 	Constants []constant.DecodedConstant
 	Variables []Variable[E]

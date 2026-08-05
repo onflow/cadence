@@ -12590,6 +12590,128 @@ func TestRuntimeIdentifierLocationToAddressLocationRewrite(t *testing.T) {
 	assert.Equal(t, cadence.NewInt(42), result)
 }
 
+func TestRuntimeNestedTypeNameConfusionAcrossImports(t *testing.T) {
+
+	t.Parallel()
+
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
+
+	// Contract `Foo` holds the answer.
+	fooContract := []byte(`
+      access(all)
+      contract Foo {
+          access(all) var answer: Int
+
+          init() {
+              self.answer = 42
+          }
+      }
+    `)
+
+	// Contract `Bar` has a *nested* type which is also named `Foo`.
+	// Its compiled global therefore has the simple name `Foo`,
+	// which must not shadow the contract `Foo` above.
+	barContract := []byte(`
+      access(all)
+      contract Bar {
+          access(all)
+          struct Foo {}
+      }
+    `)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		// NOTE: rewrites identifier locations to address locations,
+		// and returns the (empty) identifiers as-is.
+		OnResolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+			identifierLocation, ok := location.(common.IdentifierLocation)
+			if !ok {
+				return []ResolvedLocation{
+					{
+						Location:    location,
+						Identifiers: identifiers,
+					},
+				}, nil
+			}
+
+			return []ResolvedLocation{
+				{
+					Location: common.AddressLocation{
+						Address: signerAddress,
+						Name:    string(identifierLocation),
+					},
+					Identifiers: identifiers,
+				},
+			}, nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	runtime := NewTestRuntime()
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Deploy
+
+	deploy := func(name string, contract []byte) {
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction(name, contract),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+				UseVM:     *compile,
+			},
+		)
+		require.NoError(t, err)
+	}
+
+	deploy("Foo", fooContract)
+	deploy("Bar", barContract)
+
+	// Test
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: []byte(`
+              import Foo
+              import Bar
+
+              access(all)
+              fun main(): Int {
+                  return Foo.answer
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), result)
+}
+
 func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 
 	t.Parallel()

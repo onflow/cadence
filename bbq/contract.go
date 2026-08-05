@@ -21,8 +21,9 @@ package bbq
 import "github.com/onflow/cadence/common"
 
 type Contract struct {
-	// Unqualified identifier as it appears in source code.
-	// Only needed to support string/wildcard imports in tests.
+	// SimpleName is the unqualified identifier as it appears in source code.
+	// It is the name under which other programs import the contract,
+	// and is recorded as such in the program's exports.
 	SimpleName string
 	// Location-qualified canonical name
 	CanonicalName string

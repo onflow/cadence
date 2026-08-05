@@ -8793,6 +8793,131 @@ func TestCompileLineNumberInfo(t *testing.T) {
 	)
 }
 
+func TestCompileExports(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("contract", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            contract Foo {
+                fun foo() {}
+
+                struct Bar {
+                    fun bar() {}
+                }
+            }
+        `
+
+		contractsAddress := common.MustBytesToAddress([]byte{1})
+		location := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+		program := ParseCheckAndCompile(t, code, location, CompiledPrograms{})
+
+		// Only the contract itself is importable.
+		// Its members, and the members of its nested types, are not.
+		assert.Equal(
+			t,
+			[]bbq.Export{
+				{
+					SimpleName:    "Foo",
+					CanonicalName: "A.0000000000000001.Foo",
+				},
+			},
+			program.Exports,
+		)
+	})
+
+	t.Run("top-level declarations", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = 1
+
+            fun foo() {}
+
+            struct Bar {
+                fun bar() {}
+            }
+        `
+
+		program := ParseCheckAndCompile(t, code, TestLocation, CompiledPrograms{})
+
+		// All top-level declarations are importable, but `Bar.bar` is not.
+		assert.Equal(
+			t,
+			[]bbq.Export{
+				{
+					SimpleName:    "x",
+					CanonicalName: "S.test.x",
+				},
+				{
+					SimpleName:    "foo",
+					CanonicalName: "S.test.foo",
+				},
+				{
+					SimpleName:    "Bar",
+					CanonicalName: "S.test.Bar",
+				},
+			},
+			program.Exports,
+		)
+	})
+
+	t.Run("imports are not re-exported", func(t *testing.T) {
+		t.Parallel()
+
+		programs := CompiledPrograms{}
+
+		contractsAddress := common.MustBytesToAddress([]byte{1})
+
+		fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+		barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+
+		ParseCheckAndCompile(
+			t,
+			`
+              contract Foo {
+                  fun foo() {}
+              }
+            `,
+			fooLocation,
+			programs,
+		)
+
+		barProgram := ParseCheckAndCompile(
+			t,
+			fmt.Sprintf(
+				`
+                  import Foo from %[1]s
+
+                  contract Bar {
+                      fun bar() {
+                          Foo.foo()
+                      }
+                  }
+                `,
+				contractsAddress.HexWithPrefix(),
+			),
+			barLocation,
+			programs,
+		)
+
+		// `Bar` imports `Foo`, but importing `Bar` must not bring `Foo` into scope.
+		assert.Equal(
+			t,
+			[]bbq.Export{
+				{
+					SimpleName:    "Bar",
+					CanonicalName: "A.0000000000000001.Bar",
+				},
+			},
+			barProgram.Exports,
+		)
+	})
+}
+
 func TestCompileImports(t *testing.T) {
 
 	t.Parallel()
@@ -13614,19 +13739,16 @@ func TestCompileImportAlias(t *testing.T) {
 			[]bbq.GlobalInfo{
 				{
 					Location:      nil,
-					SimpleName:    "test",
 					CanonicalName: "S.test.test",
 					Index:         0,
 				},
 				{
 					Location:      importLocation,
-					SimpleName:    "Foo",
 					CanonicalName: "A.0000000000000001.Foo",
 					Index:         1,
 				},
 				{
 					Location:      importLocation,
-					SimpleName:    "hello",
 					CanonicalName: "A.0000000000000001.Foo.hello",
 					Index:         2,
 				},
@@ -13697,43 +13819,36 @@ func TestCompileImportAlias(t *testing.T) {
 			[]bbq.GlobalInfo{
 				{
 					Location:      nil,
-					SimpleName:    "Bar",
 					CanonicalName: "A.0000000000000001.Bar",
 					Index:         0,
 				},
 				{
 					Location:      nil,
-					SimpleName:    "getType",
 					CanonicalName: "A.0000000000000001.Bar.getType",
 					Index:         1,
 				},
 				{
 					Location:      nil,
-					SimpleName:    "isInstance",
 					CanonicalName: "A.0000000000000001.Bar.isInstance",
 					Index:         2,
 				},
 				{
 					Location:      nil,
-					SimpleName:    "forEachAttachment",
 					CanonicalName: "A.0000000000000001.Bar.forEachAttachment",
 					Index:         3,
 				},
 				{
 					Location:      nil,
-					SimpleName:    "hello",
 					CanonicalName: "A.0000000000000001.Bar.hello",
 					Index:         4,
 				},
 				{
 					Location:      nil,
-					SimpleName:    "defaultHello",
 					CanonicalName: "A.0000000000000001.Bar.defaultHello",
 					Index:         5,
 				},
 				{
 					Location:      importLocation,
-					SimpleName:    "defaultHello",
 					CanonicalName: "A.0000000000000001.FooInterface.defaultHello",
 					Index:         6,
 				},
@@ -14530,7 +14645,6 @@ func TestCompileReferenceMethod(t *testing.T) {
 				GlobalInfo: bbq.GlobalInfo{
 					Index:         0,
 					Location:      nil,
-					SimpleName:    "test",
 					CanonicalName: "S.test.test",
 				},
 				Function: &functions[0],

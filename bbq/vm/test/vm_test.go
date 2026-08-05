@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/onflow/cadence/bbq/commons"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/opcode"
 	. "github.com/onflow/cadence/bbq/test_utils"

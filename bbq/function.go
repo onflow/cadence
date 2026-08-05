@@ -20,6 +20,9 @@ package bbq
 
 type Function[E any] struct {
 	// SimpleName is the unqualified identifier as it appears in source code.
+	// It is how a function is identified independently of where it is declared:
+	// the linker resolves native functions by it, and member access resolution
+	// looks up a method's declared access by it.
 	SimpleName string
 	// CanonicalName is the location-qualified canonical name
 	CanonicalName string

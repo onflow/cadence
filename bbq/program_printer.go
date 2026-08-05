@@ -96,6 +96,7 @@ func NewInstructionsProgramPrinter(resolve bool, colorize bool, showFlow bool) *
 
 func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	p.printImports(program.Imports)
+	p.printExports(program.Exports)
 	p.printConstantPool(program.Constants)
 	p.printTypePool(program.Types)
 
@@ -232,6 +233,25 @@ func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
 			"%s |\t %s\n",
 			p.colorizeIndex(index),
 			name,
+		)
+	}
+
+	_ = tabWriter.Flush()
+	_, _ = fmt.Fprintln(&p.stringBuilder)
+}
+
+func (p *ProgramPrinter[_, _]) printExports(exports []Export) {
+	p.printHeader("Exports")
+
+	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
+
+	for index, export := range exports {
+		_, _ = fmt.Fprintf(
+			tabWriter,
+			"%s |\t %s\t %s\n",
+			p.colorizeIndex(index),
+			export.SimpleName,
+			export.CanonicalName,
 		)
 	}
 
