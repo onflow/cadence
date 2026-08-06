@@ -1000,8 +1000,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 					if *compile {
 						vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-					vmConfig.ContractValueHandler = compilerUtils.ContractValueHandler(
-						commons.LocationQualifiedName(nil, TestLocation, "TestImpl"),
+						vmConfig.ContractValueHandler = compilerUtils.ContractValueHandler(
+							commons.LocationQualifiedName(nil, TestLocation, "TestImpl"),
 							interpreter.NewUnmeteredIntValueFromInt64(value),
 						)
 						vmConfig.OnEventEmitted = onEmitEvents

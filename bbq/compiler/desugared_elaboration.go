@@ -493,7 +493,3 @@ func (e *DesugaredElaboration) AttachmentRemoveTypes(statement *ast.RemoveStatem
 func (e *DesugaredElaboration) BinaryExpressionTypes(expression *ast.BinaryExpression) sema.BinaryExpressionTypes {
 	return e.elaboration.BinaryExpressionTypes(expression)
 }
-
-func (e *DesugaredElaboration) ExpressionTypes(expression ast.Expression) sema.ExpressionTypes {
-	return e.elaboration.ExpressionTypes(expression)
-}

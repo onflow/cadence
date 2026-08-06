@@ -51,13 +51,14 @@ type Compiler[E, T any] struct {
 	Globals             map[string]bbq.Global
 	importedGlobals     *activations.Activation[GlobalImport]
 	usedImportedGlobals []bbq.Global
+	controlFlows        []controlFlow
+	currentControlFlow  *controlFlow
+	returns             []returns
+	currentReturn       *returns
+
 	// exports are the globals of this program that other programs may import,
 	// in the order they were reserved.
-	exports            []bbq.Export
-	controlFlows       []controlFlow
-	currentControlFlow *controlFlow
-	returns            []returns
-	currentReturn      *returns
+	exports []bbq.Export
 
 	types         []sema.Type
 	compiledTypes []T
