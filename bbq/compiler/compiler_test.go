@@ -9415,6 +9415,117 @@ func TestCompileImports(t *testing.T) {
 			referencedGlobalCanonicalNames(s2Test.Code, consumerProgram),
 		)
 	})
+
+	t.Run("deeply inherited condition referencing declaring program global", func(t *testing.T) {
+		t.Parallel()
+
+		programs := CompiledPrograms{}
+
+		definitionsAddress := common.MustBytesToAddress([]byte{1})
+		wrapperAddress := common.MustBytesToAddress([]byte{2})
+		consumerAddress := common.MustBytesToAddress([]byte{3})
+
+		definitionsLocation := common.NewAddressLocation(nil, definitionsAddress, "Definitions")
+		wrapperLocation := common.NewAddressLocation(nil, wrapperAddress, "Wrapper")
+		consumerLocation := common.NewAddressLocation(nil, consumerAddress, "Consumer")
+
+		// The inherited condition calls a global declared in the same program
+		// as the interface, rather than an imported global.
+		_ = ParseCheckAndCompile(
+			t,
+			`
+              view fun check(): Bool {
+                  return true
+              }
+
+              contract interface Definitions {
+                  struct interface I {
+                      fun test() {
+                          pre {
+                              check()
+                          }
+                      }
+                  }
+              }
+            `,
+			definitionsLocation,
+			programs,
+		)
+
+		// Wrapper only imports the interface type. Its bytecode does not need the
+		// `Definitions.check` global itself.
+		_ = ParseCheckAndCompile(
+			t,
+			fmt.Sprintf(
+				`
+                  import Definitions from %[1]s
+
+                  contract interface Wrapper {
+                      struct interface K: Definitions.I {
+                          fun test()
+                      }
+                  }
+                `,
+				definitionsAddress.HexWithPrefix(),
+			),
+			wrapperLocation,
+			programs,
+		)
+
+		// Consumer reaches the inherited condition through Wrapper, without
+		// directly importing Definitions.
+		consumerProgram := ParseCheckAndCompile(
+			t,
+			fmt.Sprintf(
+				`
+                  import Wrapper from %[1]s
+
+                  contract Consumer {
+                      struct S: Wrapper.K {
+                          fun test() {}
+                      }
+                  }
+                `,
+				wrapperAddress.HexWithPrefix(),
+			),
+			consumerLocation,
+			programs,
+		)
+
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				{
+					Location:      definitionsLocation,
+					CanonicalName: "A.0000000000000001.check",
+				},
+				{
+					Location:      nil,
+					CanonicalName: "$failPreCondition",
+				},
+			},
+			consumerProgram.Imports,
+		)
+
+		var testFunction *bbq.Function[opcode.Instruction]
+		for index := range consumerProgram.Functions {
+			function := &consumerProgram.Functions[index]
+			if function.CanonicalName == "A.0000000000000003.Consumer.S.test" {
+				testFunction = function
+				break
+			}
+		}
+		require.NotNil(t, testFunction)
+
+		assert.Equal(
+			t,
+			[]string{
+				"A.0000000000000001.check",
+				"$failPreCondition",
+			},
+			referencedGlobalCanonicalNames(testFunction.Code, consumerProgram),
+		)
+	})
 }
 
 func TestCompileOptionalChaining(t *testing.T) {

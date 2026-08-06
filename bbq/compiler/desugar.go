@@ -652,6 +652,11 @@ func (d *Desugar) desugarCondition(
 			panic(err)
 		}
 
+		// The inherited code may refer to globals declared in the program
+		// which declared the interface, not only to that program's imports.
+		// Import the declaring program itself so those globals can be linked.
+		d.addImport(inheritedFrom.Location)
+
 		allImports := elaboration.AllImportDeclarationsResolvedLocations()
 		transitiveImportLocations := make([]common.Location, 0, len(allImports))
 
