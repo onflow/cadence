@@ -645,11 +645,15 @@ func (c *Compiler[_, _]) compileExpression(expression ast.Expression) {
 		prevElaboration := c.DesugaredElaboration
 		c.DesugaredElaboration = inheritedElaboration
 
+		prevLocation := c.location
+		c.location = inheritedElaboration.location
+
 		prevIsInheritedCode := c.isInheritedCode
 		c.isInheritedCode = true
 
 		defer func() {
 			c.DesugaredElaboration = prevElaboration
+			c.location = prevLocation
 			c.isInheritedCode = prevIsInheritedCode
 		}()
 	}
@@ -4850,8 +4854,7 @@ func (c *Compiler[_, _]) declareParameters(paramList *ast.ParameterList, declare
 
 // compilePotentiallyInheritedCode runs the given compilation function
 // with the elaboration of the program which declared the given statement:
-// if the statement is inherited (e.g. an inherited condition
-// or before-statement of a condition),
+// if the statement is inherited (e.g. an inherited condition or before-statement of a condition),
 // the inherited code's elaboration is used instead of the current elaboration.
 // Called for every statement, in compileStatement.
 func (c *Compiler[_, _]) compilePotentiallyInheritedCode(statement ast.Statement, f func()) {
