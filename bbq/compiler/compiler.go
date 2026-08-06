@@ -237,6 +237,13 @@ func (c *Compiler[E, _]) addUsedImportedGlobal(
 	canonicalName string,
 	location common.Location,
 ) bbq.Global {
+	if _, exists := c.Globals[canonicalName]; exists {
+		panic(errors.NewUnexpectedError(
+			"global declaration %#q already exists",
+			canonicalName,
+		))
+	}
+
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", canonicalName))
@@ -275,6 +282,13 @@ func (c *Compiler[E, _]) addGlobal(
 	kind bbq.GlobalKind,
 	isTopLevel bool,
 ) bbq.Global {
+	if _, exists := c.Globals[canonicalName]; exists {
+		panic(errors.NewUnexpectedError(
+			"global declaration %#q already exists",
+			canonicalName,
+		))
+	}
+
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
@@ -700,6 +714,13 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	c.Program = desugaredProgram.program
 	c.postConditionsIndices = desugaredProgram.postConditionIndices
 	c.inheritedConditionParamBindings = desugaredProgram.inheritedConditionParamBinding
+
+	// Register dependencies introduced by desugaring without treating them as
+	// source imports. They are needed for linking generated and inherited code,
+	// but must not populate the source-name import mappings.
+	for _, location := range desugaredProgram.dependencyLocations {
+		c.addGlobalsFromImportedProgram(location)
+	}
 
 	for _, declaration := range c.Program.ImportDeclarations() {
 		c.compileDeclaration(declaration)
@@ -4363,30 +4384,7 @@ func (c *Compiler[_, _]) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) (_ str
 }
 
 func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclaration) (_ struct{}) {
-
-	// Resolve and add globals from transitive imports.
-
 	resolvedLocations := c.DesugaredElaboration.elaboration.ImportDeclarationResolvedLocations(declaration)
-
-	// some import declarations are added during desugaring and do not have resolved locations from the elaboration
-	if resolvedLocations == nil {
-		var identifiers []ast.Identifier
-		for _, imp := range declaration.Imports {
-			identifiers = append(identifiers, imp.Identifier)
-		}
-
-		var err error
-		resolvedLocations, err = commons.ResolveLocation(
-			c.Config.LocationHandler,
-			identifiers,
-			declaration.Location,
-		)
-		if err != nil {
-			panic(err)
-		}
-
-	}
-
 	aliases := c.DesugaredElaboration.elaboration.ImportDeclarationAliases(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {

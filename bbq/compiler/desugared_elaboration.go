@@ -21,6 +21,7 @@ package compiler
 import (
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/common"
+	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
 )
 
@@ -443,6 +444,16 @@ func (e *DesugaredElaboration) SetImportCanonicalName(simpleName string, canonic
 	if e.importCanonicalNames == nil {
 		e.importCanonicalNames = make(map[string]string)
 	}
+
+	if existing, ok := e.importCanonicalNames[simpleName]; ok {
+		panic(errors.NewUnexpectedError(
+			"import canonical name for %#q is already mapped to %s, cannot map to %s",
+			simpleName,
+			existing,
+			canonicalName,
+		))
+	}
+
 	e.importCanonicalNames[simpleName] = canonicalName
 }
 
