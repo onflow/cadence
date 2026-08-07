@@ -11462,3 +11462,178 @@ func TestCheckLocationRestrictedMemberAuthorizationCapping(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
+
+func TestCheckFunctionParameterAuthorizationVariance(t *testing.T) {
+
+	t.Parallel()
+
+	const declarations = `
+        entitlement E
+        entitlement F
+
+        struct T {
+            access(E) fun secret(): Int {
+                return 42
+            }
+        }
+    `
+
+	// A reference in a parameter position is supplied by the reader,
+	// not obtained by it, so its authorization must be left as declared.
+	// Capping it would let an under-entitled reference be passed
+	// to a function that requires an entitled one.
+	t.Run("field of function type with entitled parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun(auth(E) &T): Int
+                init(f: fun(auth(E) &T): Int) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S, t: T): Int {
+                let g = ref.f
+                let unauthorized: &T = &t
+                return g(unauthorized)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E)&S.test.T"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	// The same, through an array element rather than a member.
+	t.Run("array element of function type with entitled parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            fun test(f: fun(auth(E) &T): Int, t: T): Int {
+                let fns: [fun(auth(E) &T): Int] = [f]
+                let ref = &fns as &[fun(auth(E) &T): Int]
+                let g = ref[0]
+                let unauthorized: &T = &t
+                return g(unauthorized)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E)&S.test.T"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	// Passing a properly entitled reference remains valid:
+	// the parameter's declared authorization is preserved, not widened.
+	t.Run("entitled parameter accepts an entitled argument", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun(auth(E) &T): Int
+                init(f: fun(auth(E) &T): Int) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S, t: T): Int {
+                let g = ref.f
+                let entitled = &t as auth(E) &T
+                return g(entitled)
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// The parameter of a parameter is covariant again:
+	// the reader's callback receives the reference,
+	// so its authorization must still be capped.
+	t.Run("field of function type with entitled callback parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun(fun(auth(E) &T): Void): Void
+                init(f: fun(fun(auth(E) &T): Void): Void) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S) {
+                let g = ref.f
+                g(fun(inner: auth(E) &T) {
+                    inner.secret()
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("fun(&S.test.T):Void"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	// A return type is covariant, and is still capped.
+	t.Run("field of function type with entitled return type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: auth(F) &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A reference nested inside a parameter, but still in a contravariant position,
+	// is also left as declared.
+	t.Run("entitled reference nested in a parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun([auth(E) &T]): Int
+                init(f: fun([auth(E) &T]): Int) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S, t: T): Int {
+                let g = ref.f
+                let unauthorized: [&T] = [&t as &T]
+                return g(unauthorized)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("[auth(S.test.E)&S.test.T]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+	})
+}

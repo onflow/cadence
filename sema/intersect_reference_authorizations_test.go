@@ -40,8 +40,12 @@ import (
 // kept pointing at the originals, type-argument resolution would fail and
 // `TypeArgumentsCheck` would be silently skipped.
 //
-// An authorized reference parameter forces the rewriter to actually rebuild the
-// function type (so the identity of everything else must be shown to survive).
+// A parameter carrying an authorized reference in a covariant position forces the
+// rewriter to actually rebuild the function type
+// (so the identity of everything else must be shown to survive).
+// The reference is nested in the parameter of a parameter,
+// because a reference in the parameter itself is contravariant
+// and therefore deliberately left as declared.
 func TestIntersectReferenceAuthorizationsInType_GenericFunctionBinderIdentity(t *testing.T) {
 
 	t.Parallel()
@@ -61,6 +65,19 @@ func TestIntersectReferenceAuthorizationsInType_GenericFunctionBinderIdentity(t 
 		IntType,
 	)
 
+	// `fun(auth(Mutate) &Int): Void`, which places the authorized reference
+	// in a covariant position when the callback type itself is a parameter.
+	callbackType := NewSimpleFunctionType(
+		FunctionPurityImpure,
+		[]Parameter{
+			{
+				Identifier:     "ref",
+				TypeAnnotation: NewTypeAnnotation(authorizedReferenceType),
+			},
+		},
+		VoidTypeAnnotation,
+	)
+
 	var observed Type
 	observedSet := false
 
@@ -72,8 +89,8 @@ func TestIntersectReferenceAuthorizationsInType_GenericFunctionBinderIdentity(t 
 				TypeAnnotation: NewTypeAnnotation(genericType),
 			},
 			{
-				Identifier:     "ref",
-				TypeAnnotation: NewTypeAnnotation(authorizedReferenceType),
+				Identifier:     "callback",
+				TypeAnnotation: NewTypeAnnotation(callbackType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(genericType),
@@ -96,10 +113,12 @@ func TestIntersectReferenceAuthorizationsInType_GenericFunctionBinderIdentity(t 
 	).(*FunctionType)
 	require.True(t, ok)
 
-	// The rewriter actually rebuilt the type: the authorized reference parameter
-	// was reduced to an unauthorized reference.
+	// The rewriter actually rebuilt the type: the authorized reference nested in the
+	// callback's parameter was reduced to an unauthorized reference.
 	require.NotSame(t, original, rewritten)
-	rewrittenRef, ok := rewritten.Parameters[1].TypeAnnotation.Type.(*ReferenceType)
+	rewrittenCallback, ok := rewritten.Parameters[1].TypeAnnotation.Type.(*FunctionType)
+	require.True(t, ok)
+	rewrittenRef, ok := rewrittenCallback.Parameters[0].TypeAnnotation.Type.(*ReferenceType)
 	require.True(t, ok)
 	require.Equal(t, UnauthorizedAccess, rewrittenRef.Authorization)
 

@@ -3611,3 +3611,83 @@ func TestInterpretLocationRestrictedMemberAuthorizationCapping(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
 	})
 }
+
+func TestInterpretFunctionParameterAuthorizationVariance(t *testing.T) {
+
+	t.Parallel()
+
+	// A function-typed field whose parameter carries an entitlement,
+	// read through a weaker reference, keeps its declared parameter type.
+	// Calling it with a properly entitled argument must work,
+	// rather than fail the runtime's reference conversion check.
+	t.Run("entitled parameter, weaker outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(auth(E) &T): Int
+                init(f: fun(auth(E) &T): Int) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(r: auth(E) &T): Int {
+                    return r.secret()
+                })
+
+                let weak = &s as auth(F) &S
+
+                let g = weak.f
+                let entitled = &t as auth(E) &T
+                return g(entitled)
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+
+	// The same, through an array element rather than a member.
+	t.Run("entitled parameter, array element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let fns: [fun(auth(E) &T): Int] = [
+                    fun(r: auth(E) &T): Int { return r.secret() }
+                ]
+
+                let weak = &fns as &[fun(auth(E) &T): Int]
+
+                let g = weak[0]
+                let entitled = &t as auth(E) &T
+                return g(entitled)
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+}

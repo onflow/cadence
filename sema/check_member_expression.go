@@ -139,45 +139,102 @@ func GetDescendantReferenceType(
 // intersectReferenceAuthorizationsInType recursively traverses a type and intersects
 // all inner reference type authorizations with outerAuthorization.
 // Returns the original type unchanged if no intersection was applied.
+//
+// Only references in covariant positions are intersected,
+// i.e. positions a reader obtains a value from.
+// A reference in a contravariant position is one the reader has to supply
+// rather than one it receives, so capping it grants the reader nothing,
+// and instead weakens what callers are required to pass.
+// See intersectReferenceAuthorizationsInTypeAtPosition.
 func intersectReferenceAuthorizationsInType(
 	memoryGauge common.MemoryGauge,
 	typ Type,
 	outerAuthorization Access,
 ) Type {
+	const covariant = true
+	return intersectReferenceAuthorizationsInTypeAtPosition(
+		memoryGauge,
+		typ,
+		outerAuthorization,
+		covariant,
+	)
+}
+
+// intersectReferenceAuthorizationsInTypeAtPosition implements
+// intersectReferenceAuthorizationsInType for a type occurring
+// in a covariant or a contravariant position.
+//
+// Variance only ever flips at function parameters,
+// so it has to be tracked rather than derived locally:
+// the parameter of a parameter is covariant again.
+// For example, when reading a member of type
+// `fun(callback: fun(reference: auth(E) &T): Void): Void`
+// through a weaker reference,
+// `callback` is supplied by the reader and must not be capped,
+// but `reference` is passed *to* the reader's callback,
+// and therefore must be.
+func intersectReferenceAuthorizationsInTypeAtPosition(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	outerAuthorization Access,
+	covariant bool,
+) Type {
 	switch t := typ.(type) {
 	case *ReferenceType:
+		if !covariant {
+			// The reader supplies this reference, rather than obtaining it,
+			// so its authorization is left as declared.
+			// Positions nested inside it are still traversed,
+			// as variance can flip back to covariant further in.
+			innerType := intersectReferenceAuthorizationsInTypeAtPosition(
+				memoryGauge,
+				t.Type,
+				outerAuthorization,
+				covariant,
+			)
+			if innerType == t.Type {
+				return t
+			}
+			return NewReferenceType(memoryGauge, t.Authorization, innerType)
+		}
+
 		intersected := IntersectAccess(outerAuthorization, t.Authorization)
 		// Cascade: use the effective (intersected) auth for inner recursion
-		innerType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, intersected)
+		innerType := intersectReferenceAuthorizationsInTypeAtPosition(
+			memoryGauge,
+			t.Type,
+			intersected,
+			covariant,
+		)
 		if intersected.Equal(t.Authorization) && innerType == t.Type {
 			return t
 		}
 		return NewReferenceType(memoryGauge, intersected, innerType)
 
 	case *OptionalType:
-		innerType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		innerType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.Type, outerAuthorization, covariant)
 		if innerType == t.Type {
 			return t
 		}
 		return NewOptionalType(memoryGauge, innerType)
 
 	case *VariableSizedType:
-		elementType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		elementType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.Type, outerAuthorization, covariant)
 		if elementType == t.Type {
 			return t
 		}
 		return NewVariableSizedType(memoryGauge, elementType)
 
 	case *ConstantSizedType:
-		elementType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		elementType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.Type, outerAuthorization, covariant)
 		if elementType == t.Type {
 			return t
 		}
 		return NewConstantSizedType(memoryGauge, elementType, t.Size)
 
 	case *DictionaryType:
-		keyType := intersectReferenceAuthorizationsInType(memoryGauge, t.KeyType, outerAuthorization)
-		valueType := intersectReferenceAuthorizationsInType(memoryGauge, t.ValueType, outerAuthorization)
+		keyType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.KeyType, outerAuthorization, covariant)
+		valueType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.ValueType, outerAuthorization, covariant)
 		if keyType == t.KeyType && valueType == t.ValueType {
 			return t
 		}
@@ -189,10 +246,11 @@ func intersectReferenceAuthorizationsInType(
 			return t
 		}
 
-		newBorrowType := intersectReferenceAuthorizationsInType(
+		newBorrowType := intersectReferenceAuthorizationsInTypeAtPosition(
 			memoryGauge,
 			borrowType,
 			outerAuthorization,
+			covariant,
 		)
 		if newBorrowType == borrowType {
 			return t
@@ -202,10 +260,11 @@ func intersectReferenceAuthorizationsInType(
 	case *FunctionType:
 		changed := false
 
-		newReturnType := intersectReferenceAuthorizationsInType(
+		newReturnType := intersectReferenceAuthorizationsInTypeAtPosition(
 			memoryGauge,
 			t.ReturnTypeAnnotation.Type,
 			outerAuthorization,
+			covariant,
 		)
 		if newReturnType != t.ReturnTypeAnnotation.Type {
 			changed = true
@@ -218,21 +277,26 @@ func intersectReferenceAuthorizationsInType(
 		// references in the parameter and return types, and the `TypeArgumentsCheck`
 		// callback, consistent, since all identify the binders by pointer identity.
 
+		// Parameters, and the default arguments feeding them, flip the variance.
+		parameterCovariant := !covariant
+
 		newParameters := t.Parameters
 		parametersCopied := false
 		for i, parameter := range t.Parameters {
-			newParameterType := intersectReferenceAuthorizationsInType(
+			newParameterType := intersectReferenceAuthorizationsInTypeAtPosition(
 				memoryGauge,
 				parameter.TypeAnnotation.Type,
 				outerAuthorization,
+				parameterCovariant,
 			)
 
 			newDefaultArgument := parameter.DefaultArgument
 			if parameter.DefaultArgument != nil {
-				newDefaultArgument = intersectReferenceAuthorizationsInType(
+				newDefaultArgument = intersectReferenceAuthorizationsInTypeAtPosition(
 					memoryGauge,
 					parameter.DefaultArgument,
 					outerAuthorization,
+					parameterCovariant,
 				)
 			}
 
