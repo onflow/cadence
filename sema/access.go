@@ -456,21 +456,18 @@ func (e *EntitlementMapAccess) Image(gauge common.MemoryGauge, inputs Access, po
 		output := orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
 
 		isDisjunctionSet := inputs.SetKind == Disjunction
-		hasEmptyDisjunctImage := false
 
 		var err error
-		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-			// If atleast one image is empty, then the result is guaranteed to be unauthorized.
-			// Therefore, no need to check further.
-			if hasEmptyDisjunctImage {
-				return
-			}
-
+		for pair := inputs.Entitlements.Oldest(); pair != nil; pair = pair.Next() {
+			entitlement := pair.Key
 			entitlementImage := e.entitlementImage(entitlement)
 
+			// For a disjunctive input, if any disjunct's image is empty, nothing is
+			// guaranteed, and the result must be unauthorized.
+			// This takes priority over the unrepresentable-output error, because
+			// "(multi-element conjunction) OR nothing" is simply "nothing guaranteed".
 			if isDisjunctionSet && entitlementImage.Len() == 0 {
-				hasEmptyDisjunctImage = true
-				return
+				return UnauthorizedAccess, nil
 			}
 
 			output.SetAll(entitlementImage)
@@ -490,20 +487,15 @@ func (e *EntitlementMapAccess) Image(gauge common.MemoryGauge, inputs Access, po
 					Range: ast.NewRangeFromPositioned(gauge, pos),
 				}
 			}
-		})
-
-		// the image of a set through a map is the conjunction of all the output sets.
-		// For a disjunctive input, if any disjunct's image is empty, nothing is
-		// guaranteed, and the result must be unauthorized.
-		// This takes priority over the unrepresentable-output error, because
-		// "(multi-element conjunction) OR nothing" is simply "nothing guaranteed".
-		if output.Len() == 0 ||
-			(isDisjunctionSet && hasEmptyDisjunctImage) {
-			return UnauthorizedAccess, nil
 		}
 
 		if err != nil {
 			return nil, err
+		}
+
+		// the image of a set through a map is the conjunction of all the output sets
+		if output.Len() == 0 {
+			return UnauthorizedAccess, nil
 		}
 
 		return EntitlementSetAccess{
