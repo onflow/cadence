@@ -354,6 +354,19 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 					resultValue,
 					memberAccessInfo.ResultingType,
 				)
+			} else if memberAccessInfo.CappedNestedReferences {
+				// The member is not wrapped in a reference,
+				// but it carries references in its type,
+				// whose authorizations the checker capped
+				// with the authorization of the reference the member was read through.
+				// Convert the value to the capped type,
+				// so that a downcast cannot recover a stronger authorization.
+				// This is pre-computed at the checker.
+				resultValue = ConvertAndBox(
+					interpreter,
+					resultValue,
+					memberAccessInfo.ResultingType,
+				)
 			}
 
 			return resultValue, nil

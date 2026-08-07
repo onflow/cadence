@@ -2826,3 +2826,164 @@ func TestInterpretOptionalContainerElementEntitlementStripping(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// The capped type must also be stamped onto the value:
+	// a downcast back to the uncapped function type must fail at runtime.
+	t.Run("function field, downcast to uncapped function type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: &S = &s
+
+                let g = weak.f as! fun(): auth(E) &T
+                return g().secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	// The function's result is capped too:
+	// downcasting the returned reference must fail at runtime.
+	t.Run("function field, downcast of returned reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: &S = &s
+
+                let g = weak.f
+                let r = g() as! auth(E) &T
+                return r.secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	// When the outer reference grants the entitlement,
+	// the intersection preserves it and the call succeeds.
+	t.Run("function field, matching outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let strong = &s as auth(E) &S
+
+                let g = strong.f
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+
+	// Owned access is unaffected: there is no outer reference to cap with.
+	t.Run("function field, owned access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let g = s.f
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+}

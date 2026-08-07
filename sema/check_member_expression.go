@@ -391,16 +391,18 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	}
 
 	returnReference := false
+	cappedNestedReferences := false
 
 	defer func() {
 		checker.Elaboration.SetMemberExpressionMemberAccessInfo(
 			expression,
 			MemberAccessInfo{
-				AccessedType:    accessedType,
-				ResultingType:   resultingType,
-				Member:          member,
-				IsOptional:      isOptional,
-				ReturnReference: returnReference,
+				AccessedType:           accessedType,
+				ResultingType:          resultingType,
+				Member:                 member,
+				IsOptional:             isOptional,
+				ReturnReference:        returnReference,
+				CappedNestedReferences: cappedNestedReferences,
 			},
 		)
 	}()
@@ -617,31 +619,64 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		member.DeclarationKind == common.DeclarationKindField &&
-		ShouldReturnReference(accessedType, resultingType, isAssignment) {
+		member.DeclarationKind == common.DeclarationKindField {
 
-		var pos ast.HasPosition = expression
+		switch {
+		case ShouldReturnReference(accessedType, resultingType, isAssignment):
+			var pos ast.HasPosition = expression
 
-		authorization := UnauthorizedAccess
-		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
-			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
+			authorization := UnauthorizedAccess
+			if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
+				authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
+			}
+
+			// For non-reference elements, `authorization` is used as the wrapping authorization.
+			// For reference elements, the outer reference's raw authorization is intersected
+			// with the inner reference's authorization (note: mapped access fields cannot have
+			// reference types, so `authorization` and outer auth differ only for non-mapped fields).
+			outerRef, isRef := MaybeReferenceType(accessedType)
+			if !isRef {
+				panic(errors.NewUnreachableError())
+			}
+			resultingType = GetDescendantReferenceType(
+				checker.memoryGauge,
+				resultingType,
+				authorization,
+				outerRef.Authorization,
+			)
+			returnReference = true
+
+		case !isAssignment:
+			// The member is not wrapped in a reference,
+			// but references nested inside its type must still be intersected
+			// with the outer reference's authorization,
+			// so that a weak reference to the container caps every authorization
+			// exported through the member.
+			//
+			// This handles members that carry references
+			// but report no fields or elements,
+			// namely capability and function values:
+			// both `CapabilityType` and `FunctionType` return false
+			// from `ContainFieldsOrElements`, so they take
+			// `ShouldReturnReference`'s early exit
+			// even when they nest authorized references
+			// (e.g. `Capability<auth(E) &S>` or `fun(): auth(E) &S`).
+			//
+			// In assignment contexts the member is being written, not read out,
+			// so no intersection applies.
+			// For owned access, or members without nested references, this is a no-op.
+			cappedType := intersectContainerElementReferences(
+				checker.memoryGauge,
+				accessedType,
+				resultingType,
+			)
+			// Only record the cap when it actually narrowed the type,
+			// so that the runtime converts the value exactly when needed.
+			if cappedType != resultingType {
+				resultingType = cappedType
+				cappedNestedReferences = true
+			}
 		}
-
-		// For non-reference elements, `authorization` is used as the wrapping authorization.
-		// For reference elements, the outer reference's raw authorization is intersected
-		// with the inner reference's authorization (note: mapped access fields cannot have
-		// reference types, so `authorization` and outer auth differ only for non-mapped fields).
-		outerRef, isRef := MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		resultingType = GetDescendantReferenceType(
-			checker.memoryGauge,
-			resultingType,
-			authorization,
-			outerRef.Authorization,
-		)
-		returnReference = true
 	}
 
 	return accessedType, resultingType, member, isOptional

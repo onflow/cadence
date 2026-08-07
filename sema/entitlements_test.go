@@ -10755,3 +10755,277 @@ func TestCheckInvalidDisjunctiveEntitlementsEscalation(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
+
+func TestCheckMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// A capability field read through an unauthorized reference
+	// must not yield a capability that can be borrowed with the full authorization.
+	t.Run("capability field, unauthorized outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let c: Capability<auth(E) &T>
+                init(c: Capability<auth(E) &T>) {
+                    self.c = c
+                }
+            }
+
+            fun test(ref: &S): Int {
+                return ref.c.borrow()!.secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A function field read through an unauthorized reference
+	// must not yield a function returning a fully authorized reference.
+	t.Run("function field, unauthorized outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// The outer reference is authorized, but with an unrelated entitlement,
+	// so the intersection is still empty.
+	t.Run("capability field, disjoint outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let c: Capability<auth(E) &T>
+                init(c: Capability<auth(E) &T>) {
+                    self.c = c
+                }
+            }
+
+            fun test(ref: auth(F) &S): Int {
+                return ref.c.borrow()!.secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A mapped-access field is capped by the outer reference's authorization too.
+	t.Run("mapped function field, out-of-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: auth(F) &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// The outer reference grants the very entitlement the nested reference carries,
+	// so the intersection preserves it and the access is valid.
+	t.Run("function field, matching outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: auth(E) &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// Owned access is unaffected: there is no outer reference to cap with.
+	t.Run("function field, owned access", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(s: S): Int {
+                let g = s.f
+                return g().secret()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// An optional capability field: the outer reference is unwrapped
+	// before the capping decision, so the cap applies through the optional too.
+	t.Run("optional capability field, unauthorized outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let c: Capability<auth(E) &T>?
+                init(c: Capability<auth(E) &T>?) {
+                    self.c = c
+                }
+            }
+
+            fun test(ref: &S): Int {
+                return ref.c!.borrow()!.secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A function returning a capability:
+	// the cap must reach references nested at any depth.
+	t.Run("function field returning capability, unauthorized outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): Capability<auth(E) &T>
+                init(f: fun(): Capability<auth(E) &T>) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S): Int {
+                let g = ref.f
+                return g().borrow()!.secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A member that carries no references is unaffected.
+	t.Run("function field without nested references", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                access(all) let f: fun(): Int
+                init(f: fun(): Int) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S): Int {
+                let g = ref.f
+                return g()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
