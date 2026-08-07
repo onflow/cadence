@@ -22,6 +22,8 @@ import (
 	"github.com/onflow/cadence/common"
 )
 
+//go:generate stringer -type=GlobalKind
+
 type GlobalKind int
 
 const (

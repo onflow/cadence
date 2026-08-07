@@ -123,16 +123,14 @@ func ParseAndCheckWithOptions(
 
 		var wg sync.WaitGroup
 		results := make(chan result, concurrency)
-		for i := 0; i < concurrency; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		for range concurrency {
+			wg.Go(func() {
 				checker, err := check()
 				results <- result{
 					checker: checker,
 					err:     err,
 				}
-			}()
+			})
 		}
 		wg.Wait()
 		close(results)

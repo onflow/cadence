@@ -570,13 +570,13 @@ func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 				return json.Decode(memoryGauge, b)
 			}
 
-			script := []byte(fmt.Sprintf(
+			script := fmt.Appendf(nil,
 				`
 				  access(all) entitlement X
                   access(all) fun main(x: %s) {}
                 `,
 				test.TypeName,
-			))
+			)
 
 			_, err := runtime.ExecuteScript(
 				Script{

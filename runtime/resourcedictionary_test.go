@@ -637,7 +637,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
      }
    `)
 
-	deploy := []byte(fmt.Sprintf(
+	deploy := fmt.Appendf(nil,
 		`
          transaction {
 
@@ -650,7 +650,7 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
          }
        `,
 		hex.EncodeToString(contract),
-	))
+	)
 
 	setupTx := []byte(`
      import Test from 0x1

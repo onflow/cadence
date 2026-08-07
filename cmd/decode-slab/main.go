@@ -173,13 +173,13 @@ func parseSlabLine(line string) (slabIDStr string, address []byte, index int, da
 	}
 	dataHex = strings.TrimSpace(dataHex)
 
-	dollarIdx := strings.Index(idPart, "/$")
-	if dollarIdx < 0 {
+	before, after, ok0 := strings.Cut(idPart, "/$")
+	if !ok0 {
 		return "", nil, 0, "", false
 	}
 
-	addressHex := idPart[:dollarIdx]
-	indexStr := idPart[dollarIdx+2:]
+	addressHex := before
+	indexStr := after
 
 	addr, err := hex.DecodeString(addressHex)
 	if err != nil {

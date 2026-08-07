@@ -107,7 +107,7 @@ func TestOrderedMapOperations(t *testing.T) {
 		assert.Equal(t, insertedOldValue, oldValue)
 
 		element := om.list.Front()
-		for i := 0; i < len(insertedValues); i++ {
+		for i := range insertedValues {
 			var value *Fruit
 			if i == updateItemIndex {
 				value = newValue
@@ -188,7 +188,7 @@ func TestOrderedMapOperations(t *testing.T) {
 		require.Equal(t, len(insertedValues)-1, om.Len())
 
 		element := om.list.Front()
-		for i := 0; i < len(insertedValues); i++ {
+		for i := range insertedValues {
 			if i == deleteItemIndex {
 				continue
 			}

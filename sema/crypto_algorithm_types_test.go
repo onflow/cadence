@@ -71,7 +71,7 @@ func TestHashAlgorithmValues(t *testing.T) {
 	// Check that no new named values have been added
 	// without updating the expected values above.
 	// NOTE: This requires the stringer-generated file to be up to date (CI runs go generate).
-	for i := uint8(0); i < uint8(HashAlgorithm_Count); i++ {
+	for i := range uint8(HashAlgorithm_Count) {
 		algo := HashAlgorithm(i)
 		if _, ok := expectedValues[algo]; ok {
 			continue
@@ -118,7 +118,7 @@ func TestSignatureAlgorithmValues(t *testing.T) {
 	// Check that no new named values have been added
 	// without updating the expected values above.
 	// NOTE: This requires the stringer-generated file to be up to date (CI runs go generate).
-	for i := uint8(0); i < uint8(SignatureAlgorithm_Count); i++ {
+	for i := range uint8(SignatureAlgorithm_Count) {
 		algo := SignatureAlgorithm(i)
 		if _, ok := expectedValues[algo]; ok {
 			continue

@@ -34,7 +34,7 @@ var pragmaArgumentRegexp = regexp.MustCompile(`^\s+pragma\s+arguments\s+(.*)(?:\
 func ParseDocstringPragmaArguments(docString string) []string {
 	var pragmaArguments []string
 
-	for _, line := range strings.Split(docString, "\n") {
+	for line := range strings.SplitSeq(docString, "\n") {
 		match := pragmaArgumentRegexp.FindStringSubmatch(line)
 		if match == nil {
 			continue
@@ -56,7 +56,7 @@ var pragmaSignersRegexp = regexp.MustCompile(`^\s+pragma\s+signers\s+(.*)(?:\n|$
 func ParseDocstringPragmaSigners(docString string) []string {
 	var pragmaSigners []string
 
-	for _, line := range strings.Split(docString, "\n") {
+	for line := range strings.SplitSeq(docString, "\n") {
 		match := pragmaSignersRegexp.FindStringSubmatch(line)
 		if match == nil {
 			continue

@@ -149,8 +149,6 @@ func TestFix128(t *testing.T) {
 			},
 		} {
 
-			fix128 := fix128
-
 			t.Run(fix128.str, func(t *testing.T) {
 				t.Parallel()
 

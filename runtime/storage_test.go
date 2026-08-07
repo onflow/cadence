@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"math/rand"
 	"runtime"
 	"sort"
@@ -61,7 +62,7 @@ func withWritesToStorage(
 
 	inter := NewTestInterpreter(tb)
 
-	for i := 0; i < count; i++ {
+	for range count {
 
 		randomIndex := random.Uint32()
 
@@ -113,7 +114,7 @@ func TestRuntimeStorageWriteCachedIsDeterministic(t *testing.T) {
 	var previousWrites []ownerKeyPair
 
 	// verify for 10 times and check the writes are always deterministic
-	for i := 0; i < 10; i++ {
+	for range 10 {
 
 		var writes []ownerKeyPair
 
@@ -1208,7 +1209,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	err := rt.ExecuteTransaction(
 		Script{
-			Source: []byte(fmt.Sprintf(
+			Source: fmt.Appendf(nil,
 				`
                   transaction {
                       prepare(signer: auth(Storage, Capabilities) &Account) {
@@ -1224,7 +1225,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 				ty.ID(),
 				storagePath1,
 				storagePath2,
-			)),
+			),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -1471,8 +1472,8 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			tx := []byte(
-				fmt.Sprintf(
+			tx :=
+				fmt.Appendf(nil,
 					`
                       transaction {
                           prepare(signer: auth(Storage) &Account) {
@@ -1482,8 +1483,7 @@ func TestRuntimeStorageNonStorable(t *testing.T) {
                        }
                     `,
 					code,
-				),
-			)
+				)
 
 			runtimeInterface := &TestRuntimeInterface{
 				Storage: NewTestLedger(nil, nil),
@@ -2820,7 +2820,7 @@ func TestRuntimeNoAtreeSendOnClosedChannelDuringCommit(t *testing.T) {
 
 	assert.NotPanics(t, func() {
 
-		for i := 0; i < 1000; i++ {
+		for range 1000 {
 
 			rt := NewTestRuntime()
 
@@ -4331,7 +4331,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
 			err = rt.ExecuteTransaction(
 				Script{
-					Source: []byte(fmt.Sprintf(`
+					Source: fmt.Appendf(nil, `
                           import Foo from 0x1
 
                           transaction {
@@ -4350,7 +4350,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                           }
                         `,
 						count,
-					)),
+					),
 				},
 				Context{
 					Interface: runtimeInterface,
@@ -7050,9 +7050,7 @@ func TestRuntimeStorage2(t *testing.T) {
 			const newElementCount = 2
 			newDomainValues := writeToDomainStorageMap(inter, domainStorageMap, newElementCount, random)
 
-			for k, v := range newDomainValues {
-				domainValues[k] = v
-			}
+			maps.Copy(domainValues, newDomainValues)
 		}
 
 		// Commit changes
@@ -7153,9 +7151,7 @@ func TestRuntimeStorage2(t *testing.T) {
 				// Write to domain storage map
 				const domainStorageMapCount = 2
 				newDomainValues := writeToDomainStorageMap(inter, domainStorageMap, domainStorageMapCount, random)
-				for k, v := range newDomainValues {
-					domainValues[k] = v
-				}
+				maps.Copy(domainValues, newDomainValues)
 			}
 
 			// Commit changes

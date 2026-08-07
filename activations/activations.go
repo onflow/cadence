@@ -19,6 +19,8 @@
 package activations
 
 import (
+	"maps"
+
 	"github.com/onflow/cadence/common"
 )
 
@@ -117,9 +119,7 @@ func (a *Activation[T]) Clone() *Activation[T] {
 
 	if a.entries != nil {
 		clone.entries = make(map[string]T, len(a.entries))
-		for name, value := range a.entries { //nolint:maprange
-			clone.entries[name] = value
-		}
+		maps.Copy(clone.entries, a.entries)
 	}
 
 	return clone
