@@ -5015,6 +5015,268 @@ func TestInterpretDynamicCastingEntitledReferenceThroughBoundContainerElement(t 
 	})
 }
 
+func TestInterpretIndexedFunctionDowncasting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("indexed function downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                access(Withdraw) fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <- create Vault(balance: amount)
+                }
+            }
+
+            access(all) fun main() {
+                let vault <- create Vault(balance: 100.0)
+                let privileged = &vault as auth(Withdraw) &Vault
+                let callbacks: [fun(): auth(Withdraw) &Vault] = [
+                    fun(): auth(Withdraw) &Vault {
+                        return privileged
+                    }
+                ]
+                let weak = &callbacks as &[fun(): &Vault]
+                let _ = weak[0] as! fun(): auth(Withdraw) &Vault
+                destroy vault
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun():&S.test.Vault"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun():auth(S.test.Withdraw)&S.test.Vault"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	t.Run("recovered indexed function cannot invoke withdraw", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                access(Withdraw) fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <- create Vault(balance: amount)
+                }
+            }
+
+            access(all) fun main() {
+                let vault <- create Vault(balance: 100.0)
+                let privileged = &vault as auth(Withdraw) &Vault
+
+                let callbacks: [fun(): auth(Withdraw) &Vault] = [
+                    fun(): auth(Withdraw) &Vault {
+                        return privileged
+                    }
+                ]
+
+                let weak = &callbacks as &[fun(): &Vault]
+                let strong = weak[0] as! fun(): auth(Withdraw) &Vault
+                let stolen <- strong().withdraw(amount: 10.0)
+
+                destroy stolen
+                destroy vault
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun():&S.test.Vault"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun():auth(S.test.Withdraw)&S.test.Vault"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	t.Run("direct function return conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+            }
+
+            access(all) fun main() {
+                let vault <- create Vault(balance: 100.0)
+                let privileged = &vault as auth(Withdraw) &Vault
+
+                let direct: fun(): &Vault = fun(): auth(Withdraw) &Vault {
+                    return privileged
+                }
+
+                let _ = direct as! fun(): auth(Withdraw) &Vault
+                destroy vault
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun():&S.test.Vault"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun():auth(S.test.Withdraw)&S.test.Vault"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+}
+
+func TestInterpretCapabilityDowncasting(t *testing.T) {
+
+	t.Parallel()
+
+	newCapabilityValue := func(t *testing.T, inter Invokable) interpreter.Value {
+		t.Helper()
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		borrowType := result.(interpreter.TypeValue).Type
+
+		return interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+	}
+
+	t.Run("indexed capability downcast", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+            }
+
+            fun getBorrowType(): Type {
+                return Type<auth(Withdraw) &Vault>()
+            }
+
+            access(all) fun main(cap: Capability<auth(Withdraw) &Vault>) {
+                let caps: [Capability<auth(Withdraw) &Vault>] = [cap]
+                let weak = &caps as &[Capability<&Vault>]
+                let _ = weak[0] as! Capability<auth(Withdraw) &Vault>
+            }
+        `)
+
+		_, err := inter.Invoke("main", newCapabilityValue(t, inter))
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<&S.test.Vault>"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("Capability<auth(S.test.Withdraw)&S.test.Vault>"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	t.Run("weak-local assignment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+            }
+
+            fun getBorrowType(): Type {
+                return Type<auth(Withdraw) &Vault>()
+            }
+
+            access(all) fun main(cap: Capability<auth(Withdraw) &Vault>) {
+                let caps: [Capability<auth(Withdraw) &Vault>] = [cap]
+                let weak = &caps as &[Capability<&Vault>]
+                let low: Capability<&Vault> = weak[0]
+                let _ = low as! Capability<auth(Withdraw) &Vault>
+            }
+        `)
+
+		_, err := inter.Invoke("main", newCapabilityValue(t, inter))
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<&S.test.Vault>"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("Capability<auth(S.test.Withdraw)&S.test.Vault>"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+}
+
 func TestInterpretDynamicCastingEntitledReferenceThroughBoundContainerMethodInFunctionType(t *testing.T) {
 
 	t.Parallel()
