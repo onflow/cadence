@@ -1208,7 +1208,6 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 		}
 
 		for typ, testValues := range testCases {
-			typ := typ
 
 			for _, testCase := range testValues {
 				test(
@@ -1299,7 +1298,6 @@ func TestInterpretFixedPointLeastSignificantDecimalHandling(t *testing.T) {
 		}
 
 		for typ, testValues := range testCases {
-			typ := typ
 
 			for _, testCase := range testValues {
 				a := testCase.a

@@ -998,7 +998,6 @@ func TestInterpretDivisionByZero(t *testing.T) {
 	)
 
 	for _, typ := range numericTypes {
-		typ := typ
 		typeName := typ.String()
 
 		t.Run(typeName, func(t *testing.T) {
@@ -1044,7 +1043,6 @@ func TestInterpretSaturatingDivisionByZero(t *testing.T) {
 	)
 
 	for _, typ := range numericTypes {
-		typ := typ
 
 		saturatingType, ok := typ.(sema.SaturatingArithmeticType)
 		if !ok || !saturatingType.SupportsSaturatingDivide() {

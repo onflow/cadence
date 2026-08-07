@@ -502,9 +502,9 @@ func InterfaceFieldTypesMappedByName(interfaceType InterfaceType) map[string]Typ
 }
 
 // DecodeFields decodes a HasFields into a struct
-func DecodeFields(composite Composite, s interface{}) error {
+func DecodeFields(composite Composite, s any) error {
 	v := reflect.ValueOf(s)
-	if !v.IsValid() || v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+	if !v.IsValid() || v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		return fmt.Errorf("s must be a pointer to a struct")
 	}
 
@@ -524,22 +524,22 @@ func decodeFieldValue(targetType reflect.Type, value Value) (reflect.Value, erro
 
 	// cadence.Address
 	switch targetType {
-	case reflect.TypeOf(Address{}):
+	case reflect.TypeFor[Address]():
 		decodeSpecialFieldFunc = decodeAddress
 
-	case reflect.TypeOf(&big.Int{}):
+	case reflect.TypeFor[*big.Int]():
 		decodeSpecialFieldFunc = decodeBigInt
 
 	default:
 		switch targetType.Kind() {
-		case reflect.Ptr:
+		case reflect.Pointer:
 			decodeSpecialFieldFunc = decodeOptional
 		case reflect.Map:
 			decodeSpecialFieldFunc = decodeDict
 		case reflect.Array, reflect.Slice:
 			decodeSpecialFieldFunc = decodeSlice
 		case reflect.Struct:
-			if !targetType.Implements(reflect.TypeOf((*Value)(nil)).Elem()) {
+			if !targetType.Implements(reflect.TypeFor[Value]()) {
 				decodeSpecialFieldFunc = decodeStruct
 			}
 		}

@@ -21,6 +21,7 @@ package interpreter
 import (
 	goErrors "errors"
 	"fmt"
+	"maps"
 	"math"
 	"math/big"
 	"slices"
@@ -230,13 +231,9 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	// Iterating over the maps in a non-deterministic way is OK,
 	// we only copy the values over.
 
-	for typeID, code := range codes.CompositeCodes { //nolint:maprange
-		c.CompositeCodes[typeID] = code
-	}
+	maps.Copy(c.CompositeCodes, codes.CompositeCodes)
 
-	for typeID, code := range codes.InterfaceCodes { //nolint:maprange
-		c.InterfaceCodes[typeID] = code
-	}
+	maps.Copy(c.InterfaceCodes, codes.InterfaceCodes)
 }
 
 type Storage interface {
@@ -798,8 +795,6 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 
 			// Rebind declaration, so the closure captures to current iteration's value,
 			// i.e. the next iteration doesn't override `declaration`
-
-			declaration := declaration
 
 			identifier := declaration.Identifier.Identifier
 

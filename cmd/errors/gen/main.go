@@ -194,8 +194,7 @@ func namedErrorElement(
 		},
 	}
 
-	for i := 0; i < structType.NumFields(); i++ {
-		field := structType.Field(i)
+	for field := range structType.Fields() {
 		composite.Elts = append(
 			composite.Elts,
 			goKeyValue(

@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/accounts-script
 
-go 1.24
+go 1.26
 
 require (
 	github.com/ethereum/go-ethereum v1.13.10

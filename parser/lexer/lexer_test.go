@@ -3102,7 +3102,7 @@ func TestEOFsAfterError(t *testing.T) {
 	// Assert EOFs keep on being returned for Next()
 	// at the end of the stream
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 
 		require.Equal(t,
 			Token{
@@ -3127,7 +3127,7 @@ func TestEOFsAfterEmptyInput(t *testing.T) {
 	// Assert EOFs keep on being returned for Next()
 	// at the end of the stream
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 
 		require.Equal(t,
 			Token{
@@ -3147,7 +3147,7 @@ func TestLimit(t *testing.T) {
 	t.Parallel()
 
 	var b strings.Builder
-	for i := 0; i < 300000; i++ {
+	for range 300000 {
 		b.WriteString("x ")
 	}
 

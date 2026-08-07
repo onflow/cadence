@@ -69,12 +69,12 @@ func SignedBigIntToSizedBigEndianBytes(bigInt *big.Int, sizeInBytes uint) []byte
 		increm = increm.Add(bigInt, bigOne)
 		bytes := increm.Bytes()
 		offset := len(buf) - len(bytes)
-		for i := 0; i < offset; i++ {
+		for i := range offset {
 			buf[i] = 0xff // sign extend
 		}
 
 		offsetBuf := buf[offset:]
-		for i := 0; i < len(bytes); i++ {
+		for i := range bytes {
 			offsetBuf[i] = ^bytes[i]
 		}
 	case 0:

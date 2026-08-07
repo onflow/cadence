@@ -94,7 +94,7 @@ func TestComputationKindValues(t *testing.T) {
 	// NOTE: This requires the stringer-generated file to be up to date (CI runs go generate).
 	//
 	// ComputationKindUnknown = 0, then the rest start at ComputationKindRangeStart (1000).
-	for i := uint(0); i < uint(ComputationKind_Count); i++ {
+	for i := range uint(ComputationKind_Count) {
 		// Skip the gap between 0 and 1001.
 		if i > 0 && i < ComputationKindRangeStart {
 			continue

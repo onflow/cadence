@@ -31,5 +31,5 @@ type Pass struct {
 	// ResultOf provides the inputs to this analysis pass,
 	// which are the corresponding results of its prerequisite analyzers.
 	// The map keys are the elements of Analyzer.Requires.
-	ResultOf map[*Analyzer]interface{}
+	ResultOf map[*Analyzer]any
 }

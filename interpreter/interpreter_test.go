@@ -450,7 +450,7 @@ func BenchmarkValueIsSubtypeOfSemaType(b *testing.B) {
 	const size = 1000
 	values := make([]Value, 0, size)
 
-	for i := 0; i < size; i++ {
+	for i := range size {
 		value := NewUnmeteredStringValue(fmt.Sprintf("value%d", i))
 		values = append(values, value)
 	}
