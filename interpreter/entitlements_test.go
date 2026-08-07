@@ -2826,3 +2826,125 @@ func TestInterpretOptionalContainerElementEntitlementStripping(t *testing.T) {
 		)
 	})
 }
+
+func TestEntitlementMapEmptyDisjunctImageControls(t *testing.T) {
+
+	t.Parallel()
+
+	// Both disjuncts in domain, distinct single-element images.
+	t.Run("both disjuncts mapped", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+            entitlement mapping M {
+                A -> B
+                C -> D
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(C | A) &{S}) {
+                let x: auth(D | B) &[Int] = ref.x
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	// Both disjuncts map to the same single entitlement.
+	t.Run("disjuncts collapse to same image", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement mapping M {
+                A -> C
+                B -> C
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(B | A) &{S}) {
+                let x: auth(C) &[Int] = ref.x
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	// Conjunction with an unmapped entitlement must still map.
+	// The holder has both A and B, so M(A) = {C} is genuinely guaranteed.
+	t.Run("conjunction with unmapped entitlement", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement mapping M {
+                A -> C
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(A, B) &{S}) {
+                let x: auth(C) &[Int] = ref.x
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	// Identity maps are unaffected: every entitlement maps to itself.
+	t.Run("identity map", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                include Identity
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(B | A) &{S}) {
+                let x: auth(B | A) &[Int] = ref.x
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	// Single in-domain entitlement maps correctly (no disjunction).
+	t.Run("single in-domain entitlement", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                A -> B
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(A) &{S}): auth(B) &[Int] {
+                return ref.x
+            }
+        `)
+		require.NoError(t, err)
+	})
+}
