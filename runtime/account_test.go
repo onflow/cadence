@@ -1935,6 +1935,62 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		assert.Equal(t, 2, calls)
 	})
+
+	t.Run("VerifyPoP with non-BLS key", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestRuntime()
+
+		script := []byte(`
+
+          access(all) fun main(): Bool {
+              let publicKey = PublicKey(
+                  publicKey: "0102".decodeHex(),
+                  signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+              )
+
+              return publicKey.verifyPoP([1, 2, 3, 4, 5])
+          }
+        `)
+
+		var called bool
+
+		storage := NewTestLedger(nil, nil)
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnValidatePublicKey: func(
+				pk *stdlib.PublicKey,
+			) error {
+				return nil
+			},
+			OnBLSVerifyPOP: func(
+				pk *stdlib.PublicKey,
+				proof []byte,
+			) (bool, error) {
+				called = true
+				return false, nil
+			},
+		}
+		addPublicKeyValidation(runtimeInterface, nil)
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+				UseVM:     *compile,
+			},
+		)
+		RequireError(t, err)
+
+		// the abort is a user error raised before the host function is called
+		assert.True(t, errors.IsUserError(err))
+		assert.ErrorContains(t, err, "verifyPoP is only supported for BLS")
+		assert.False(t, called)
+	})
 }
 
 func TestRuntimeAuthAccountContracts(t *testing.T) {

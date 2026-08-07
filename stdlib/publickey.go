@@ -421,6 +421,14 @@ func PublicKeyVerifyPoP(
 		panic(err)
 	}
 
+	// a non-BLS public key is valid user input: abort with a user error
+	// instead of calling the host function
+	if publicKey.SignAlgo != sema.SignatureAlgorithmBLS_BLS12_381 {
+		panic(errors.NewDefaultUserError(
+			"verifyPoP is only supported for BLS (BLS_BLS12_381) public keys",
+		))
+	}
+
 	signature, err := interpreter.ByteArrayValueToByteSlice(context, signatureValue)
 	if err != nil {
 		panic(err)

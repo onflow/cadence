@@ -608,6 +608,66 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestRuntimeBLSAggregatePublicKeysNonBLSKey(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestRuntime()
+
+	script := []byte(`
+
+      access(all) fun main(): PublicKey? {
+        let k1 = PublicKey(
+            publicKey: "0102".decodeHex(),
+            signatureAlgorithm: SignatureAlgorithm.BLS_BLS12_381
+        )
+        let k2 = PublicKey(
+            publicKey: "0304".decodeHex(),
+            signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+        )
+        return BLS.aggregatePublicKeys([k1, k2])
+      }
+    `)
+
+	var called bool
+
+	storage := NewTestLedger(nil, nil)
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: storage,
+		OnValidatePublicKey: func(
+			pk *stdlib.PublicKey,
+		) error {
+			return nil
+		},
+		OnBLSAggregatePublicKeys: func(
+			keys []*stdlib.PublicKey,
+		) (*stdlib.PublicKey, error) {
+			called = true
+			return nil, nil
+		},
+	}
+	addPublicKeyValidation(runtimeInterface, nil)
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// documented nil return, without calling the host function
+	assert.Equal(t, cadence.NewOptional(nil), result)
+	assert.False(t, called)
+}
+
 func getCadenceValueArrayFromHexStr(t *testing.T, inp string) cadence.Value {
 	bytes, err := hex.DecodeString(inp)
 	require.NoError(t, err)
