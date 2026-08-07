@@ -4559,7 +4559,7 @@ func (r randomValueGenerator) randomEnumValue(inter *interpreter.Interpreter) ca
 	// This mirrors how real (declared) enums are set up.
 	caseCount := r.randomInt(maxRandomEnumCases-1) + 1
 	enumLookupFunctionType := sema.EnumLookupFunctionType(semaEnumType)
-	for caseIndex := 0; caseIndex < caseCount; caseIndex++ {
+	for caseIndex := range caseCount {
 		caseName := fmt.Sprintf("case%d", caseIndex)
 		enumLookupFunctionType.Members.Set(
 			caseName,
