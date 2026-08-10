@@ -669,7 +669,8 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			// In assignment contexts the member is being written, not read out,
 			// so no intersection applies.
 			// For owned access, or members without nested references, this is a no-op.
-			if _, isRef := MaybeReferenceType(accessedType); isRef {
+			_, isRef := MaybeReferenceType(accessedType)
+			if isRef && memberAuthorizationGatesReads(member) {
 				cappedType := intersectReferencesWithAuthorization(
 					checker.memoryGauge,
 					resultingType,
@@ -871,6 +872,38 @@ func (checker *Checker) grantedMemberAuthorization(
 	}
 
 	return outerRef.Authorization
+}
+
+// memberAuthorizationGatesReads returns whether the authorization
+// of the reference a member is read through is what gates reading it,
+// and therefore also has to cap the references nested in the member's type.
+//
+// It does for entitlement-based and publicly readable members,
+// which code anywhere may read.
+//
+// It does not for `access(self)`, `access(contract)` and `access(account)` members,
+// which are gated by where the reading code is instead.
+// Capping those would only restrict the declaring code itself,
+// as no other code can read them through a reference of any authorization.
+//
+// An unspecified access modifier counts as publicly readable:
+// that is what it means outside a restricted access check mode,
+// and it is the conservative answer, because it caps rather than not.
+func memberAuthorizationGatesReads(member *Member) bool {
+	primitiveAccess, isPrimitiveAccess := member.Access.(PrimitiveAccess)
+	if !isPrimitiveAccess {
+		return true
+	}
+
+	switch ast.PrimitiveAccess(primitiveAccess) {
+	case ast.AccessSelf,
+		ast.AccessContract,
+		ast.AccessAccount:
+		return false
+
+	default:
+		return true
+	}
 }
 
 // isWriteableMember returns true if the given member can be written to

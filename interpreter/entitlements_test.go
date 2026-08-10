@@ -3566,3 +3566,48 @@ func TestInterpretOptionalMemberAuthorizationCapping(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
 	})
 }
+
+func TestInterpretLocationRestrictedMemberAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// A location-restricted member keeps the authorizations nested in its type,
+	// at runtime as well: no cap was recorded, so the value is not converted,
+	// and a downcast back to the declared type succeeds.
+	t.Run("access(account) function field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(account) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: &S = &s
+
+                let g = weak.f as! fun(): auth(E) &T
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+}
