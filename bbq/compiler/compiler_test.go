@@ -20,12 +20,12 @@ package compiler_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -58,20 +58,20 @@ func canonicalName(typeID string) bbq.CanonicalName {
 	if err != nil {
 		return bbq.NewCanonicalName(nil, typeID)
 	}
+
+	if separator := strings.LastIndexByte(name, '.'); separator >= 0 {
+		return bbq.NewTypedCanonicalName(
+			location,
+			name[:separator],
+			name[separator+1:],
+		)
+	}
+
 	return bbq.NewCanonicalName(location, name)
 }
 
-// typedCanonicalName creates a CanonicalName with TypeQualifier derived from
-// Name as the part before the last "." (or "" if no ".").
-func typedCanonicalName(typeID string) bbq.CanonicalName {
-	c := canonicalName(typeID)
-	c.TypeQualifier = commons.TypeQualifierFromName(c.Name)
-	return c
-}
-
-// methodCanonicalName is an alias for typedCanonicalName; both derive
-// TypeQualifier the same way.
-var methodCanonicalName = typedCanonicalName
+var typedCanonicalName = canonicalName
+var methodCanonicalName = canonicalName
 
 func assertTypesEqual(t *testing.T, expectedTypes, actualTypes []interpreter.StaticType) {
 	require.Equal(t, len(expectedTypes), len(actualTypes))
@@ -5212,12 +5212,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 					},
 				},
 				CompilerConfig: &compiler.Config{
-					BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-						activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-						activation.Set(
-							stdlib.LogFunctionName,
-							compiler.NewGlobalImport(stdlib.LogFunctionName),
-						)
+					BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+						activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+						name := bbq.NewCanonicalName(nil, stdlib.LogFunctionName)
+						activation.Set(name, compiler.NewGlobalImport(name))
 						return activation
 					},
 				},
@@ -10669,12 +10667,10 @@ func TestCompileOptionalArgument(t *testing.T) {
 		require.NoError(t, err)
 
 		config := &compiler.Config{
-			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-				activation.Set(
-					stdlib.AssertFunctionName,
-					compiler.NewGlobalImport(stdlib.AssertFunctionName),
-				)
+			BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+				activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+				name := bbq.NewCanonicalName(nil, stdlib.AssertFunctionName)
+				activation.Set(name, compiler.NewGlobalImport(name))
 				return activation
 			},
 		}
@@ -13358,17 +13354,13 @@ func TestCompileInjectedContract(t *testing.T) {
 	require.NoError(t, err)
 
 	config := &compiler.Config{
-		BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[compiler.GlobalImport] {
+		BuiltinGlobalsProvider: func(location common.Location) *bbq.Activation[compiler.GlobalImport] {
 			assert.Equal(t, TestLocation, location)
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-			activation.Set(
-				"B",
-				compiler.NewGlobalImport("B"),
-			)
-			activation.Set(
-				"B.c",
-				compiler.NewGlobalImport("B.c"),
-			)
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+			name := bbq.NewCanonicalName(nil, "B")
+			activation.Set(name, compiler.NewGlobalImport(name))
+			name = bbq.NewTypedCanonicalName(nil, "B", "c")
+			activation.Set(name, compiler.NewGlobalImport(name))
 			return activation
 		},
 	}

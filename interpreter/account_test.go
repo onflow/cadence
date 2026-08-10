@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
@@ -573,16 +574,24 @@ func testAccountWithErrorHandler(
 		vmConfig.AtreeStorageValidationEnabled = true
 		vmConfig.AtreeValueValidationEnabled = true
 
-		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(
+			_ common.Location,
+		) *bbq.Activation[vm.Variable] {
+			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			accountVariable := &interpreter.SimpleVariable{}
 			accountVariable.InitializeWithValue(accountValueDeclaration.Value)
-			activation.Set(accountValueDeclaration.Name, accountVariable)
+			activation.Set(
+				bbq.NewCanonicalName(nil, accountValueDeclaration.Name),
+				accountVariable,
+			)
 
 			authAccountVariable := &interpreter.SimpleVariable{}
 			authAccountVariable.InitializeWithValue(authAccountValueDeclaration.Value)
-			activation.Set(authAccountValueDeclaration.Name, authAccountVariable)
+			activation.Set(
+				bbq.NewCanonicalName(nil, authAccountValueDeclaration.Name),
+				authAccountVariable,
+			)
 
 			return activation
 		}
@@ -605,10 +614,12 @@ func testAccountWithErrorHandler(
 					CheckerErrorHandler:  checkerErrorHandler,
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
-						BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-							activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+						BuiltinGlobalsProvider: func(
+							_ common.Location,
+						) *bbq.Activation[compiler.GlobalImport] {
+							activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 							for _, valueDeclaration := range valueDeclarations {
-								name := valueDeclaration.Name
+								name := bbq.NewCanonicalName(nil, valueDeclaration.Name)
 								existing := activation.Find(name)
 								if existing != (compiler.GlobalImport{}) {
 									continue

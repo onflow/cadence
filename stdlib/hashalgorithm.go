@@ -312,7 +312,7 @@ func NewVMHashAlgorithmCaseValues(hasher Hasher) []VMValue {
 			Name: commons.TypeQualifiedName(
 				sema.HashAlgorithmType,
 				hashAlgorithm.Name(),
-			),
+			).String(),
 			Value: caseValue,
 		}
 	}

@@ -104,7 +104,7 @@ var VMRoundingRuleCaseValues = func() []VMValue {
 			Name: commons.TypeQualifiedName(
 				sema.RoundingRuleType,
 				roundingRule.Name(),
-			),
+			).String(),
 			Value: RoundingRuleCaseValues[rawValue],
 		}
 	}

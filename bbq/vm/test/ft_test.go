@@ -29,7 +29,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -99,23 +98,17 @@ func compiledFTTransfer(tb testing.TB) {
 			}
 			return imported.DesugaredElaboration, nil
 		},
-		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+		BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-			activation.Set(
-				stdlib.AssertFunctionName,
-				compiler.NewGlobalImport(stdlib.AssertFunctionName),
-			)
+			name := bbq.NewCanonicalName(nil, stdlib.AssertFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
-			activation.Set(
-				stdlib.GetAccountFunctionName,
-				compiler.NewGlobalImport(stdlib.GetAccountFunctionName),
-			)
+			name = bbq.NewCanonicalName(nil, stdlib.GetAccountFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
-			activation.Set(
-				stdlib.PanicFunctionName,
-				compiler.NewGlobalImport(stdlib.PanicFunctionName),
-			)
+			name = bbq.NewCanonicalName(nil, stdlib.PanicFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
 			return activation
 		},
@@ -226,27 +219,29 @@ func compiledFTTransfer(tb testing.TB) {
 		return contractValues[location]
 	}
 
-	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+	vmConfig.BuiltinGlobalsProvider = func(
+		_ common.Location,
+	) *bbq.Activation[vm.Variable] {
+		activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 		panicVariable := &interpreter.SimpleVariable{}
 		panicVariable.InitializeWithValue(stdlib.VMPanicFunction.Value)
 		activation.Set(
-			stdlib.PanicFunctionName,
+			bbq.NewCanonicalName(nil, stdlib.PanicFunctionName),
 			panicVariable,
 		)
 
 		assertVariable := &interpreter.SimpleVariable{}
 		assertVariable.InitializeWithValue(stdlib.VMAssertFunction.Value)
 		activation.Set(
-			stdlib.AssertFunctionName,
+			bbq.NewCanonicalName(nil, stdlib.AssertFunctionName),
 			assertVariable,
 		)
 
 		getAccountVariable := &interpreter.SimpleVariable{}
 		getAccountVariable.InitializeWithValue(stdlib.NewVMGetAccountFunction(accountHandler).Value)
 		activation.Set(
-			stdlib.GetAccountFunctionName,
+			bbq.NewCanonicalName(nil, stdlib.GetAccountFunctionName),
 			getAccountVariable,
 		)
 

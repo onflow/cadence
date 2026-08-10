@@ -21,9 +21,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -75,9 +73,7 @@ func LinkGlobals(
 			variable.InitializeWithValue(value)
 			// Linker matches the compiled function index with the linked function index
 			globals[index] = variable
-			funcCanonicalName := function.CanonicalName
-			funcCanonicalName.TypeQualifier = commons.TypeQualifierFromName(funcCanonicalName.Name)
-			indexedGlobals[funcCanonicalName] = variable
+			indexedGlobals[function.CanonicalName] = variable
 		case *bbq.VariableGlobal[opcode.Instruction]:
 			variable := typedGlobal.Variable
 			simpleVariable := &interpreter.SimpleVariable{}
@@ -97,9 +93,7 @@ func LinkGlobals(
 			}
 			// Linker matches the compiled variable index with the linked variable index
 			globals[index] = simpleVariable
-			varCanonicalName := variable.CanonicalName
-			varCanonicalName.TypeQualifier = commons.TypeQualifierFromName(varCanonicalName.Name)
-			indexedGlobals[varCanonicalName] = simpleVariable
+			indexedGlobals[variable.CanonicalName] = simpleVariable
 		case *bbq.ContractGlobal:
 			contract := typedGlobal.Contract
 			contractVariable := interpreter.NewContractVariableWithGetter(
@@ -110,9 +104,7 @@ func LinkGlobals(
 			)
 			// Linker matches the compiled contract index with the linked contract index
 			globals[index] = contractVariable
-			contractCanonicalName := contract.CanonicalName
-			contractCanonicalName.TypeQualifier = commons.TypeQualifierFromName(contractCanonicalName.Name)
-			indexedGlobals[contractCanonicalName] = contractVariable
+			indexedGlobals[contract.CanonicalName] = contractVariable
 		case *bbq.ImportedGlobal:
 			importedGlobal := linkImportedGlobal(
 				memoryGauge,
@@ -159,18 +151,17 @@ func linkImportedGlobal(
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) Variable {
 	canonicalName := importedGlobal.CanonicalName
-	canonicalName.TypeQualifier = commons.TypeQualifierFromName(canonicalName.Name)
 	importLocation := canonicalName.Location
 
 	if importLocation == nil {
-		var builtinGlobals *activations.Activation[Variable]
+		var builtinGlobals *bbq.Activation[Variable]
 		if context.BuiltinGlobalsProvider == nil {
 			builtinGlobals = DefaultBuiltinGlobals()
 		} else {
 			builtinGlobals = context.BuiltinGlobalsProvider(location)
 		}
 
-		global := builtinGlobals.Find(canonicalName.Name)
+		global := builtinGlobals.Find(canonicalName)
 		if global == nil {
 			panic(LinkerError{
 				Message: fmt.Sprintf("cannot find import '%s'", canonicalName),

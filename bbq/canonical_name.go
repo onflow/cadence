@@ -18,15 +18,14 @@
 
 package bbq
 
-import "github.com/onflow/cadence/common"
+import (
+	"github.com/onflow/cadence/common"
+)
 
 // CanonicalName uniquely identifies a declaration by its location and its
 // location-relative qualified name.
 //
-// Name is a simple name for top-level declarations (e.g. "Foo"), and a
-// qualified name for nested declarations and members (e.g. "Foo.Bar.test").
-// Keeping the location separate avoids repeatedly constructing and parsing
-// location-qualified strings.
+// Name is the declaration's simple name (e.g. "Foo" or "test").
 //
 // TypeQualifier is the name of the enclosing type, without location
 // qualification (e.g. "Foo", "$ArrayVariableSized"). It is empty for
@@ -70,10 +69,15 @@ func (n CanonicalName) IsEmpty() bool {
 }
 
 func (n CanonicalName) TypeID(memoryGauge common.MemoryGauge) common.TypeID {
-	if n.Location == nil {
-		return common.TypeID(n.Name)
+	name := n.Name
+	if n.TypeQualifier != "" {
+		name = n.TypeQualifier + "." + name
 	}
-	return n.Location.TypeID(memoryGauge, n.Name)
+
+	if n.Location == nil {
+		return common.TypeID(name)
+	}
+	return n.Location.TypeID(memoryGauge, name)
 }
 
 func (n CanonicalName) String() string {

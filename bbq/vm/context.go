@@ -46,7 +46,7 @@ type Context struct {
 	referencedResourceKindedValues              ReferencedResourceKindedValues
 
 	invokeFunction                func(function Value, arguments []Value, returnType sema.Type) (Value, error)
-	lookupFunction                func(location common.Location, name string) FunctionValue
+	lookupFunction                func(name bbq.CanonicalName) FunctionValue
 	recoverErrors                 func(onError func(error))
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
@@ -398,11 +398,9 @@ func (c *Context) GetMethod(
 
 	semaType := c.SemaTypeFromStaticType(staticType)
 
-	location := typeLocation(semaType)
-
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
 
-	method := c.GetFunction(location, qualifiedFuncName)
+	method := c.GetFunction(qualifiedFuncName)
 	if method == nil {
 		return nil
 	}
@@ -489,10 +487,9 @@ func typeLocation(semaType sema.Type) common.Location {
 }
 
 func (c *Context) GetFunction(
-	location common.Location,
-	name string,
+	name bbq.CanonicalName,
 ) FunctionValue {
-	return c.lookupFunction(location, name)
+	return c.lookupFunction(name)
 }
 
 func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue) []*interpreter.CompositeValue {

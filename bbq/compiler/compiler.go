@@ -22,7 +22,6 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -45,15 +44,11 @@ type Compiler[E, T any] struct {
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
-	functions       []*function[E]
-	globalVariables []*globalVariable[E]
-	constants       []*DecodedConstant
-	Globals         map[bbq.CanonicalName]bbq.Global
-
-	// TODO: Merge imported-globals and builtin-globals
-	importedGlobals map[bbq.CanonicalName]GlobalImport
-	builtinGlobals  *activations.Activation[GlobalImport]
-
+	functions           []*function[E]
+	globalVariables     []*globalVariable[E]
+	constants           []*DecodedConstant
+	Globals             map[bbq.CanonicalName]bbq.Global
+	importedGlobals     *bbq.Activation[GlobalImport]
 	usedImportedGlobals []bbq.Global
 	controlFlows        []controlFlow
 	currentControlFlow  *controlFlow
@@ -156,9 +151,9 @@ type GlobalImport struct {
 	CanonicalName bbq.CanonicalName
 }
 
-func NewGlobalImport(canonicalName string) GlobalImport {
+func NewGlobalImport(canonicalName bbq.CanonicalName) GlobalImport {
 	return GlobalImport{
-		CanonicalName: bbq.NewCanonicalName(nil, canonicalName),
+		CanonicalName: canonicalName,
 	}
 }
 
@@ -170,12 +165,16 @@ func newCompiler[E, T any](
 	typeGen TypeGen[T],
 ) *Compiler[E, T] {
 
-	var builtinGlobals *activations.Activation[GlobalImport]
+	var builtinGlobals *bbq.Activation[GlobalImport]
 	if config.BuiltinGlobalsProvider != nil {
 		builtinGlobals = config.BuiltinGlobalsProvider(location)
 	} else {
 		builtinGlobals = DefaultBuiltinGlobals()
 	}
+	importedGlobals := bbq.NewActivation(
+		config.MemoryGauge,
+		builtinGlobals,
+	)
 
 	common.UseMemory(config.MemoryGauge, common.CompilerMemoryUsage)
 
@@ -185,8 +184,7 @@ func newCompiler[E, T any](
 		Config:               config,
 		location:             location,
 		Globals:              make(map[bbq.CanonicalName]bbq.Global),
-		importedGlobals:      make(map[bbq.CanonicalName]GlobalImport),
-		builtinGlobals:       builtinGlobals,
+		importedGlobals:      importedGlobals,
 		typesInPool:          make(map[commons.TypeCacheKey]uint16),
 		constantsInPool:      make(map[constantUniqueKey]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
@@ -217,11 +215,7 @@ func (c *Compiler[E, _]) findGlobal(canonicalName bbq.CanonicalName) bbq.Global 
 		}
 	}
 
-	// TODO: Once imported-globals and builtin-globals are merged, this would be a single lookup.
-	importedGlobal, ok := c.importedGlobals[canonicalName]
-	if !ok && canonicalName.Location == nil {
-		importedGlobal = c.builtinGlobals.Find(canonicalName.Name)
-	}
+	importedGlobal := c.importedGlobals.Find(canonicalName)
 	if importedGlobal == (GlobalImport{}) {
 		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", canonicalName))
 	}
@@ -316,12 +310,12 @@ func (c *Compiler[E, _]) addGlobal(
 }
 
 func (c *Compiler[_, _]) addImportedGlobal(canonicalName bbq.CanonicalName) {
-	if _, ok := c.importedGlobals[canonicalName]; ok {
+	if c.importedGlobals.Find(canonicalName) != (GlobalImport{}) {
 		return
 	}
-	c.importedGlobals[canonicalName] = GlobalImport{
+	c.importedGlobals.Set(canonicalName, GlobalImport{
 		CanonicalName: canonicalName,
-	}
+	})
 }
 
 func (c *Compiler[E, _]) addFunction(
@@ -4363,6 +4357,14 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 			for _, identifier := range resolvedLocation.Identifiers {
 				originalName := identifier.Identifier
 				canonicalName := c.canonicalNameAt(location, originalName)
+				for _, export := range importedProgram.Exports {
+					if export.CanonicalName.TypeQualifier == "" &&
+						export.CanonicalName.Name == originalName {
+
+						canonicalName = export.CanonicalName
+						break
+					}
+				}
 
 				name := originalName
 				if alias, ok := aliases[originalName]; ok {
@@ -4965,16 +4967,10 @@ func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
 
 func (c *Compiler[E, _]) canonicalName(enclosingType sema.Type, identifier string) bbq.CanonicalName {
 	if enclosingType == nil {
-		return bbq.NewCanonicalName(c.location, identifier)
+		return c.canonicalNameAt(c.location, identifier)
 	}
 
-	typeQualifier := commons.TypeQualifier(enclosingType)
-	location := locationOfType(enclosingType)
-	return bbq.NewTypedCanonicalName(
-		location,
-		typeQualifier,
-		identifier,
-	)
+	return commons.TypeQualifiedName(enclosingType, identifier)
 }
 
 func (c *Compiler[E, _]) canonicalNameAt(location common.Location, identifier string) bbq.CanonicalName {
@@ -4984,7 +4980,7 @@ func (c *Compiler[E, _]) canonicalNameAt(location common.Location, identifier st
 func (c *Compiler[E, _]) canonicalNameForType(typ sema.Type) bbq.CanonicalName {
 	name := commons.TypeQualifier(typ)
 	location := locationOfType(typ)
-	return bbq.NewCanonicalName(location, name)
+	return c.canonicalNameAt(location, name)
 }
 
 func locationOfType(typ sema.Type) common.Location {

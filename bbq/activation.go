@@ -16,26 +16,16 @@
  * limitations under the License.
  */
 
-package compiler
+package bbq
 
 import (
-	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/common"
 )
 
-type BuiltinGlobalsProvider func(location common.Location) *bbq.Activation[GlobalImport]
+// Activation is a map of CanonicalName keys to values.
+type Activation[T any] = activations.KeyedActivation[CanonicalName, T]
 
-type ElaborationResolver func(location common.Location) (*DesugaredElaboration, error)
-
-type Config struct {
-	MemoryGauge         common.MemoryGauge
-	ImportHandler       commons.ImportHandler
-	LocationHandler     commons.LocationHandler
-	ElaborationResolver ElaborationResolver
-	// BuiltinGlobalsProvider provides the built-in globals for a given location.
-	// NOTE: all global imports must be for location nil!
-	BuiltinGlobalsProvider BuiltinGlobalsProvider
-
-	PeepholeOptimizationsEnabled bool
+func NewActivation[T any](memoryGauge common.MemoryGauge, parent *Activation[T]) *Activation[T] {
+	return activations.NewKeyedActivation[CanonicalName, T](memoryGauge, parent)
 }

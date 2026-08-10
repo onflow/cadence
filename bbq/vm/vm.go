@@ -25,7 +25,6 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -502,9 +501,10 @@ func (vm *VM) InitializeContract(typeID sema.TypeID, arguments ...Value) (*inter
 	if err != nil {
 		contractName = string(typeID)
 	}
-	contractInitializer := bbq.NewCanonicalName(
+	contractInitializer := bbq.NewTypedCanonicalName(
 		location,
-		commons.QualifiedName(contractName, commons.InitFunctionName),
+		contractName,
+		commons.InitFunctionName,
 	)
 	value, err := vm.InvokeExternallyCanonical(contractInitializer, arguments...)
 	if err != nil {
@@ -2503,23 +2503,11 @@ func (vm *VM) invokeFunction(
 	)
 }
 
-func (vm *VM) lookupFunction(location common.Location, canonicalName string) FunctionValue {
+func (vm *VM) lookupFunction(name bbq.CanonicalName) FunctionValue {
 	context := vm.context
-	if location != nil {
-		// The canonicalName may be location-qualified (e.g. "S.test.A.init").
-		// Strip the location prefix to get the location-relative name (e.g. "A.init").
-		// Use a prefix match on the location's type ID to avoid ambiguity: a short
-		// name like "S.test" must not be misinterpreted as a ScriptLocation type ID.
-		prefix := location.ID() + "."
-		if strings.HasPrefix(canonicalName, prefix) {
-			canonicalName = canonicalName[len(prefix):]
-		}
-	}
-	name := bbq.NewCanonicalName(location, canonicalName)
-	name.TypeQualifier = commons.TypeQualifierFromName(name.Name)
 
 	// First check in current program.
-	global := vm.globals[canonicalName]
+	global := vm.globals[name]
 	if global != nil {
 		value := global.GetValue(context)
 		return value.(FunctionValue)
@@ -2528,18 +2516,18 @@ func (vm *VM) lookupFunction(location common.Location, canonicalName string) Fun
 	// If not found, check in already linked imported functions,
 	// or link the function now, dynamically.
 
-	if location == nil {
-		var indexedGlobals *activations.Activation[Variable]
+	if name.Location == nil {
+		var indexedGlobals *bbq.Activation[Variable]
 		if context.BuiltinGlobalsProvider == nil {
 			indexedGlobals = DefaultBuiltinGlobals()
 		} else {
-			indexedGlobals = context.BuiltinGlobalsProvider(location)
+			indexedGlobals = context.BuiltinGlobalsProvider(name.Location)
 		}
-		global = indexedGlobals.Find(name.Name)
+		global = indexedGlobals.Find(name)
 	} else {
 		// TODO: This currently link all functions in program, unnecessarily.
 		//   Link only the requested function.
-		linkedGlobals := context.linkLocation(location)
+		linkedGlobals := context.linkLocation(name.Location)
 		global = linkedGlobals.indexedGlobals[name]
 	}
 
@@ -2576,7 +2564,6 @@ func (vm *VM) Global(simpleName string) Value {
 // TODO: Remove this method and refactor and repurpose `Config.BuiltinGlobalsProvider`
 // method to be able to use for any location, not just built-in/nil location.
 func (vm *VM) SetGlobal(name bbq.CanonicalName, variable Variable) {
-	name.TypeQualifier = commons.TypeQualifierFromName(name.Name)
 	vm.globals[name] = variable
 }
 

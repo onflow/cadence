@@ -767,9 +767,9 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 			qualifiedMethodName := commons.TypeQualifiedName(structType, methodName)
 
 			compilerConfig := &compiler.Config{
-				BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+				BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.DefaultBuiltinGlobals()
-					activation := activations.NewActivation(nil, baseActivation)
+					activation := bbq.NewActivation(nil, baseActivation)
 					activation.Set(
 						qualifiedMethodName,
 						compiler.NewGlobalImport(qualifiedMethodName),

@@ -1170,13 +1170,13 @@ func TestInterpretImportGlobals(t *testing.T) {
 
 		programs := CompiledPrograms{}
 
-		builtinGlobalsProvider := func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+		builtinGlobalsProvider := func(
+			_ common.Location,
+		) *bbq.Activation[compiler.GlobalImport] {
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-			activation.Set(
-				logFunctionName,
-				compiler.NewGlobalImport(logFunctionName),
-			)
+			name := bbq.NewCanonicalName(nil, logFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
 			return activation
 		}
@@ -1217,13 +1217,15 @@ func TestInterpretImportGlobals(t *testing.T) {
 				VMConfig: &vm.Config{
 					Tracer:          interpreter.NoOpTracer{},
 					StackDepthLimit: math.MaxUint64,
-					BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[vm.Variable] {
-						activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+					BuiltinGlobalsProvider: func(
+						location common.Location,
+					) *bbq.Activation[vm.Variable] {
+						activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 						logVariable := &interpreter.SimpleVariable{}
 						logVariable.InitializeWithValue(valueDeclaration.Value)
 						activation.Set(
-							logFunctionName,
+							bbq.NewCanonicalName(nil, logFunctionName),
 							logVariable,
 						)
 
@@ -1381,13 +1383,13 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 
 		programs := CompiledPrograms{}
 
-		builtinGlobalsProvider := func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+		builtinGlobalsProvider := func(
+			_ common.Location,
+		) *bbq.Activation[compiler.GlobalImport] {
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-			activation.Set(
-				logFunctionName,
-				compiler.NewGlobalImport(logFunctionName),
-			)
+			name := bbq.NewCanonicalName(nil, logFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
 			return activation
 		}
@@ -1460,13 +1462,15 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 
 		vmConfig := test.PrepareVMConfig(t, nil, programs)
 
-		vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(
+			location common.Location,
+		) *bbq.Activation[vm.Variable] {
+			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			logVariable := &interpreter.SimpleVariable{}
 			logVariable.InitializeWithValue(valueDeclaration.Value)
 			activation.Set(
-				logFunctionName,
+				bbq.NewCanonicalName(nil, logFunctionName),
 				logVariable,
 			)
 
@@ -2048,13 +2052,13 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 
 		programs := CompiledPrograms{}
 
-		builtinGlobalsProvider := func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+		builtinGlobalsProvider := func(
+			_ common.Location,
+		) *bbq.Activation[compiler.GlobalImport] {
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-			activation.Set(
-				logFunctionName,
-				compiler.NewGlobalImport(logFunctionName),
-			)
+			name := bbq.NewCanonicalName(nil, logFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
 			return activation
 		}
@@ -2111,13 +2115,15 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 
 		vmConfig := test.PrepareVMConfig(t, nil, programs)
 
-		vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(
+			location common.Location,
+		) *bbq.Activation[vm.Variable] {
+			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			logVariable := &interpreter.SimpleVariable{}
 			logVariable.InitializeWithValue(valueDeclaration.Value)
 			activation.Set(
-				logFunctionName,
+				bbq.NewCanonicalName(nil, logFunctionName),
 				logVariable,
 			)
 

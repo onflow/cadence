@@ -19,6 +19,7 @@
 package commons
 
 import (
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -37,13 +38,32 @@ var BuiltinTypes = common.Concat[sema.Type](
 	},
 )
 
-func TypeQualifiedName(typ sema.Type, functionName string) string {
+func TypeQualifiedName(typ sema.Type, functionName string) bbq.CanonicalName {
 	if typ == nil {
-		return functionName
+		return bbq.NewCanonicalName(nil, functionName)
 	}
 
-	typeQualifier := TypeQualifier(typ)
-	return typeQualifier + "." + functionName
+	return bbq.NewTypedCanonicalName(
+		typeLocation(typ),
+		TypeQualifier(typ),
+		functionName,
+	)
+}
+
+func typeLocation(typ sema.Type) common.Location {
+	switch typ := typ.(type) {
+	case *sema.FunctionType:
+		if typ.TypeFunctionType != nil {
+			return typeLocation(typ.TypeFunctionType)
+		}
+	case *sema.ReferenceType:
+		return typeLocation(typ.Type)
+	case *sema.IntersectionType:
+		return typeLocation(typ.Types[0])
+	case sema.LocatedType:
+		return typ.GetLocation()
+	}
+	return nil
 }
 
 func QualifiedName(typeName, functionName string) string {

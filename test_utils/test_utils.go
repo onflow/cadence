@@ -28,6 +28,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/compiler"
+	. "github.com/onflow/cadence/bbq/test_utils"
+	"github.com/onflow/cadence/bbq/vm"
+	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/pretty"
@@ -38,12 +44,6 @@ import (
 	. "github.com/onflow/cadence/test_utils/interpreter_utils"
 	"github.com/onflow/cadence/test_utils/runtime_utils"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
-
-	"github.com/onflow/cadence/bbq/commons"
-	"github.com/onflow/cadence/bbq/compiler"
-	. "github.com/onflow/cadence/bbq/test_utils"
-	"github.com/onflow/cadence/bbq/vm"
-	compilerUtils "github.com/onflow/cadence/bbq/vm/test"
 )
 
 // builtinContractMemberVMFunctions maps the type-qualifier of a built-in contract
@@ -341,7 +341,7 @@ func ParseCheckAndPrepareWithOptions(
 			// Collect nested variables (e.g. enum case values like "RoundingRule.towardZero")
 			// from HostFunctionValues, so they can be registered in both the VM and compiler activations.
 			type nestedVariableEntry struct {
-				qualifiedName string
+				qualifiedName bbq.CanonicalName
 				value         interpreter.Value
 			}
 			var nestedEntries []nestedVariableEntry
@@ -350,7 +350,7 @@ func ParseCheckAndPrepareWithOptions(
 			// in the base activation (e.g. `RLP.decodeString`), so they can be
 			// registered as type-qualified globals in both the VM and the compiler.
 			type memberFunctionEntry struct {
-				qualifiedName string
+				qualifiedName bbq.CanonicalName
 				value         vm.Value
 			}
 			var memberFunctionEntries []memberFunctionEntry
@@ -360,7 +360,7 @@ func ParseCheckAndPrepareWithOptions(
 				if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
 					for nestedName, nestedVar := range functionValue.NestedVariables { //nolint:maprange
 						nestedEntries = append(nestedEntries, nestedVariableEntry{
-							qualifiedName: name + "." + nestedName,
+							qualifiedName: bbq.NewCanonicalName(nil, name+"."+nestedName),
 							value:         nestedVar.GetValue(nil),
 						})
 					}
@@ -378,21 +378,26 @@ func ParseCheckAndPrepareWithOptions(
 				}
 			}
 			slices.SortFunc(nestedEntries, func(a, b nestedVariableEntry) int {
-				return strings.Compare(a.qualifiedName, b.qualifiedName)
+				return strings.Compare(a.qualifiedName.String(), b.qualifiedName.String())
 			})
 			slices.SortFunc(memberFunctionEntries, func(a, b memberFunctionEntry) int {
-				return strings.Compare(a.qualifiedName, b.qualifiedName)
+				return strings.Compare(a.qualifiedName.String(), b.qualifiedName.String())
 			})
 
-			vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
+			vmConfig.BuiltinGlobalsProvider = func(
+				_ common.Location,
+			) *bbq.Activation[vm.Variable] {
 
-				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+				activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 				panicVariable := interpreter.NewVariableWithValue(
 					nil,
 					stdlib.VMPanicFunction.Value,
 				)
-				activation.Set(stdlib.PanicFunctionName, panicVariable)
+				activation.Set(
+					bbq.NewCanonicalName(nil, stdlib.PanicFunctionName),
+					panicVariable,
+				)
 
 				// Add the given built-in values.
 				// Convert the externally provided `interpreter.HostFunctionValue`s into `vm.NativeFunctionValue`s.
@@ -450,7 +455,7 @@ func ParseCheckAndPrepareWithOptions(
 						value,
 					)
 
-					activation.Set(name, vmVariable)
+					activation.Set(bbq.NewCanonicalName(nil, name), vmVariable)
 				}
 
 				// Register nested variables as separate qualified globals.
@@ -475,17 +480,20 @@ func ParseCheckAndPrepareWithOptions(
 
 			// Register externally provided globals in compiler.
 			compilerConfig = &compiler.Config{
-				BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+				BuiltinGlobalsProvider: func(
+					_ common.Location,
+				) *bbq.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.DefaultBuiltinGlobals()
-					activation := activations.NewActivation(nil, baseActivation)
+					activation := bbq.NewActivation(nil, baseActivation)
 					for name := range interpreterBaseActivationVariables { //nolint:maprange
-						existing := activation.Find(name)
+						canonicalName := bbq.NewCanonicalName(nil, name)
+						existing := activation.Find(canonicalName)
 						if existing != (compiler.GlobalImport{}) {
 							continue
 						}
 						activation.Set(
-							name,
-							compiler.NewGlobalImport(name),
+							canonicalName,
+							compiler.NewGlobalImport(canonicalName),
 						)
 					}
 
@@ -578,14 +586,19 @@ func ParseCheckAndPrepareWithOptions(
 	}
 
 	if vmConfig.BuiltinGlobalsProvider == nil {
-		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(
+			_ common.Location,
+		) *bbq.Activation[vm.Variable] {
+			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			panicVariable := interpreter.NewVariableWithValue(
 				nil,
 				stdlib.VMPanicFunction.Value,
 			)
-			activation.Set(stdlib.PanicFunctionName, panicVariable)
+			activation.Set(
+				bbq.NewCanonicalName(nil, stdlib.PanicFunctionName),
+				panicVariable,
+			)
 
 			return activation
 		}
