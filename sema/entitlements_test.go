@@ -10888,6 +10888,114 @@ func TestCheckMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 
+	// A field with mapping access is capped with the *mapped* authorization,
+	// not with the accessed reference's raw authorization.
+	// `M` maps `G` to `E`, so reading the field through an `auth(G)` reference
+	// grants `E`, and the nested `auth(E)` reference survives —
+	// even though `G` and `E` are disjoint.
+	t.Run("mapped function field, in-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: auth(G) &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// The same, for a mapped field that *is* wrapped in a reference.
+	// This path capped with the raw authorization as well.
+	t.Run("mapped array field, in-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let x: [auth(E) &T]
+                init(x: [auth(E) &T]) {
+                    self.x = x
+                }
+            }
+
+            fun test(ref: auth(G) &S): Int {
+                return ref.x[0].secret()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// A mapped field whose mapped authorization does not cover the nested
+	// reference is still capped.
+	t.Run("mapped array field, mapped authorization too weak", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            entitlement mapping M {
+                G -> F
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let x: [auth(E) &T]
+                init(x: [auth(E) &T]) {
+                    self.x = x
+                }
+            }
+
+            fun test(ref: auth(G) &S): Int {
+                return ref.x[0].secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
 	// The outer reference grants the very entitlement the nested reference carries,
 	// so the intersection preserves it and the access is valid.
 	t.Run("function field, matching outer authorization", func(t *testing.T) {

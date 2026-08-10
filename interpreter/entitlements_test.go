@@ -2987,3 +2987,99 @@ func TestInterpretMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) 
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
 	})
 }
+
+func TestInterpretMappedMemberAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// A field with mapping access is capped with the mapped authorization,
+	// so reading it through a reference whose authorization is in the map's domain
+	// preserves the nested reference's authorization, at runtime too.
+	t.Run("mapped function field, in-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let ref = &s as auth(G) &S
+
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+
+	// Out of the map's domain the mapped authorization is unauthorized,
+	// so the nested reference is stripped, and a downcast cannot recover it.
+	t.Run("mapped function field, out-of-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let ref = &s as auth(F) &S
+
+                let g = ref.f as! fun(): auth(E) &T
+                return g().secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+}
