@@ -10755,3 +10755,249 @@ func TestCheckInvalidDisjunctiveEntitlementsEscalation(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
+
+func TestEntitlementMapEmptyDisjunctImage(t *testing.T) {
+
+	t.Parallel()
+
+	// B is outside M's domain. auth(A | B) should collapse to
+	// unauthorized because M(B) = {}.
+	t.Run("empty disjunct", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            entitlement mapping M {
+                A -> C
+            }
+
+            resource Inner {
+                access(C) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            resource Holder {
+                access(mapping M) let inner: @Inner
+                init() {
+                    self.inner <- create Inner()
+                }
+            }
+
+            fun test(): Int {
+                let holder <- create Holder()
+                let holderRef = &holder as auth(B) &Holder
+
+                let widened: auth(A | B) &Holder = holderRef
+                let forged: auth(C) &Inner = widened.inner
+                let r = forged.secret()
+
+                destroy holder
+                return r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.C)&S.test.Inner"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&S.test.Inner"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Widening happens implicitly at the call boundary.
+	t.Run("widening via function parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            entitlement mapping M {
+                A -> C
+            }
+
+            resource Inner {
+                access(C) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            resource Holder {
+                access(mapping M) let inner: @Inner
+                init() {
+                    self.inner <- create Inner()
+                }
+            }
+
+            fun helper(_ ref: auth(A | B) &Holder): auth(C) &Inner {
+                return ref.inner
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.C)&S.test.Inner"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&S.test.Inner"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// M(A) = {C, D} (two arrows), M(B) = {} (empty). The honest answer
+	// is "(C & D) OR nothing" = unauthorized. The empty-disjunct collapse
+	// must take priority over the unrepresentable-output error.
+	t.Run("multi-image AND empty disjunct", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+
+            entitlement mapping M {
+                A -> C
+                A -> D
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(_ ref: auth(B) &{S}): auth(C) &[Int] {
+                let widened: auth(A | B) &{S} = ref
+                return widened.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.C)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// M(A) = {C, D}, input is auth(A | B) where B is also in the domain
+	// with a single-element image. The unrepresentable error must still
+	// fire (existing behavior preserved).
+	t.Run("multi-image without empty disjunct", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+            entitlement E
+
+            entitlement mapping M {
+                A -> C
+                A -> D
+                B -> E
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(A | B) &{S}) {
+                let x = ref.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
+	})
+
+	// auth(B) alone cannot yield auth(C) because M(B) = {}.
+	t.Run("without widening", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            entitlement mapping M {
+                A -> C
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(B) &{S}): auth(C) &[Int] {
+                return ref.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.C)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Conjunction where all entitlements are outside the domain.
+	// The union of images is empty, so the result is unauthorized.
+	t.Run("conjunction all out-of-domain", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+
+            entitlement mapping M {
+                A -> D
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(B, C) &{S}): auth(D) &[Int] {
+                return ref.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.D)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+}

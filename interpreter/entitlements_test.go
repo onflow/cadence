@@ -2826,3 +2826,230 @@ func TestInterpretOptionalContainerElementEntitlementStripping(t *testing.T) {
 		)
 	})
 }
+
+func TestEntitlementMapEmptyDisjunctImageControls(t *testing.T) {
+
+	t.Parallel()
+
+	// Both disjuncts in domain, distinct single-element images.
+	t.Run("both disjuncts mapped", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+            entitlement mapping M {
+                A -> B
+                C -> D
+            }
+
+            struct S {
+                access(mapping M) let x: [Int]
+                init() {
+                    self.x = [1]
+                }
+            }
+
+            fun test(): auth(D | B) &[Int] {
+                let s = S()
+                let ref = &s as auth(C | A) &S
+                return ref.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		refValue := value.(*interpreter.EphemeralReferenceValue)
+
+		require.True(t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.D", "S.test.B"} },
+				2,
+				sema.Disjunction,
+			).Equal(refValue.Authorization),
+		)
+	})
+
+	// Both disjuncts map to the same single entitlement.
+	t.Run("disjuncts collapse to same image", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement mapping M {
+                A -> C
+                B -> C
+            }
+
+            struct S {
+                access(mapping M) let x: [Int]
+                init() {
+                    self.x = [1]
+                }
+            }
+
+            fun test(): auth(C) &[Int] {
+                let s = S()
+                let ref = &s as auth(B | A) &S
+                return ref.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		refValue := value.(*interpreter.EphemeralReferenceValue)
+
+		// Both disjuncts collapse to the same single entitlement C.
+		// The interpreter normalizes a single-element set to Conjunction,
+		// while the VM preserves the original Disjunction.
+		// A single element Conjunction and a single element Disjunction
+		// have the same semantic meaning.
+		expectedSetKind := sema.Conjunction
+		if *compile {
+			expectedSetKind = sema.Disjunction
+		}
+
+		require.True(t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.C"} },
+				1,
+				expectedSetKind,
+			).Equal(refValue.Authorization),
+		)
+	})
+
+	// Conjunction with an unmapped entitlement must still map.
+	// The holder has both A and B, so M(A) = {C} is genuinely guaranteed.
+	t.Run("conjunction with unmapped entitlement", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement mapping M {
+                A -> C
+            }
+
+            struct S {
+                access(mapping M) let x: [Int]
+                init() {
+                    self.x = [1]
+                }
+            }
+
+            fun test(): auth(C) &[Int] {
+                let s = S()
+                let ref = &s as auth(A, B) &S
+                return ref.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		refValue := value.(*interpreter.EphemeralReferenceValue)
+
+		require.True(t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.C"} },
+				1,
+				sema.Conjunction,
+			).Equal(refValue.Authorization),
+		)
+	})
+
+	// Identity maps are unaffected: every entitlement maps to itself.
+	t.Run("identity map", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                include Identity
+            }
+
+            struct S {
+                access(mapping M) let x: [Int]
+                init() {
+                    self.x = [1]
+                }
+            }
+
+            fun test(): auth(B | A) &[Int] {
+                let s = S()
+                let ref = &s as auth(B | A) &S
+                return ref.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		refValue := value.(*interpreter.EphemeralReferenceValue)
+
+		require.True(t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.A", "S.test.B"} },
+				2,
+				sema.Disjunction,
+			).Equal(refValue.Authorization),
+		)
+	})
+
+	// Single in-domain entitlement maps correctly (no disjunction).
+	t.Run("single in-domain entitlement", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement A
+            entitlement B
+            entitlement mapping M {
+                A -> B
+            }
+
+            struct S {
+                access(mapping M) let x: [Int]
+                init() {
+                    self.x = [1]
+                }
+            }
+
+            fun test(): auth(B) &[Int] {
+                let s = S()
+                let ref = &s as auth(A) &S
+                return ref.x
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		refValue := value.(*interpreter.EphemeralReferenceValue)
+
+		require.True(t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.B"} },
+				1,
+				sema.Conjunction,
+			).Equal(refValue.Authorization),
+		)
+	})
+}

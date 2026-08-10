@@ -455,9 +455,21 @@ func (e *EntitlementMapAccess) Image(gauge common.MemoryGauge, inputs Access, po
 	case EntitlementSetAccess:
 		output := orderedmap.New[EntitlementOrderedSet](inputs.Entitlements.Len())
 
+		isDisjunctionSet := inputs.SetKind == Disjunction
+
 		var err error
-		inputs.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+		for pair := inputs.Entitlements.Oldest(); pair != nil; pair = pair.Next() {
+			entitlement := pair.Key
 			entitlementImage := e.entitlementImage(entitlement)
+
+			// For a disjunctive input, if any disjunct's image is empty, nothing is
+			// guaranteed, and the result must be unauthorized.
+			// This takes priority over the unrepresentable-output error, because
+			// "(multi-element conjunction) OR nothing" is simply "nothing guaranteed".
+			if isDisjunctionSet && entitlementImage.Len() == 0 {
+				return UnauthorizedAccess, nil
+			}
+
 			output.SetAll(entitlementImage)
 
 			// The image of a single element is always a conjunctive set;
@@ -466,7 +478,7 @@ func (e *EntitlementMapAccess) Image(gauge common.MemoryGauge, inputs Access, po
 			// which is too complex to be represented in Cadence as a type.
 			// Thus, whenever such a type would arise, we raise an error instead
 			if err == nil &&
-				inputs.SetKind == Disjunction &&
+				isDisjunctionSet &&
 				entitlementImage.Len() > 1 {
 
 				err = &UnrepresentableEntitlementMapOutputError{
@@ -475,7 +487,8 @@ func (e *EntitlementMapAccess) Image(gauge common.MemoryGauge, inputs Access, po
 					Range: ast.NewRangeFromPositioned(gauge, pos),
 				}
 			}
-		})
+		}
+
 		if err != nil {
 			return nil, err
 		}
