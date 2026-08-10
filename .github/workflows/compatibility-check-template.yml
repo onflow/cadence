@@ -22,7 +22,7 @@ on:
       ATREE_DEPLOY_KEY:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.base-branch || github.run_id }}-${{ inputs.chain }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}-${{ inputs.chain }}
   cancel-in-progress: true
 
 jobs:
