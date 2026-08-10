@@ -39,7 +39,7 @@ const (
 
 var chainFlag = flag.String("chain", "", "mainnet or testnet")
 
-const authFlagUsage = "find.xyz API auth (username:password)"
+const authFlagUsage = "Flowscan API auth (username:password)"
 
 var authFlag = flag.String("auth", "", authFlagUsage)
 
@@ -72,9 +72,9 @@ func main() {
 	var apiURL string
 	switch chain {
 	case mainnet:
-		apiURL = "https://api.find.xyz"
+		apiURL = "https://api.mainnet.flowscan.flow.com"
 	case testnet:
-		apiURL = "https://api.test-find.xyz"
+		apiURL = "https://api.testnet.flowscan.flow.com"
 	}
 
 	apiURL += "/bulk/v1/contract?valid_only=true"
