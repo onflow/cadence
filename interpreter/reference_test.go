@@ -7146,7 +7146,7 @@ func TestInterpretReferenceGetTypeStripsHiddenEntitlements(t *testing.T) {
 
 	check := func(t *testing.T, code, expected string) {
 		t.Helper()
-		inter := parseCheckAndPrepareWithoutStorageComparison(t, code)
+		inter := parseCheckAndPrepare(t, code)
 		res, err := inter.Invoke("test")
 		require.NoError(t, err)
 		require.Equal(t, interpreter.NewUnmeteredStringValue(expected), res)
@@ -7228,7 +7228,7 @@ func TestInterpretReferenceIsInstanceStripsHiddenEntitlements(t *testing.T) {
 
 	check := func(t *testing.T, code string, expected ...bool) {
 		t.Helper()
-		inter := parseCheckAndPrepareWithoutStorageComparison(t, code)
+		inter := parseCheckAndPrepare(t, code)
 		res, err := inter.Invoke("test")
 		require.NoError(t, err)
 

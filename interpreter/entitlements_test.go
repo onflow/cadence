@@ -2836,7 +2836,7 @@ func TestInterpretMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) 
 	t.Run("function field, downcast to uncapped function type", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement E
 
             struct T {
@@ -2876,7 +2876,7 @@ func TestInterpretMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) 
 	t.Run("function field, downcast of returned reference", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement E
 
             struct T {
@@ -2917,7 +2917,7 @@ func TestInterpretMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) 
 	t.Run("function field, matching outer authorization", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement E
 
             struct T {
@@ -2955,7 +2955,7 @@ func TestInterpretMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) 
 	t.Run("function field, owned access", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement E
 
             struct T {
@@ -2998,7 +2998,7 @@ func TestInterpretMappedMemberAuthorizationCapping(t *testing.T) {
 	t.Run("mapped function field, in-domain outer authorization", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement E
             entitlement G
 
@@ -3042,7 +3042,7 @@ func TestInterpretMappedMemberAuthorizationCapping(t *testing.T) {
 	t.Run("mapped function field, out-of-domain outer authorization", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+		inter := parseCheckAndPrepare(t, `
             entitlement E
             entitlement F
             entitlement G
