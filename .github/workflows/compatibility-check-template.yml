@@ -99,7 +99,14 @@ jobs:
       - name: Check contracts using ${{ inputs.base-branch }}
         working-directory: ./tools/compatibility-check
         run: |
-          GOPROXY=direct go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@`git rev-parse origin/${{ inputs.base-branch }}`
+          # Use the compatibility-check tool as it exists on the base branch, so the
+          # tool itself (not only its Cadence dependency) matches the base. Otherwise a
+          # PR that changes both the tool and the Cadence library it calls into fails
+          # to compile here, because the PR's tool code references Cadence APIs that do
+          # not exist on the base branch yet.
+          BASE=`git rev-parse origin/${{ inputs.base-branch }}`
+          git checkout "$BASE" -- .
+          GOPROXY=direct go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@"$BASE"
           go mod tidy
           go run ./cmd/check_contracts/main.go flow-${{ inputs.chain }} ../../tmp/contracts.csv ../../tmp/output-old.txt
 
