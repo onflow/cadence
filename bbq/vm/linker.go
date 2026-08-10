@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -31,7 +32,7 @@ import (
 
 type LinkedGlobals struct {
 	// globals defined in the program, indexed by name.
-	indexedGlobals *activations.Activation[Variable]
+	indexedGlobals map[bbq.CanonicalName]Variable
 }
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
@@ -51,7 +52,7 @@ func LinkGlobals(
 
 	// reserved globals for the current program (exact)
 	globals := make([]Variable, len(program.Globals))
-	indexedGlobals := activations.NewActivation[Variable](memoryGauge, nil)
+	indexedGlobals := make(map[bbq.CanonicalName]Variable)
 
 	// NOTE: ensure both the context and the mapping are updated
 
@@ -74,7 +75,9 @@ func LinkGlobals(
 			variable.InitializeWithValue(value)
 			// Linker matches the compiled function index with the linked function index
 			globals[index] = variable
-			indexedGlobals.Set(function.CanonicalName, variable)
+			funcCanonicalName := function.CanonicalName
+			funcCanonicalName.TypeQualifier = commons.TypeQualifierFromName(funcCanonicalName.Name)
+			indexedGlobals[funcCanonicalName] = variable
 		case *bbq.VariableGlobal[opcode.Instruction]:
 			variable := typedGlobal.Variable
 			simpleVariable := &interpreter.SimpleVariable{}
@@ -94,7 +97,9 @@ func LinkGlobals(
 			}
 			// Linker matches the compiled variable index with the linked variable index
 			globals[index] = simpleVariable
-			indexedGlobals.Set(variable.CanonicalName, simpleVariable)
+			varCanonicalName := variable.CanonicalName
+			varCanonicalName.TypeQualifier = commons.TypeQualifierFromName(varCanonicalName.Name)
+			indexedGlobals[varCanonicalName] = simpleVariable
 		case *bbq.ContractGlobal:
 			contract := typedGlobal.Contract
 			contractVariable := interpreter.NewContractVariableWithGetter(
@@ -105,7 +110,9 @@ func LinkGlobals(
 			)
 			// Linker matches the compiled contract index with the linked contract index
 			globals[index] = contractVariable
-			indexedGlobals.Set(contract.CanonicalName, contractVariable)
+			contractCanonicalName := contract.CanonicalName
+			contractCanonicalName.TypeQualifier = commons.TypeQualifierFromName(contractCanonicalName.Name)
+			indexedGlobals[contractCanonicalName] = contractVariable
 		case *bbq.ImportedGlobal:
 			importedGlobal := linkImportedGlobal(
 				memoryGauge,
@@ -151,18 +158,29 @@ func linkImportedGlobal(
 	context *Context,
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) Variable {
-	importLocation := importedGlobal.Location
-
-	var indexedGlobals *activations.Activation[Variable]
+	canonicalName := importedGlobal.CanonicalName
+	canonicalName.TypeQualifier = commons.TypeQualifierFromName(canonicalName.Name)
+	importLocation := canonicalName.Location
 
 	if importLocation == nil {
+		var builtinGlobals *activations.Activation[Variable]
 		if context.BuiltinGlobalsProvider == nil {
-			indexedGlobals = DefaultBuiltinGlobals()
+			builtinGlobals = DefaultBuiltinGlobals()
 		} else {
-			indexedGlobals = context.BuiltinGlobalsProvider(location)
+			builtinGlobals = context.BuiltinGlobalsProvider(location)
 		}
-	} else {
 
+		global := builtinGlobals.Find(canonicalName.Name)
+		if global == nil {
+			panic(LinkerError{
+				Message: fmt.Sprintf("cannot find import '%s'", canonicalName),
+			})
+		}
+		return global
+	}
+
+	var indexedGlobals map[bbq.CanonicalName]Variable
+	{
 		linkedGlobals, ok := linkedGlobalsCache[importLocation]
 		if !ok {
 			importedProgram := context.ImportHandler(importLocation)
@@ -180,10 +198,7 @@ func linkImportedGlobal(
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
-	// When linking/finding the global in the imported program,
-	// use the unqualified-name.
-	// Because
-	global := indexedGlobals.Find(importedGlobal.CanonicalName)
+	global := indexedGlobals[canonicalName]
 	if global == nil {
 		panic(LinkerError{
 			Message: fmt.Sprintf("cannot find import '%s'", importedGlobal.CanonicalName),
@@ -239,5 +254,5 @@ func loadContractValue(contract *bbq.Contract, context *Context) Value {
 		))
 	}
 
-	return context.ContractValueHandler(context, contract.Location)
+	return context.ContractValueHandler(context, contract.CanonicalName.Location)
 }

@@ -49,7 +49,7 @@ type VM struct {
 	ip      uint16
 
 	context *Context
-	globals *activations.Activation[Variable]
+	globals map[bbq.CanonicalName]Variable
 }
 
 func NewVM(
@@ -263,7 +263,7 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 		defer func() {
 			vm.context.ReportInvokeTrace(
 				function.FunctionType(vm.context).String(),
-				function.Function.CanonicalName,
+				function.Function.CanonicalName.String(),
 				time.Since(startTime),
 			)
 		}()
@@ -309,19 +309,15 @@ func (vm *VM) callerLocation() common.Location {
 // given its name relative to the program (i.e: not location-qualified).
 func (vm *VM) findGlobal(name string) Variable {
 	context := vm.context
-	canonicalName := commons.LocationQualifiedName(
-		context.MemoryGauge,
-		context.location,
-		name,
-	)
-	return vm.globals.Find(canonicalName)
+	canonicalName := bbq.NewCanonicalName(context.location, name)
+	return vm.globals[canonicalName]
 }
 
-func (vm *VM) getGlobalFunction(canonicalName string) (FunctionValue, error) {
-	functionVariable := vm.globals.Find(canonicalName)
+func (vm *VM) getGlobalFunction(canonicalName bbq.CanonicalName) (FunctionValue, error) {
+	functionVariable := vm.globals[canonicalName]
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
-			name: canonicalName,
+			name: canonicalName.String(),
 		}
 	}
 
@@ -338,16 +334,15 @@ func (vm *VM) getGlobalFunction(canonicalName string) (FunctionValue, error) {
 
 // InvokeExternally invokes a global function with the given arguments
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
-	canonicalName := commons.LocationQualifiedName(
-		vm.context.MemoryGauge,
-		vm.context.location,
-		name,
-	)
+	canonicalName := bbq.NewCanonicalName(vm.context.location, name)
 
 	return vm.InvokeExternallyCanonical(canonicalName, arguments...)
 }
 
-func (vm *VM) InvokeExternallyCanonical(canonicalName string, arguments ...Value) (v Value, err error) {
+func (vm *VM) InvokeExternallyCanonical(
+	canonicalName bbq.CanonicalName,
+	arguments ...Value,
+) (v Value, err error) {
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
@@ -364,11 +359,7 @@ func (vm *VM) InvokeExternallyCanonical(canonicalName string, arguments ...Value
 // without validating them.
 // NOTE: FOR TESTING PURPOSES ONLY! Use InvokeExternally instead
 func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
-	canonicalName := commons.LocationQualifiedName(
-		vm.context.MemoryGauge,
-		vm.context.location,
-		name,
-	)
+	canonicalName := bbq.NewCanonicalName(vm.context.location, name)
 
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
@@ -383,17 +374,17 @@ func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...
 }
 
 func (vm *VM) InvokeMethodExternally(
-	canonicalName string,
+	canonicalName bbq.CanonicalName,
 	receiver interpreter.MemberAccessibleValue,
 	arguments ...Value,
 ) (
 	v Value,
 	err error,
 ) {
-	functionVariable := vm.globals.Find(canonicalName)
+	functionVariable := vm.globals[canonicalName]
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
-			name: canonicalName,
+			name: canonicalName.String(),
 		}
 	}
 
@@ -506,7 +497,15 @@ func (vm *VM) invokeExternally(
 }
 
 func (vm *VM) InitializeContract(typeID sema.TypeID, arguments ...Value) (*interpreter.CompositeValue, error) {
-	contractInitializer := commons.QualifiedName(string(typeID), commons.InitFunctionName)
+	location := vm.context.location
+	_, contractName, err := common.DecodeTypeID(vm.context.MemoryGauge, string(typeID))
+	if err != nil {
+		contractName = string(typeID)
+	}
+	contractInitializer := bbq.NewCanonicalName(
+		location,
+		commons.QualifiedName(contractName, commons.InitFunctionName),
+	)
 	value, err := vm.InvokeExternallyCanonical(contractInitializer, arguments...)
 	if err != nil {
 		return nil, err
@@ -2506,9 +2505,21 @@ func (vm *VM) invokeFunction(
 
 func (vm *VM) lookupFunction(location common.Location, canonicalName string) FunctionValue {
 	context := vm.context
+	if location != nil {
+		// The canonicalName may be location-qualified (e.g. "S.test.A.init").
+		// Strip the location prefix to get the location-relative name (e.g. "A.init").
+		// Use a prefix match on the location's type ID to avoid ambiguity: a short
+		// name like "S.test" must not be misinterpreted as a ScriptLocation type ID.
+		prefix := location.ID() + "."
+		if strings.HasPrefix(canonicalName, prefix) {
+			canonicalName = canonicalName[len(prefix):]
+		}
+	}
+	name := bbq.NewCanonicalName(location, canonicalName)
+	name.TypeQualifier = commons.TypeQualifierFromName(name.Name)
 
 	// First check in current program.
-	global := vm.globals.Find(canonicalName)
+	global := vm.globals[canonicalName]
 	if global != nil {
 		value := global.GetValue(context)
 		return value.(FunctionValue)
@@ -2517,22 +2528,21 @@ func (vm *VM) lookupFunction(location common.Location, canonicalName string) Fun
 	// If not found, check in already linked imported functions,
 	// or link the function now, dynamically.
 
-	var indexedGlobals *activations.Activation[Variable]
-
 	if location == nil {
+		var indexedGlobals *activations.Activation[Variable]
 		if context.BuiltinGlobalsProvider == nil {
 			indexedGlobals = DefaultBuiltinGlobals()
 		} else {
 			indexedGlobals = context.BuiltinGlobalsProvider(location)
 		}
+		global = indexedGlobals.Find(name.Name)
 	} else {
 		// TODO: This currently link all functions in program, unnecessarily.
 		//   Link only the requested function.
 		linkedGlobals := context.linkLocation(location)
-		indexedGlobals = linkedGlobals.indexedGlobals
+		global = linkedGlobals.indexedGlobals[name]
 	}
 
-	global = indexedGlobals.Find(canonicalName)
 	if global == nil {
 		return nil
 	}
@@ -2565,8 +2575,9 @@ func (vm *VM) Global(simpleName string) Value {
 
 // TODO: Remove this method and refactor and repurpose `Config.BuiltinGlobalsProvider`
 // method to be able to use for any location, not just built-in/nil location.
-func (vm *VM) SetGlobal(name string, variable Variable) {
-	vm.globals.Set(name, variable)
+func (vm *VM) SetGlobal(name bbq.CanonicalName, variable Variable) {
+	name.TypeQualifier = commons.TypeQualifierFromName(name.Name)
+	vm.globals[name] = variable
 }
 
 // LocationRange returns the location of the currently executing instruction.

@@ -45,11 +45,15 @@ type Compiler[E, T any] struct {
 
 	compositeTypeStack *Stack[sema.CompositeKindedType]
 
-	functions           []*function[E]
-	globalVariables     []*globalVariable[E]
-	constants           []*DecodedConstant
-	Globals             map[string]bbq.Global
-	importedGlobals     *activations.Activation[GlobalImport]
+	functions       []*function[E]
+	globalVariables []*globalVariable[E]
+	constants       []*DecodedConstant
+	Globals         map[bbq.CanonicalName]bbq.Global
+
+	// TODO: Merge imported-globals and builtin-globals
+	importedGlobals map[bbq.CanonicalName]GlobalImport
+	builtinGlobals  *activations.Activation[GlobalImport]
+
 	usedImportedGlobals []bbq.Global
 	controlFlows        []controlFlow
 	currentControlFlow  *controlFlow
@@ -99,7 +103,8 @@ type Compiler[E, T any] struct {
 	// Important: It must NOT be reused to desugar any top-level declaration, after the initial use.
 	desugar *Desugar
 
-	addedImports map[common.Location]struct{}
+	addedImports     map[common.Location]struct{}
+	importedPrograms map[common.Location]*bbq.InstructionProgram
 
 	isInheritedCode bool
 }
@@ -148,15 +153,12 @@ func NewInstructionCompilerWithConfig(
 }
 
 type GlobalImport struct {
-	Location common.Location
-
-	// Location-qualified canonical name
-	CanonicalName string
+	CanonicalName bbq.CanonicalName
 }
 
 func NewGlobalImport(canonicalName string) GlobalImport {
 	return GlobalImport{
-		CanonicalName: canonicalName,
+		CanonicalName: bbq.NewCanonicalName(nil, canonicalName),
 	}
 }
 
@@ -168,13 +170,12 @@ func newCompiler[E, T any](
 	typeGen TypeGen[T],
 ) *Compiler[E, T] {
 
-	var importedGlobals *activations.Activation[GlobalImport]
+	var builtinGlobals *activations.Activation[GlobalImport]
 	if config.BuiltinGlobalsProvider != nil {
-		importedGlobals = config.BuiltinGlobalsProvider(location)
+		builtinGlobals = config.BuiltinGlobalsProvider(location)
 	} else {
-		importedGlobals = DefaultBuiltinGlobals()
+		builtinGlobals = DefaultBuiltinGlobals()
 	}
-	importedGlobals = activations.NewActivation(config.MemoryGauge, importedGlobals)
 
 	common.UseMemory(config.MemoryGauge, common.CompilerMemoryUsage)
 
@@ -183,8 +184,9 @@ func newCompiler[E, T any](
 		DesugaredElaboration: NewDesugaredElaboration(program.Elaboration, location),
 		Config:               config,
 		location:             location,
-		Globals:              make(map[string]bbq.Global),
-		importedGlobals:      importedGlobals,
+		Globals:              make(map[bbq.CanonicalName]bbq.Global),
+		importedGlobals:      make(map[bbq.CanonicalName]GlobalImport),
+		builtinGlobals:       builtinGlobals,
 		typesInPool:          make(map[commons.TypeCacheKey]uint16),
 		constantsInPool:      make(map[constantUniqueKey]*DecodedConstant),
 		compositeTypeStack: &Stack[sema.CompositeKindedType]{
@@ -194,29 +196,32 @@ func newCompiler[E, T any](
 		typeGen:             typeGen,
 		postConditionsIndex: -1,
 		addedImports:        make(map[common.Location]struct{}),
+		importedPrograms:    make(map[common.Location]*bbq.InstructionProgram),
 	}
 }
 
-func (c *Compiler[E, _]) findGlobal(canonicalName string) bbq.Global {
+func (c *Compiler[E, _]) findGlobal(canonicalName bbq.CanonicalName) bbq.Global {
 	global, ok := c.Globals[canonicalName]
 	if ok {
 		return global
 	}
 
-	// TODO: Now that names are canonical, is this really needed now?
-	// If failed to find, then try with type-qualified name.
-	// This is because contract functions/type-constructors can be accessed without the contract name.
-	// e.g: SomeContract.Foo() == Foo(), within `SomeContract`.
-	if !c.compositeTypeStack.isEmpty() {
+	// Nested declarations can be referenced without their enclosing contract
+	// name from within that contract (e.g. `ABC()` for `Foo.ABC`).
+	if canonicalName.TypeQualifier == "" && !c.compositeTypeStack.isEmpty() {
 		enclosingContract := c.compositeTypeStack.bottom()
-		typeQualifiedName := c.canonicalName(enclosingContract, canonicalName)
+		typeQualifiedName := c.canonicalName(enclosingContract, canonicalName.Name)
 		global, ok = c.Globals[typeQualifiedName]
 		if ok {
 			return global
 		}
 	}
 
-	importedGlobal := c.importedGlobals.Find(canonicalName)
+	// TODO: Once imported-globals and builtin-globals are merged, this would be a single lookup.
+	importedGlobal, ok := c.importedGlobals[canonicalName]
+	if !ok && canonicalName.Location == nil {
+		importedGlobal = c.builtinGlobals.Find(canonicalName.Name)
+	}
 	if importedGlobal == (GlobalImport{}) {
 		panic(errors.NewUnexpectedError("cannot find global declaration '%s'", canonicalName))
 	}
@@ -229,14 +234,16 @@ func (c *Compiler[E, _]) findGlobal(canonicalName string) bbq.Global {
 	// So set an index and add it to the 'globals'.
 	return c.addUsedImportedGlobal(
 		importedGlobal.CanonicalName,
-		importedGlobal.Location,
 	)
 }
 
 func (c *Compiler[E, _]) addUsedImportedGlobal(
-	canonicalName string,
-	location common.Location,
+	canonicalName bbq.CanonicalName,
 ) bbq.Global {
+	if existing, ok := c.Globals[canonicalName]; ok {
+		return existing
+	}
+
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewUnexpectedError("invalid global declaration '%s'", canonicalName))
@@ -245,7 +252,6 @@ func (c *Compiler[E, _]) addUsedImportedGlobal(
 	global := bbq.NewImportedGlobal(
 		c.Config.MemoryGauge,
 		canonicalName,
-		location,
 		uint16(count),
 	)
 	c.Globals[canonicalName] = global
@@ -265,16 +271,18 @@ func (c *Compiler[E, _]) addUsedImportedGlobal(
 // addGlobal reserves a global of the program currently being compiled.
 //
 // isTopLevel must reflect whether the global is declared at the top level of the
-// program, i.e. whether `canonicalName` is the program's location qualified with
-// `simpleName`, rather than being nested inside a type.
+// program, rather than being nested inside a type.
 // Top-level globals are the ones other programs may import,
 // so they are also recorded as exports of the program.
 func (c *Compiler[E, _]) addGlobal(
-	simpleName string,
-	canonicalName string,
+	canonicalName bbq.CanonicalName,
 	kind bbq.GlobalKind,
 	isTopLevel bool,
 ) bbq.Global {
+	if existing, ok := c.Globals[canonicalName]; ok {
+		return existing
+	}
+
 	count := len(c.Globals)
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid global declaration"))
@@ -284,11 +292,11 @@ func (c *Compiler[E, _]) addGlobal(
 
 	switch kind {
 	case bbq.GlobalKindFunction:
-		global = bbq.NewFunctionGlobal[E](c.Config.MemoryGauge, canonicalName, nil, uint16(count))
+		global = bbq.NewFunctionGlobal[E](c.Config.MemoryGauge, canonicalName, uint16(count))
 	case bbq.GlobalKindVariable:
-		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, canonicalName, nil, uint16(count))
+		global = bbq.NewVariableGlobal[E](c.Config.MemoryGauge, canonicalName, uint16(count))
 	case bbq.GlobalKindContract:
-		global = bbq.NewContractGlobal(c.Config.MemoryGauge, canonicalName, nil, uint16(count))
+		global = bbq.NewContractGlobal(c.Config.MemoryGauge, canonicalName, uint16(count))
 	default:
 		panic(errors.NewDefaultUserError("unsupported global kind %#q", kind.String()))
 	}
@@ -299,7 +307,6 @@ func (c *Compiler[E, _]) addGlobal(
 		c.exports = append(
 			c.exports,
 			bbq.Export{
-				SimpleName:    simpleName,
 				CanonicalName: canonicalName,
 			},
 		)
@@ -308,23 +315,18 @@ func (c *Compiler[E, _]) addGlobal(
 	return global
 }
 
-func (c *Compiler[_, _]) addImportedGlobal(location common.Location, canonicalName string) {
-	existing := c.importedGlobals.Find(canonicalName)
-	if existing != (GlobalImport{}) {
+func (c *Compiler[_, _]) addImportedGlobal(canonicalName bbq.CanonicalName) {
+	if _, ok := c.importedGlobals[canonicalName]; ok {
 		return
 	}
-	c.importedGlobals.Set(
-		canonicalName,
-		GlobalImport{
-			Location:      location,
-			CanonicalName: canonicalName,
-		},
-	)
+	c.importedGlobals[canonicalName] = GlobalImport{
+		CanonicalName: canonicalName,
+	}
 }
 
 func (c *Compiler[E, _]) addFunction(
 	simpleName string,
-	canonicalName string,
+	canonicalName bbq.CanonicalName,
 	parameterCount uint16,
 	functionType *sema.FunctionType,
 ) *function[E] {
@@ -340,7 +342,7 @@ func (c *Compiler[E, _]) addFunction(
 
 func (c *Compiler[E, _]) addGlobalVariableWithGetter(
 	simpleName string,
-	canonicalName string,
+	canonicalName bbq.CanonicalName,
 	functionType *sema.FunctionType,
 ) *globalVariable[E] {
 	function := c.newFunction(
@@ -361,7 +363,7 @@ func (c *Compiler[E, _]) addGlobalVariableWithGetter(
 }
 
 func (c *Compiler[E, _]) addGlobalVariable(
-	canonicalName string,
+	canonicalName bbq.CanonicalName,
 ) *globalVariable[E] {
 	globalVariable := &globalVariable[E]{
 		CanonicalName: canonicalName,
@@ -374,7 +376,7 @@ func (c *Compiler[E, _]) addGlobalVariable(
 
 func (c *Compiler[E, _]) newFunction(
 	simpleName string,
-	canonicalName string,
+	canonicalName bbq.CanonicalName,
 	parameterCount uint16,
 	functionType *sema.FunctionType,
 ) *function[E] {
@@ -756,14 +758,15 @@ func (c *Compiler[E, T]) Compile() *bbq.Program[E, T] {
 	// associate the contract with the global for linking
 	// can't do this in exportContracts because it's called before initializeAllGlobals
 	for _, contract := range contracts {
-		global := c.Globals[contract.CanonicalName]
+		canonicalName := contract.CanonicalName
+		global := c.Globals[canonicalName]
 		if contractGlobal, ok := global.(*bbq.ContractGlobal); ok {
-			if contractGlobal.GlobalInfo.Location != nil && global == nil {
-				panic(errors.NewUnexpectedError("global not found for contract %s", contract.CanonicalName))
+			if canonicalName.Location != nil && global == nil {
+				panic(errors.NewUnexpectedError("global not found for contract %s", canonicalName))
 			}
 			contractGlobal.Contract = contract
 		} else {
-			panic(errors.NewUnexpectedError("wrong global type found for contract %s", contract.CanonicalName))
+			panic(errors.NewUnexpectedError("wrong global type found for contract %s", canonicalName))
 		}
 	}
 
@@ -801,7 +804,7 @@ func (c *Compiler[_, _]) initializeAllGlobals(
 	// Reserve globals for the contract values before everything.
 	// Contract values must be always start at the zero-th index.
 	for _, contract := range contract {
-		c.addGlobal(contract.SimpleName, contract.CanonicalName, bbq.GlobalKindContract, true)
+		c.addGlobal(contract.CanonicalName, bbq.GlobalKindContract, true)
 	}
 
 	c.initializeVariableGlobals(
@@ -834,7 +837,7 @@ func (c *Compiler[_, _]) initializeVariableGlobals(
 	for _, declaration := range variableDecls {
 		variableName := declaration.Identifier.Identifier
 		canonicalVarName := c.canonicalName(enclosingType, variableName)
-		c.addGlobal(variableName, canonicalVarName, bbq.GlobalKindVariable, isTopLevel)
+		c.addGlobal(canonicalVarName, bbq.GlobalKindVariable, isTopLevel)
 	}
 
 	for _, declaration := range enumCaseDecls {
@@ -843,7 +846,7 @@ func (c *Compiler[_, _]) initializeVariableGlobals(
 		// e.g: `enum E: UInt8 { case A; case B }` will reserve globals `E.A`, `E.B`.
 		enumCaseName := declaration.Identifier.Identifier
 		canonicalCaseName := c.canonicalName(enclosingType, enumCaseName)
-		c.addGlobal(enumCaseName, canonicalCaseName, bbq.GlobalKindVariable, isTopLevel)
+		c.addGlobal(canonicalCaseName, bbq.GlobalKindVariable, isTopLevel)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -882,7 +885,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// must be also visited here. And must only visit them. e.g: Don't visit inits.
 			functionName := declaration.FunctionDeclaration.Identifier.Identifier
 			functionCanonicalName := c.canonicalName(enclosingType, functionName)
-			c.addGlobal(functionName, functionCanonicalName, bbq.GlobalKindFunction, isTopLevel)
+			c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction, isTopLevel)
 		}
 	}
 
@@ -891,21 +894,21 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 	if enclosingType != nil {
 		for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
 			functionName := boundFunction.Name
-			qualifiedName := c.canonicalName(enclosingType, functionName)
-			c.addGlobal(functionName, qualifiedName, bbq.GlobalKindFunction, false)
+			functionCanonicalName := c.canonicalName(enclosingType, functionName)
+			c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction, false)
 		}
 
 		if enclosingType.GetCompositeKind().SupportsAttachments() {
 			functionName := sema.CompositeForEachAttachmentFunctionName
 			functionCanonicalName := c.canonicalName(enclosingType, functionName)
-			c.addGlobal(functionName, functionCanonicalName, bbq.GlobalKindFunction, false)
+			c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction, false)
 		}
 	}
 
 	for _, declaration := range functionDecls {
 		functionName := declaration.Identifier.Identifier
 		functionCanonicalName := c.canonicalName(enclosingType, functionName)
-		c.addGlobal(functionName, functionCanonicalName, bbq.GlobalKindFunction, isTopLevel)
+		c.addGlobal(functionCanonicalName, bbq.GlobalKindFunction, isTopLevel)
 	}
 
 	for _, declaration := range compositeDecls {
@@ -922,7 +925,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 
 		var (
 			simpleConstructorName    string
-			canonicalConstructorName string
+			constructorCanonicalName bbq.CanonicalName
 			constructorIsTopLevel    bool
 		)
 
@@ -932,7 +935,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// (already reserved in `reserveGlobals` before getting here).
 			// Suffix the type-name.
 			simpleConstructorName = commons.InitFunctionName
-			canonicalConstructorName = c.canonicalName(compositeType, simpleConstructorName)
+			constructorCanonicalName = c.canonicalName(compositeType, simpleConstructorName)
 			// The constructor is nested inside the composite, even when the composite itself
 			// is top-level: its canonical name is qualified with the composite's type.
 			constructorIsTopLevel = false
@@ -942,20 +945,19 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
 			// Suffix the type-name.
 			simpleConstructorName = commons.InitFunctionName
-			canonicalConstructorName = c.canonicalName(compositeType, simpleConstructorName)
+			constructorCanonicalName = c.canonicalName(compositeType, simpleConstructorName)
 			constructorIsTopLevel = false
 
 		default:
 			// For other composite types, the type-name is used for the constructor function.
 			// So the constructor is top-level exactly when the composite itself is.
 			simpleConstructorName = declaration.Identifier.Identifier
-			canonicalConstructorName = commons.TypeQualifier(compositeType)
+			constructorCanonicalName = c.canonicalNameForType(compositeType)
 			constructorIsTopLevel = isTopLevel
 		}
 
 		c.addGlobal(
-			simpleConstructorName,
-			canonicalConstructorName,
+			constructorCanonicalName,
 			bbq.GlobalKindFunction,
 			constructorIsTopLevel,
 		)
@@ -995,9 +997,8 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		// Reserve a global for the constructor function.
 		// The attachment's type-name is used for it,
 		// so it is top-level exactly when the attachment itself is.
-		constructorCanonicalName := commons.TypeQualifier(compositeType)
+		constructorCanonicalName := c.canonicalNameForType(compositeType)
 		c.addGlobal(
-			declaration.Identifier.Identifier,
 			constructorCanonicalName,
 			bbq.GlobalKindFunction,
 			isTopLevel,
@@ -1026,7 +1027,6 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 
 			initFunctionCanonicalName := c.canonicalName(enclosingType, commons.ProgramInitFunctionName)
 			c.addGlobal(
-				commons.ProgramInitFunctionName,
 				initFunctionCanonicalName,
 				bbq.GlobalKindFunction,
 				isTopLevel,
@@ -1113,7 +1113,6 @@ func (c *Compiler[_, _]) exportImports() []bbq.Import {
 		for _, importedGlobal := range c.usedImportedGlobals {
 			globalInfo := importedGlobal.GetGlobalInfo()
 			bbqImport := bbq.Import{
-				Location:      globalInfo.Location,
 				CanonicalName: globalInfo.CanonicalName,
 			}
 			exportedImports = append(exportedImports, bbqImport)
@@ -1251,15 +1250,11 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 		}
 
 		contractType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
-		location := contractType.GetLocation()
-
-		canonicalName := commons.TypeQualifier(contractType)
+		canonicalName := c.canonicalNameForType(contractType)
 
 		common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQContractMemoryUsage)
 		contract := bbq.Contract{
-			SimpleName:    declaration.Identifier.Identifier,
 			CanonicalName: canonicalName,
-			Location:      location,
 		}
 		contracts = append(
 			contracts,
@@ -2866,7 +2861,7 @@ func (c *Compiler[_, _]) VisitIdentifierExpression(expression *ast.IdentifierExp
 	return
 }
 
-func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.IdentifierExpression) string {
+func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.IdentifierExpression) bbq.CanonicalName {
 	// A global identifier of a program can be:
 	//	- An import.
 	//  - A construct defined in the same program, which could be a:
@@ -2881,7 +2876,7 @@ func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.Identifie
 	// 1.1) Types
 	variable, found := c.DesugaredElaboration.GetGlobalType(simpleName)
 	if found {
-		return commons.TypeQualifier(variable.Type)
+		return c.canonicalNameForType(variable.Type)
 	}
 
 	// 1.2) Functions and variables
@@ -2898,10 +2893,10 @@ func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.Identifie
 		return importedGlobalCanonicalName
 	}
 
-	return simpleName
+	return bbq.NewCanonicalName(nil, simpleName)
 }
 
-func (c *Compiler[_, _]) emitGlobalLoad(name string) {
+func (c *Compiler[_, _]) emitGlobalLoad(name bbq.CanonicalName) {
 	global := c.findGlobal(name)
 	c.emit(opcode.InstructionGetGlobal{
 		Global: global.GetGlobalInfo().Index,
@@ -2909,7 +2904,7 @@ func (c *Compiler[_, _]) emitGlobalLoad(name string) {
 }
 
 func (c *Compiler[_, _]) emitMethodLoad(
-	name string,
+	name bbq.CanonicalName,
 	receiverType sema.Type,
 ) {
 	global := c.findGlobal(name)
@@ -3089,7 +3084,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 	invocationType := memberInfo.Member.TypeAnnotation.Type.(*sema.FunctionType)
 	if invocationType.IsConstructor {
-		funcName = c.canonicalName(
+		canonicalFuncName := c.canonicalName(
 			memberInfo.AccessedType,
 			funcName,
 		)
@@ -3097,7 +3092,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 		// Calling a type constructor must be invoked statically. e.g: `SomeContract.Foo()`.
 
 		// Load function value
-		c.emitGlobalLoad(funcName)
+		c.emitGlobalLoad(canonicalFuncName)
 
 		c.emitInvocation(
 			expression,
@@ -3159,7 +3154,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 	}
 
 	// Load function value.
-	funcName = c.canonicalName(
+	canonicalFuncName := c.canonicalName(
 		accessedType,
 		funcName,
 	)
@@ -3172,7 +3167,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 		// Compile as static-function call.
 		// No receiver is loaded.
-		c.emitGlobalLoad(funcName)
+		c.emitGlobalLoad(canonicalFuncName)
 
 		c.emitInvocation(
 			expression,
@@ -3192,7 +3187,7 @@ func (c *Compiler[_, _]) compileMethodInvocation(
 
 				// Get the method as a bound function.
 				// This is needed to capture the implicit reference that's get created by bound functions.
-				c.emitMethodLoad(funcName, accessedType)
+				c.emitMethodLoad(canonicalFuncName, accessedType)
 
 				c.emitInvocation(
 					expression,
@@ -3487,8 +3482,8 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 			if isDynamicMethodInvocation(accessedType) {
 				c.emitDynamicMethodLoad(memberName, accessedType)
 			} else {
-				memberName = c.canonicalName(accessedType, memberName)
-				c.emitMethodLoad(memberName, accessedType)
+				memberCanonicalName := c.canonicalName(accessedType, memberName)
+				c.emitMethodLoad(memberCanonicalName, accessedType)
 			}
 
 		default:
@@ -3505,9 +3500,9 @@ func (c *Compiler[_, _]) compileMemberAccess(expression *ast.MemberExpression) {
 			// TODO: Avoid loading the receiver for constructors.
 			c.emit(opcode.InstructionDrop{})
 
-			memberName = c.canonicalName(accessedType, memberName)
 			// Load function value
-			c.emitGlobalLoad(memberName)
+			functionCanonicalName := c.canonicalName(accessedType, memberName)
+			c.emitGlobalLoad(functionCanonicalName)
 		}
 	}
 
@@ -3779,9 +3774,10 @@ func (c *Compiler[_, _]) VisitFunctionExpression(expression *ast.FunctionExpress
 
 	functionType := c.DesugaredElaboration.FunctionExpressionFunctionType(desugaredExpression)
 
+	// TODO: Do anonymous functions need an autogenerated name to avoid conflicts?
 	function := c.addFunction(
 		"",
-		"",
+		bbq.CanonicalName{},
 		uint16(parameterCount),
 		functionType,
 	)
@@ -3939,7 +3935,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 
 	var (
 		functionSimpleName    string
-		functionCanonicalName string
+		functionCanonicalName bbq.CanonicalName
 	)
 	switch kind {
 	case common.CompositeKindContract:
@@ -3956,7 +3952,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
 		functionSimpleName = enclosingType.GetIdentifier()
-		functionCanonicalName = commons.TypeQualifier(enclosingType)
+		functionCanonicalName = c.canonicalNameForType(enclosingType)
 	}
 
 	parameterCount := 0
@@ -4006,7 +4002,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		}
 	}
 
-	typeName := commons.TypeQualifier(enclosingType)
+	typeName := c.canonicalNameForType(enclosingType)
 
 	if address == common.ZeroAddress {
 
@@ -4133,7 +4129,7 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 		parameterCount int
 		isObjectMethod bool
 		isAttachment   bool
-		functionName   string
+		functionName   bbq.CanonicalName
 	)
 
 	paramList := declaration.ParameterList
@@ -4289,7 +4285,7 @@ func (c *Compiler[_, _]) VisitInterfaceDeclaration(declaration *ast.InterfaceDec
 func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
 	for _, boundFunction := range CommonBuiltinTypeBoundFunctions {
 		name := boundFunction.Name
-		qualifiedName := commons.TypeQualifiedName(typ, name)
+		qualifiedName := c.canonicalName(typ, name)
 		c.addFunction(
 			name,
 			qualifiedName,
@@ -4303,7 +4299,7 @@ func (c *Compiler[_, _]) addBuiltinMethods(typ sema.Type) {
 		kind := t.GetCompositeKind()
 		if kind.SupportsAttachments() {
 			name := sema.CompositeForEachAttachmentFunctionName
-			qualifiedName := commons.TypeQualifiedName(typ, name)
+			qualifiedName := c.canonicalName(typ, name)
 			functionType := sema.CompositeForEachAttachmentFunctionType(kind)
 			c.addFunction(
 				name,
@@ -4354,7 +4350,7 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 
 	for _, resolvedLocation := range resolvedLocations {
 		location := resolvedLocation.Location
-		c.addGlobalsFromImportedProgram(location)
+		importedProgram := c.addGlobalsFromImportedProgram(location)
 
 		// A program imports constructs using their simple name (e.g: `import Foo from 0x01`)
 		// But the actual imported compiled program use canonical-name for exported globals.
@@ -4377,19 +4373,19 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		} else {
 			// Wildcard import (e.g: `import "imported"`).
 			// Set up canonical names mapping for all exported globals from the imported program.
-			c.populateWildcardImportCanonicalNames(location)
+			c.populateWildcardImportCanonicalNames(importedProgram)
 		}
 	}
 
 	return
 }
 
-func (c *Compiler[_, _]) populateWildcardImportCanonicalNames(location common.Location) {
-	if location == nil {
+func (c *Compiler[_, _]) populateWildcardImportCanonicalNames(
+	importedProgram *bbq.InstructionProgram,
+) {
+	if importedProgram == nil {
 		return
 	}
-
-	importedProgram := c.Config.ImportHandler(location)
 
 	// Only the constructs the imported program exports are brought into scope.
 	// Its remaining globals are not importable by their simple name:
@@ -4399,29 +4395,34 @@ func (c *Compiler[_, _]) populateWildcardImportCanonicalNames(location common.Lo
 	// or they are that program's own imports, which it does not re-export.
 	for _, export := range importedProgram.Exports {
 		c.DesugaredElaboration.SetImportCanonicalName(
-			export.SimpleName,
+			export.CanonicalName.Name,
 			export.CanonicalName,
 		)
 	}
 }
 
-func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location) {
+func (c *Compiler[_, _]) addGlobalsFromImportedProgram(
+	location common.Location,
+) *bbq.InstructionProgram {
 	// Built-in location has no program.
 	if location == nil {
-		return
+		return nil
 	}
 
 	// If the imports are already added for this location, then no need to add again.
 	if _, ok := c.addedImports[location]; ok {
-		return
+		return c.importedPrograms[location]
 	}
 
 	importedProgram := c.Config.ImportHandler(location)
+	c.importedPrograms[location] = importedProgram
+
+	// TODO: Can the "importedProgram.Exports" be used to populate imported globals?
 
 	// Add a global variable for the imported contract value.
 	contracts := importedProgram.Contracts
 	for _, contract := range contracts {
-		c.addImportedGlobal(location, contract.CanonicalName)
+		c.addImportedGlobal(contract.CanonicalName)
 	}
 
 	for _, variable := range importedProgram.Variables {
@@ -4435,19 +4436,21 @@ func (c *Compiler[_, _]) addGlobalsFromImportedProgram(location common.Location)
 			//
 			// Only add them if they are not already added.
 			// e.g: Could have more than one path to a transitive import.
-			c.addUsedImportedGlobal(canonicalName, location)
+			c.addUsedImportedGlobal(canonicalName)
 		}
 	}
 
 	for _, function := range importedProgram.Functions {
-		c.addImportedGlobal(location, function.CanonicalName)
+		c.addImportedGlobal(function.CanonicalName)
 	}
 
 	c.addedImports[location] = struct{}{}
 
 	for _, impt := range importedProgram.Imports {
-		c.addGlobalsFromImportedProgram(impt.Location)
+		c.addGlobalsFromImportedProgram(impt.CanonicalName.Location)
 	}
+
+	return importedProgram
 }
 
 func (c *Compiler[_, _]) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
@@ -4960,23 +4963,42 @@ func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
 	}
 }
 
-func (c *Compiler[E, _]) canonicalName(enclosingType sema.Type, identifier string) string {
-	// If there is an enclosing type, then get the type-qualified name.
-	// Type-qualified name is already location-qualified.
-	if enclosingType != nil {
-		return commons.TypeQualifiedName(enclosingType, identifier)
+func (c *Compiler[E, _]) canonicalName(enclosingType sema.Type, identifier string) bbq.CanonicalName {
+	if enclosingType == nil {
+		return bbq.NewCanonicalName(c.location, identifier)
 	}
 
-	// Otherwise, generate a location-qualified name.
-	return commons.LocationQualifiedName(
-		c.Config.MemoryGauge,
-		c.location,
+	typeQualifier := commons.TypeQualifier(enclosingType)
+	location := locationOfType(enclosingType)
+	return bbq.NewTypedCanonicalName(
+		location,
+		typeQualifier,
 		identifier,
 	)
 }
 
-func (c *Compiler[E, _]) canonicalNameAt(location common.Location, identifier string) string {
-	memoryGauge := c.Config.MemoryGauge
-	id := location.TypeID(memoryGauge, identifier)
-	return string(id)
+func (c *Compiler[E, _]) canonicalNameAt(location common.Location, identifier string) bbq.CanonicalName {
+	return bbq.NewCanonicalName(location, identifier)
+}
+
+func (c *Compiler[E, _]) canonicalNameForType(typ sema.Type) bbq.CanonicalName {
+	name := commons.TypeQualifier(typ)
+	location := locationOfType(typ)
+	return bbq.NewCanonicalName(location, name)
+}
+
+func locationOfType(typ sema.Type) common.Location {
+	switch typ := typ.(type) {
+	case *sema.FunctionType:
+		if typ.TypeFunctionType != nil {
+			return locationOfType(typ.TypeFunctionType)
+		}
+	case *sema.ReferenceType:
+		return locationOfType(typ.Type)
+	case *sema.IntersectionType:
+		return locationOfType(typ.Types[0])
+	case sema.LocatedType:
+		return typ.GetLocation()
+	}
+	return nil
 }

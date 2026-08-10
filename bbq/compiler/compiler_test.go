@@ -53,6 +53,26 @@ func assertGlobalsEqual(t *testing.T, expected []bbq.GlobalInfo, actual []bbq.Gl
 	}
 }
 
+func canonicalName(typeID string) bbq.CanonicalName {
+	location, name, err := common.DecodeTypeID(nil, typeID)
+	if err != nil {
+		return bbq.NewCanonicalName(nil, typeID)
+	}
+	return bbq.NewCanonicalName(location, name)
+}
+
+// typedCanonicalName creates a CanonicalName with TypeQualifier derived from
+// Name as the part before the last "." (or "" if no ".").
+func typedCanonicalName(typeID string) bbq.CanonicalName {
+	c := canonicalName(typeID)
+	c.TypeQualifier = commons.TypeQualifierFromName(c.Name)
+	return c
+}
+
+// methodCanonicalName is an alias for typedCanonicalName; both derive
+// TypeQualifier the same way.
+var methodCanonicalName = typedCanonicalName
+
 func assertTypesEqual(t *testing.T, expectedTypes, actualTypes []interpreter.StaticType) {
 	require.Equal(t, len(expectedTypes), len(actualTypes))
 	for i, expectedType := range expectedTypes {
@@ -80,9 +100,9 @@ func referencedGlobalCanonicalNames(
 	for _, instr := range code {
 		switch i := instr.(type) {
 		case opcode.InstructionGetGlobal:
-			names = append(names, program.Globals[i.Global].GetGlobalInfo().CanonicalName)
+			names = append(names, program.Globals[i.Global].GetGlobalInfo().CanonicalName.String())
 		case opcode.InstructionGetMethod:
-			names = append(names, program.Globals[i.Method].GetGlobalInfo().CanonicalName)
+			names = append(names, program.Globals[i.Method].GetGlobalInfo().CanonicalName.String())
 		}
 	}
 	return names
@@ -4290,19 +4310,19 @@ func TestCompileDefaultFunction(t *testing.T) {
 	// Not interested in the content of the constructor.
 	concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 	constructor := program.Functions[concreteTypeConstructorIndex]
-	require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
+	require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName.String())
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
+	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[typedCanonicalName(concreteTypeConstructorName)].GetGlobalInfo().Index)
 
 	// `Test` type's `test` function.
 
 	concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 	concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
+	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName.String())
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
+	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[methodCanonicalName(concreteTypeTestFuncName)].GetGlobalInfo().Index)
 
 	// Should be calling into interface's default function.
 	// ```
@@ -4356,10 +4376,10 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	interfaceTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "IA.test")
 	interfaceTypeTestFunc := program.Functions[interfaceFunctionIndex]
-	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.CanonicalName)
+	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.CanonicalName.String())
 
 	// Also check if the globals are linked properly.
-	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].GetGlobalInfo().Index)
+	assert.Equal(t, interfaceFunctionIndex, comp.Globals[methodCanonicalName(interfaceTypeTestFuncName)].GetGlobalInfo().Index)
 
 	// Should contain the implementation.
 	// ```
@@ -4781,10 +4801,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Not interested in the content of the constructor.
 		concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
+		require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName.String())
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[typedCanonicalName(concreteTypeConstructorName)].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -4798,10 +4818,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName.String())
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[methodCanonicalName(concreteTypeTestFuncName)].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -5002,10 +5022,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 		// Not interested in the content of the constructor.
 		concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
+		require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName.String())
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
+		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[typedCanonicalName(concreteTypeConstructorName)].GetGlobalInfo().Index)
 
 		// `Test` type's `test` function.
 
@@ -5020,10 +5040,10 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName.String())
 
 		// Also check if the globals are linked properly.
-		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
+		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[methodCanonicalName(concreteTypeTestFuncName)].GetGlobalInfo().Index)
 
 		// Would be equivalent to:
 		// ```
@@ -5293,7 +5313,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, dLocation, "D.Vault.getBalance")
 		concreteTypeTestFunc := dProgram.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName.String())
 
 		// Would be equivalent to:
 		// ```
@@ -5389,16 +5409,13 @@ func TestCompileFunctionConditions(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location:      aLocation,
-					CanonicalName: "A.0000000000000001.A.TestStruct",
+				CanonicalName: typedCanonicalName("A.0000000000000001.A.TestStruct"),
+			},
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.A.TestStruct.test"),
 				},
 				{
-					Location:      aLocation,
-					CanonicalName: "A.0000000000000001.A.TestStruct.test",
-				},
-				{
-					Location:      nil,
-					CanonicalName: "$failPreCondition",
+					CanonicalName: canonicalName("$failPreCondition"),
 				},
 			},
 			dProgram.Imports,
@@ -6468,13 +6485,13 @@ func TestCompileTransaction(t *testing.T) {
 	constructor := program.Functions[transactionInitFunctionIndex]
 	require.Equal(t,
 		qualifiedTransactionName,
-		constructor.CanonicalName,
+		constructor.CanonicalName.String(),
 	)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+transactionInitFunctionIndex,
-		comp.Globals[qualifiedTransactionName].GetGlobalInfo().Index,
+		comp.Globals[typedCanonicalName(qualifiedTransactionName)].GetGlobalInfo().Index,
 	)
 
 	transactionType := &interpreter.CompositeStaticType{
@@ -6503,13 +6520,13 @@ func TestCompileTransaction(t *testing.T) {
 	prepareFunction := program.Functions[prepareFunctionIndex]
 	require.Equal(t,
 		qualifiedPrepareName,
-		prepareFunction.CanonicalName,
+		prepareFunction.CanonicalName.String(),
 	)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+prepareFunctionIndex,
-		comp.Globals[qualifiedPrepareName].GetGlobalInfo().Index,
+		comp.Globals[methodCanonicalName(qualifiedPrepareName)].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -6561,12 +6578,12 @@ func TestCompileTransaction(t *testing.T) {
 	//    }
 
 	executeFunction := program.Functions[executeFunctionIndex]
-	require.Equal(t, qualifiedExecuteName, executeFunction.CanonicalName)
+	require.Equal(t, qualifiedExecuteName, executeFunction.CanonicalName.String())
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+executeFunctionIndex,
-		comp.Globals[qualifiedExecuteName].GetGlobalInfo().Index,
+		comp.Globals[methodCanonicalName(qualifiedExecuteName)].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -6709,7 +6726,7 @@ func TestCompileTransaction(t *testing.T) {
 	initFunction := program.Functions[programInitFunctionIndex]
 	require.Equal(t,
 		qualifiedInitName,
-		initFunction.CanonicalName,
+		initFunction.CanonicalName.String(),
 	)
 
 	assert.Equal(t,
@@ -8821,13 +8838,12 @@ func TestCompileExports(t *testing.T) {
 			t,
 			[]bbq.Export{
 				{
-					SimpleName:    "Foo",
-					CanonicalName: "A.0000000000000001.Foo",
-				},
+				CanonicalName: typedCanonicalName("A.0000000000000001.Foo"),
 			},
-			program.Exports,
-		)
-	})
+		},
+		program.Exports,
+	)
+})
 
 	t.Run("top-level declarations", func(t *testing.T) {
 		t.Parallel()
@@ -8849,17 +8865,14 @@ func TestCompileExports(t *testing.T) {
 			t,
 			[]bbq.Export{
 				{
-					SimpleName:    "x",
-					CanonicalName: "S.test.x",
-				},
-				{
-					SimpleName:    "foo",
-					CanonicalName: "S.test.foo",
-				},
-				{
-					SimpleName:    "Bar",
-					CanonicalName: "S.test.Bar",
-				},
+				CanonicalName: canonicalName("S.test.x"),
+			},
+			{
+				CanonicalName: canonicalName("S.test.foo"),
+			},
+			{
+				CanonicalName: typedCanonicalName("S.test.Bar"),
+			},
 			},
 			program.Exports,
 		)
@@ -8909,11 +8922,10 @@ func TestCompileExports(t *testing.T) {
 			t,
 			[]bbq.Export{
 				{
-					SimpleName:    "Bar",
-					CanonicalName: "A.0000000000000001.Bar",
-				},
+				CanonicalName: typedCanonicalName("A.0000000000000001.Bar"),
 			},
-			barProgram.Exports,
+		},
+		barProgram.Exports,
 		)
 	})
 }
@@ -8973,18 +8985,16 @@ func TestCompileImports(t *testing.T) {
 		// Should have import for contract value `A` and the method `A.test`.
 		assert.Equal(
 			t,
-			[]bbq.Import{
-				{
-					Location:      aLocation,
-					CanonicalName: "A.0000000000000001.A",
-				},
-				{
-					Location:      aLocation,
-					CanonicalName: "A.0000000000000001.A.test",
-				},
+		[]bbq.Import{
+			{
+				CanonicalName: typedCanonicalName("A.0000000000000001.A"),
 			},
-			bProgram.Imports,
-		)
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.A.test"),
+			},
+		},
+		bProgram.Imports,
+	)
 	})
 
 	t.Run("transitive import", func(t *testing.T) {
@@ -9046,11 +9056,10 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location:      aLocation,
-					CanonicalName: "A.0000000000000001.A.Foo",
-				},
+				CanonicalName: typedCanonicalName("A.0000000000000001.A.Foo"),
 			},
-			bProgram.Imports,
+		},
+		bProgram.Imports,
 		)
 
 		// Deploy third contract
@@ -9080,19 +9089,16 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location:      bLocation,
-					CanonicalName: "A.0000000000000001.B.Bar",
-				},
-				{
-					Location:      bLocation,
-					CanonicalName: "A.0000000000000001.B.Bar.getFoo",
-				},
-				{
-					Location:      aLocation,
-					CanonicalName: "A.0000000000000001.A.Foo.test",
-				},
+				CanonicalName: typedCanonicalName("A.0000000000000001.B.Bar"),
 			},
-			cProgram.Imports,
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.B.Bar.getFoo"),
+			},
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.A.Foo.test"),
+			},
+		},
+		cProgram.Imports,
 		)
 	})
 
@@ -9212,13 +9218,13 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				// S1's inherited precondition -> 0x1's Foo
-				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo"},
-				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo.check"},
-				// Synthetic precondition-fail function (emitted after S1's precondition)
-				{Location: nil, CanonicalName: "$failPreCondition"},
-				// S2's inherited precondition -> 0x2's Foo
-				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo"},
-				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo.check"},
+			{CanonicalName: typedCanonicalName("A.0000000000000001.Foo")},
+			{CanonicalName: methodCanonicalName("A.0000000000000001.Foo.check")},
+			// Synthetic precondition-fail function (emitted after S1's precondition)
+			{CanonicalName: canonicalName("$failPreCondition")},
+			// S2's inherited precondition -> 0x2's Foo
+			{CanonicalName: typedCanonicalName("A.0000000000000002.Foo")},
+			{CanonicalName: methodCanonicalName("A.0000000000000002.Foo.check")},
 			},
 			consumerProgram.Imports,
 		)
@@ -9227,7 +9233,7 @@ func TestCompileImports(t *testing.T) {
 		// S1.test's inherited precondition must reference 0x1's Foo;
 		// S2.test's inherited precondition must reference 0x2's Foo.
 		s1Test := consumerProgram.Functions[7]
-		assert.Equal(t, "A.0000000000000005.Consumer.S1.test", s1Test.CanonicalName)
+		assert.Equal(t, "A.0000000000000005.Consumer.S1.test", s1Test.CanonicalName.String())
 		assert.Equal(t,
 			[]string{
 				"A.0000000000000001.Foo",       // GetGlobal: load 0x1's Foo contract value
@@ -9238,7 +9244,7 @@ func TestCompileImports(t *testing.T) {
 		)
 
 		s2Test := consumerProgram.Functions[12]
-		assert.Equal(t, "A.0000000000000005.Consumer.S2.test", s2Test.CanonicalName)
+		assert.Equal(t, "A.0000000000000005.Consumer.S2.test", s2Test.CanonicalName.String())
 		assert.Equal(t,
 			[]string{
 				"A.0000000000000002.Foo",       // GetGlobal: load 0x2's Foo contract value
@@ -9379,13 +9385,13 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				// S1's inherited precondition -> 0x1's Foo (deep)
-				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo"},
-				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo.check"},
-				// Synthetic precondition-fail function (emitted after S1's precondition)
-				{Location: nil, CanonicalName: "$failPreCondition"},
-				// S2's inherited precondition -> 0x2's Foo
-				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo"},
-				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo.check"},
+			{CanonicalName: typedCanonicalName("A.0000000000000001.Foo")},
+			{CanonicalName: methodCanonicalName("A.0000000000000001.Foo.check")},
+			// Synthetic precondition-fail function (emitted after S1's precondition)
+			{CanonicalName: canonicalName("$failPreCondition")},
+			// S2's inherited precondition -> 0x2's Foo
+			{CanonicalName: typedCanonicalName("A.0000000000000002.Foo")},
+			{CanonicalName: methodCanonicalName("A.0000000000000002.Foo.check")},
 			},
 			consumerProgram.Imports,
 		)
@@ -9394,7 +9400,7 @@ func TestCompileImports(t *testing.T) {
 		// S1.test's inherited precondition must reference 0x1's Foo (across the
 		// Wrapper -> DefinitionsA hop); S2.test's must reference 0x2's Foo.
 		s1Test := consumerProgram.Functions[7]
-		assert.Equal(t, "A.0000000000000005.Consumer.S1.test", s1Test.CanonicalName)
+		assert.Equal(t, "A.0000000000000005.Consumer.S1.test", s1Test.CanonicalName.String())
 		assert.Equal(t,
 			[]string{
 				"A.0000000000000001.Foo",       // GetGlobal: load 0x1's Foo contract value
@@ -9405,7 +9411,7 @@ func TestCompileImports(t *testing.T) {
 		)
 
 		s2Test := consumerProgram.Functions[12]
-		assert.Equal(t, "A.0000000000000005.Consumer.S2.test", s2Test.CanonicalName)
+		assert.Equal(t, "A.0000000000000005.Consumer.S2.test", s2Test.CanonicalName.String())
 		assert.Equal(t,
 			[]string{
 				"A.0000000000000002.Foo",       // GetGlobal: load 0x2's Foo contract value
@@ -9496,12 +9502,10 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location:      definitionsLocation,
-					CanonicalName: "A.0000000000000001.check",
+					CanonicalName: bbq.NewCanonicalName(definitionsLocation, "check"),
 				},
 				{
-					Location:      nil,
-					CanonicalName: "$failPreCondition",
+					CanonicalName: canonicalName("$failPreCondition"),
 				},
 			},
 			consumerProgram.Imports,
@@ -9510,7 +9514,7 @@ func TestCompileImports(t *testing.T) {
 		var testFunction *bbq.Function[opcode.Instruction]
 		for index := range consumerProgram.Functions {
 			function := &consumerProgram.Functions[index]
-			if function.CanonicalName == "A.0000000000000003.Consumer.S.test" {
+			if function.CanonicalName == methodCanonicalName("A.0000000000000003.Consumer.S.test") {
 				testFunction = function
 				break
 			}
@@ -13124,8 +13128,7 @@ func TestCompileImportEnumCase(t *testing.T) {
 		t,
 		[]bbq.Import{
 			{
-				Location:      aLocation,
-				CanonicalName: "A.0000000000000001.A.E.X",
+				CanonicalName: methodCanonicalName("A.0000000000000001.A.E.X"),
 			},
 		},
 		bProgram.Imports,
@@ -13382,7 +13385,7 @@ func TestCompileInjectedContract(t *testing.T) {
 
 	aTestFunction := functions[3]
 
-	require.Equal(t, aTestFunction.CanonicalName, "S.test.A.test")
+	require.Equal(t, aTestFunction.CanonicalName.String(), "S.test.A.test")
 
 	bStaticType = &interpreter.CompositeStaticType{
 		QualifiedIdentifier: "B",
@@ -13441,10 +13444,10 @@ func TestCompileInjectedContract(t *testing.T) {
 	assert.Equal(t,
 		[]bbq.Import{
 			{
-				CanonicalName: "B",
+				CanonicalName: canonicalName("B"),
 			},
 			{
-				CanonicalName: "B.c",
+				CanonicalName: methodCanonicalName("B.c"),
 			},
 		},
 		program.Imports,
@@ -13683,7 +13686,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 12)
 
 	defaultDestroyEventEmittingFunction := functions[8]
-	require.Equal(t, "A.0000000000000001.Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.CanonicalName)
+	require.Equal(t, "A.0000000000000001.Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.CanonicalName.String())
 
 	const inheritedEventConstructorIndex = 10
 	const selfDefinedABCEventConstructorIndex = 13
@@ -13831,40 +13834,35 @@ func TestCompileImportAlias(t *testing.T) {
 		)
 		assert.Equal(
 			t,
-			[]bbq.Import{
-				{
-					Location:      importLocation,
-					CanonicalName: "A.0000000000000001.Foo",
-				},
-				{
-					Location:      importLocation,
-					CanonicalName: "A.0000000000000001.Foo.hello",
-				},
+		[]bbq.Import{
+			{
+				CanonicalName: typedCanonicalName("A.0000000000000001.Foo"),
 			},
-			program.Imports,
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.Foo.hello"),
+			},
+		},
+		program.Imports,
 		)
 
 		// Imported types are location qualified.
 		assertGlobalsEqual(
 			t,
-			[]bbq.GlobalInfo{
-				{
-					Location:      nil,
-					CanonicalName: "S.test.test",
-					Index:         0,
-				},
-				{
-					Location:      importLocation,
-					CanonicalName: "A.0000000000000001.Foo",
-					Index:         1,
-				},
-				{
-					Location:      importLocation,
-					CanonicalName: "A.0000000000000001.Foo.hello",
-					Index:         2,
-				},
+		[]bbq.GlobalInfo{
+			{
+				CanonicalName: canonicalName("S.test.test"),
+				Index:         0,
 			},
-			program.Globals,
+			{
+				CanonicalName: typedCanonicalName("A.0000000000000001.Foo"),
+				Index:         1,
+			},
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.Foo.hello"),
+				Index:         2,
+			},
+		},
+		program.Globals,
 		)
 
 	})
@@ -13915,57 +13913,49 @@ func TestCompileImportAlias(t *testing.T) {
 
 		assert.Equal(
 			t,
-			[]bbq.Import{
-				{
-					Location:      importLocation,
-					CanonicalName: "A.0000000000000001.FooInterface.defaultHello",
-				},
+		[]bbq.Import{
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.FooInterface.defaultHello"),
 			},
-			program.Imports,
-		)
+		},
+		program.Imports,
+	)
 
-		// only imported function is a location qualified global.
-		assertGlobalsEqual(
-			t,
-			[]bbq.GlobalInfo{
-				{
-					Location:      nil,
-					CanonicalName: "A.0000000000000001.Bar",
-					Index:         0,
-				},
-				{
-					Location:      nil,
-					CanonicalName: "A.0000000000000001.Bar.getType",
-					Index:         1,
-				},
-				{
-					Location:      nil,
-					CanonicalName: "A.0000000000000001.Bar.isInstance",
-					Index:         2,
-				},
-				{
-					Location:      nil,
-					CanonicalName: "A.0000000000000001.Bar.forEachAttachment",
-					Index:         3,
-				},
-				{
-					Location:      nil,
-					CanonicalName: "A.0000000000000001.Bar.hello",
-					Index:         4,
-				},
-				{
-					Location:      nil,
-					CanonicalName: "A.0000000000000001.Bar.defaultHello",
-					Index:         5,
-				},
-				{
-					Location:      importLocation,
-					CanonicalName: "A.0000000000000001.FooInterface.defaultHello",
-					Index:         6,
-				},
+	// only imported function is a location qualified global.
+	assertGlobalsEqual(
+		t,
+		[]bbq.GlobalInfo{
+			{
+				CanonicalName: typedCanonicalName("A.0000000000000001.Bar"),
+				Index:         0,
 			},
-			program.Globals,
-		)
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.Bar.getType"),
+				Index:         1,
+			},
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.Bar.isInstance"),
+				Index:         2,
+			},
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.Bar.forEachAttachment"),
+				Index:         3,
+			},
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.Bar.hello"),
+				Index:         4,
+			},
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.Bar.defaultHello"),
+				Index:         5,
+			},
+			{
+				CanonicalName: methodCanonicalName("A.0000000000000001.FooInterface.defaultHello"),
+				Index:         6,
+			},
+		},
+		program.Globals,
+	)
 	})
 }
 
@@ -14755,16 +14745,14 @@ func TestCompileReferenceMethod(t *testing.T) {
 			&bbq.FunctionGlobal[opcode.Instruction]{
 				GlobalInfo: bbq.GlobalInfo{
 					Index:         0,
-					Location:      nil,
-					CanonicalName: "S.test.test",
+					CanonicalName: canonicalName("S.test.test"),
 				},
 				Function: &functions[0],
 			},
 			&bbq.ImportedGlobal{
 				GlobalInfo: bbq.GlobalInfo{
 					Index:         1,
-					Location:      nil,
-					CanonicalName: "$ArrayVariableSized.map",
+					CanonicalName: methodCanonicalName("$ArrayVariableSized.map"),
 				},
 			},
 		},
@@ -14968,7 +14956,7 @@ func TestCompileInheritedStatementEndingControlFlow(t *testing.T) {
 	testFunctionQualifiedName := commons.LocationQualifiedName(nil, bLocation, "B.Test.test")
 	var testFunction *bbq.Function[opcode.Instruction]
 	for i, function := range program.Functions {
-		if function.CanonicalName == testFunctionQualifiedName {
+		if function.CanonicalName == methodCanonicalName(testFunctionQualifiedName) {
 			testFunction = &program.Functions[i]
 			break
 		}

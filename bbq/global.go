@@ -18,9 +18,7 @@
 
 package bbq
 
-import (
-	"github.com/onflow/cadence/common"
-)
+import "github.com/onflow/cadence/common"
 
 //go:generate stringer -type=GlobalKind
 
@@ -34,9 +32,7 @@ const (
 )
 
 type GlobalInfo struct {
-	// CanonicalName is the location-qualified canonical name
-	CanonicalName string
-	Location      common.Location
+	CanonicalName CanonicalName
 	Index         uint16
 }
 
@@ -65,15 +61,13 @@ type ImportedGlobal struct {
 
 func NewFunctionGlobal[E any](
 	memoryGauge common.MemoryGauge,
-	canonicalName string,
-	location common.Location,
+	canonicalName CanonicalName,
 	index uint16,
 ) *FunctionGlobal[E] {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &FunctionGlobal[E]{
 		GlobalInfo: GlobalInfo{
 			CanonicalName: canonicalName,
-			Location:      location,
 			Index:         index,
 		},
 	}
@@ -97,15 +91,13 @@ func (g ImportedGlobal) GetGlobalInfo() GlobalInfo {
 
 func NewVariableGlobal[E any](
 	memoryGauge common.MemoryGauge,
-	canonicalName string,
-	location common.Location,
+	canonicalName CanonicalName,
 	index uint16,
 ) *VariableGlobal[E] {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &VariableGlobal[E]{
 		GlobalInfo: GlobalInfo{
 			CanonicalName: canonicalName,
-			Location:      location,
 			Index:         index,
 		},
 	}
@@ -113,15 +105,13 @@ func NewVariableGlobal[E any](
 
 func NewContractGlobal(
 	memoryGauge common.MemoryGauge,
-	canonicalName string,
-	location common.Location,
+	canonicalName CanonicalName,
 	index uint16,
 ) *ContractGlobal {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &ContractGlobal{
 		GlobalInfo: GlobalInfo{
 			CanonicalName: canonicalName,
-			Location:      location,
 			Index:         index,
 		},
 	}
@@ -129,15 +119,13 @@ func NewContractGlobal(
 
 func NewImportedGlobal(
 	memoryGauge common.MemoryGauge,
-	canonicalName string,
-	location common.Location,
+	canonicalName CanonicalName,
 	index uint16,
 ) *ImportedGlobal {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &ImportedGlobal{
 		GlobalInfo: GlobalInfo{
 			CanonicalName: canonicalName,
-			Location:      location,
 			Index:         index,
 		},
 	}

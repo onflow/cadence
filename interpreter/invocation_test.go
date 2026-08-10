@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -806,7 +807,13 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 
 			functionVariable := &interpreter.SimpleVariable{}
 			functionVariable.InitializeWithValue(functionValue)
-			programVM.SetGlobal(qualifiedMethodName, functionVariable)
+			programVM.SetGlobal(
+				bbq.NewCanonicalName(
+					location,
+					commons.QualifiedName(structType.Identifier, methodName),
+				),
+				functionVariable,
+			)
 
 			invokable = test_utils.NewVMInvokable(programVM, programs[location].DesugaredElaboration)
 

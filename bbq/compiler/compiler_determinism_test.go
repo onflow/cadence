@@ -40,7 +40,7 @@ func compileQualifiedFunctionNames(t *testing.T, code string) []string {
 
 	names := make([]string, 0, len(program.Functions))
 	for _, f := range program.Functions {
-		names = append(names, f.CanonicalName)
+		names = append(names, f.CanonicalName.String())
 	}
 	return names
 }

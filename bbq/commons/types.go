@@ -69,9 +69,12 @@ func LocationQualifiedName(
 
 // TypeQualifier returns the prefix to be appended to an identifier
 // (e.g: to a function name), to make it type-qualified.
-// For primitive types, the type-qualifier is the typeID itself.
+// For primitive types, the type-qualifier is the type name itself.
 // For derived types (e.g: arrays, dictionaries, capabilities, etc.) the type-qualifier
 // is a predefined identifier.
+// For nominal/located types, the type-qualifier is the type name only,
+// without location qualification (e.g. "Foo", not "A.01.Foo").
+// The location is carried separately by CanonicalName.Location.
 // TODO: Maybe make this a method on the type
 func TypeQualifier(typ sema.Type) string {
 	switch typ := typ.(type) {
@@ -103,10 +106,7 @@ func TypeQualifier(typ sema.Type) string {
 	case *sema.InclusiveRangeType:
 		return TypeQualifierInclusiveRange
 	default:
-		// Use the canonical type ID for all nominal types.
-		// For located types, this includes the declaration location (e.g. `A.01.Foo`)
-		// and prevents same-named types from different programs from sharing a BBQ global.
-		return string(typ.ID())
+		return typ.QualifiedString()
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
@@ -329,7 +330,11 @@ func (executor *contractFunctionExecutor) executeWithVM(
 
 	staticType := contractValue.StaticType(context)
 	semaType := context.SemaTypeFromStaticType(staticType)
-	qualifiedFuncName := commons.TypeQualifiedName(semaType, executor.functionName)
+	typeName := executor.contractLocation.QualifiedIdentifier(common.TypeID(semaType.ID()))
+	qualifiedFuncName := bbq.NewCanonicalName(
+		executor.contractLocation,
+		commons.QualifiedName(typeName, executor.functionName),
+	)
 
 	value, err := executor.vm.InvokeMethodExternally(
 		qualifiedFuncName,

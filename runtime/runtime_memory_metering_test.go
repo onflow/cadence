@@ -99,7 +99,7 @@ func TestRuntimeInterpreterAddressLocationMetering(t *testing.T) {
 
 		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindAddressLocation))
 		assert.Equal(t, uint64(2), memoryGauge.getMemory(common.MemoryKindElaboration))
-		assert.Equal(t, ifCompile[uint64](0xd8, 0), memoryGauge.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, uint64(0), memoryGauge.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(1), memoryGauge.getMemory(common.MemoryKindCadenceVoidValue))
 	})
 }

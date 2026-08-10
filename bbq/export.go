@@ -35,9 +35,5 @@ package bbq
 // import copies every global of the imported program. Narrowing this to public
 // constructs only would have to happen in both places at once.
 type Export struct {
-	// SimpleName is the unqualified identifier as it appears in source code.
-	// This is the name under which other programs import the construct.
-	SimpleName string
-	// CanonicalName is the location-qualified name of the corresponding global.
-	CanonicalName string
+	CanonicalName CanonicalName
 }

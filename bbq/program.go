@@ -43,8 +43,8 @@ func (p *Program[E, T]) GetFunctionName(index uint16) string {
 		panic("function index out of bounds")
 	}
 	function := p.Functions[index]
-	if function.CanonicalName != "" {
-		return function.CanonicalName
+	if !function.CanonicalName.IsEmpty() {
+		return function.CanonicalName.String()
 	}
 	if function.SimpleName != "" {
 		return function.SimpleName
