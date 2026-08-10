@@ -28,15 +28,16 @@ import (
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation or compilation.
-type Activation[T any] struct {
-	MemoryGauge common.MemoryGauge
-	entries     map[string]T
-	Parent      *Activation[T]
-	Depth       int
-	IsFunction  bool
-}
+type Activation[T any] = KeyedActivation[string, T]
 
 func NewActivation[T any](memoryGauge common.MemoryGauge, parent *Activation[T]) *Activation[T] {
+	return NewKeyedActivation[string, T](memoryGauge, parent)
+}
+
+func NewKeyedActivation[K comparable, V any](
+	memoryGauge common.MemoryGauge,
+	parent *KeyedActivation[K, V],
+) *KeyedActivation[K, V] {
 	var depth int
 	if parent != nil {
 		depth = parent.Depth + 1
@@ -44,23 +45,35 @@ func NewActivation[T any](memoryGauge common.MemoryGauge, parent *Activation[T])
 
 	common.UseMemory(memoryGauge, common.ActivationMemoryUsage)
 
-	return &Activation[T]{
+	return &KeyedActivation[K, V]{
 		Depth:       depth,
 		Parent:      parent,
 		MemoryGauge: memoryGauge,
 	}
 }
 
+// KeyedActivation is a map of keys to values.
+// It can be used to represent an active scope in a program,
+// i.e. it can be used as a symbol table during semantic analysis,
+// or as an activation record during interpretation or compilation.
+type KeyedActivation[K comparable, V any] struct {
+	MemoryGauge common.MemoryGauge
+	entries     map[K]V
+	Parent      *KeyedActivation[K, V]
+	Depth       int
+	IsFunction  bool
+}
+
 // Find returns the value for a given name in the activation.
 // It returns nil if no value is found.
-func (a *Activation[T]) Find(name string) (_ T) {
+func (a *KeyedActivation[K, V]) Find(key K) (_ V) {
 
 	current := a
 
 	for current != nil {
 
 		if current.entries != nil {
-			result, ok := current.entries[name]
+			result, ok := current.entries[key]
 			if ok {
 				return result
 			}
@@ -73,9 +86,9 @@ func (a *Activation[T]) Find(name string) (_ T) {
 }
 
 // ValuesInFunction returns all values in the current function activation.
-func (a *Activation[T]) ValuesInFunction() map[string]T {
+func (a *KeyedActivation[K, V]) ValuesInFunction() map[K]V {
 
-	values := make(map[string]T)
+	values := make(map[K]V)
 
 	current := a
 
@@ -100,25 +113,25 @@ func (a *Activation[T]) ValuesInFunction() map[string]T {
 }
 
 // ValuesInCurrentLevel returns all values in the current activation level.
-func (a *Activation[T]) ValuesInCurrentLevel() map[string]T {
+func (a *KeyedActivation[K, V]) ValuesInCurrentLevel() map[K]V {
 	return a.entries
 }
 
 // Set sets the given name-value pair in the activation.
-func (a *Activation[T]) Set(name string, value T) {
+func (a *KeyedActivation[K, V]) Set(name K, value V) {
 	if a.entries == nil {
 		common.UseMemory(a.MemoryGauge, common.ActivationEntriesMemoryUsage)
-		a.entries = make(map[string]T)
+		a.entries = make(map[K]V)
 	}
 
 	a.entries[name] = value
 }
 
-func (a *Activation[T]) Clone() *Activation[T] {
-	clone := NewActivation[T](a.MemoryGauge, a.Parent)
+func (a *KeyedActivation[K, V]) Clone() *KeyedActivation[K, V] {
+	clone := NewKeyedActivation[K, V](a.MemoryGauge, a.Parent)
 
 	if a.entries != nil {
-		clone.entries = make(map[string]T, len(a.entries))
+		clone.entries = make(map[K]V, len(a.entries))
 		maps.Copy(clone.entries, a.entries)
 	}
 
