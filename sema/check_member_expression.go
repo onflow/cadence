@@ -623,10 +623,8 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 
 		switch {
 		case ShouldReturnReference(accessedType, resultingType, isAssignment):
-			if _, isRef := MaybeReferenceType(accessedType); !isRef {
-				panic(errors.NewUnreachableError())
-			}
-
+			// ShouldReturnReference only holds when the member is accessed
+			// through a reference, which grantedMemberAuthorization requires.
 			grantedAuthorization := checker.grantedMemberAuthorization(
 				member,
 				accessedType,
@@ -671,10 +669,8 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			// In assignment contexts the member is being written, not read out,
 			// so no intersection applies.
 			// For owned access, or members without nested references, this is a no-op.
-			if _, isRef := MaybeReferenceType(accessedType); isRef &&
-				resultingType.IsOrContainsReferenceType() {
-
-				cappedType := intersectReferenceAuthorizationsInType(
+			if _, isRef := MaybeReferenceType(accessedType); isRef {
+				cappedType := intersectReferencesWithAuthorization(
 					checker.memoryGauge,
 					resultingType,
 					checker.grantedMemberAuthorization(member, accessedType, expression),
@@ -842,8 +838,6 @@ func (checker *Checker) mapAccessToAuthorization(
 // For a field with mapping access it is the image
 // of the accessed reference's authorization through the map,
 // and for any other member it is the accessed reference's authorization itself.
-// For a member that is not accessed through a reference it is unauthorized,
-// as an owned value's members are read as values, rather than as references.
 //
 // This is what caps the authorizations of the references nested in the member's type.
 // A field with mapping access has to be capped with the mapped authorization,
@@ -853,6 +847,13 @@ func (checker *Checker) mapAccessToAuthorization(
 // so a nested `auth(E)` reference has to survive,
 // even though `G` and `E` are disjoint.
 //
+// accessedType must be a reference type, or an optional reference type.
+// An owned value's members are read as values rather than as references,
+// so there is no authorization to grant,
+// and in particular the result must not be used as a cap:
+// it would strip every nested authorization
+// from a member read from an owned value.
+//
 // NOTE: For a mapping whose image is not representable, an error is reported,
 // so this must be called at most once per member access.
 func (checker *Checker) grantedMemberAuthorization(
@@ -860,14 +861,15 @@ func (checker *Checker) grantedMemberAuthorization(
 	accessedType Type,
 	pos ast.HasPosition,
 ) Access {
+	outerRef, isRef := MaybeReferenceType(accessedType)
+	if !isRef {
+		panic(errors.NewUnreachableError())
+	}
+
 	if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
 		return checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
 	}
 
-	outerRef, isRef := MaybeReferenceType(accessedType)
-	if !isRef {
-		return UnauthorizedAccess
-	}
 	return outerRef.Authorization
 }
 
