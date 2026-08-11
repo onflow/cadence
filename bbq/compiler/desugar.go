@@ -44,7 +44,13 @@ type Desugar struct {
 	config                 *Config
 	enclosingInterfaceType *sema.InterfaceType
 
-	modifiedDeclarations           []ast.Declaration
+	modifiedDeclarations []ast.Declaration
+
+	// enclosingMembers are the members of the declaration that encloses
+	// the declaration which is currently being desugared.
+	// It is nil if the current declaration is a top-level declaration.
+	enclosingMembers *[]ast.Declaration
+
 	inheritedFuncsWithConditions   map[string][]*inheritedFunction
 	inheritedEvents                map[sema.Type][]*inheritedEvent
 	postConditionIndices           map[*ast.FunctionBlock]int
@@ -125,6 +131,32 @@ func (d *Desugar) desugarDeclaration(declaration ast.Declaration) (result ast.De
 	desugaredDeclaration := ast.AcceptDeclaration[ast.Declaration](declaration, d)
 	desugared = desugaredDeclaration != declaration
 	return desugaredDeclaration, desugared
+}
+
+// desugarMember desugars the given member of a declaration,
+// where the provided members are the members of the enclosing declaration.
+// The previously enclosing members are restored when unwinding.
+func (d *Desugar) desugarMember(
+	member ast.Declaration,
+	enclosingMembers *[]ast.Declaration,
+) (result ast.Declaration, desugared bool) {
+	prevEnclosingMembers := d.enclosingMembers
+	d.enclosingMembers = enclosingMembers
+	defer func() {
+		d.enclosingMembers = prevEnclosingMembers
+	}()
+
+	return d.desugarDeclaration(member)
+}
+
+func (d *Desugar) addToEnclosingMembersOrProgram(declaration ast.Declaration) {
+	enclosingMembers := d.enclosingMembers
+	if enclosingMembers == nil {
+		d.modifiedDeclarations = append(d.modifiedDeclarations, declaration)
+		return
+	}
+
+	*enclosingMembers = append(*enclosingMembers, declaration)
 }
 
 type comparableElement interface {
@@ -940,12 +972,12 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 	// visit and desugar members.
 	existingMembers := declaration.Members.Declarations()
 	for _, member := range existingMembers {
-		desugaredMember, desugared := d.desugarDeclaration(member)
+		desugaredMember, desugared := d.desugarMember(member, &desugaredMembers)
+		membersDesugared = membersDesugared || desugared
 		if desugaredMember == nil {
 			continue
 		}
 
-		membersDesugared = membersDesugared || desugared
 		desugaredMembers = append(desugaredMembers, desugaredMember)
 	}
 
@@ -1049,7 +1081,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 		// Otherwise, visit and desugar members.
 		existingMembers := declaration.Members.Declarations()
 		for _, member := range existingMembers {
-			desugaredMember, desugared := d.desugarDeclaration(member)
+			desugaredMember, desugared := d.desugarMember(member, &desugaredMembers)
 			if desugaredMember == nil {
 				continue
 			}
@@ -1107,12 +1139,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 			)
 			enumLookupFuncType := sema.EnumLookupFunctionType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
-
-			// TODO: Instead of appending as a top level function,
-			// see if this can be added as a member of the enclosing container,
-			// similar to how struct constructors are placed.
-			// The caveat is that this needs to be marked as a static-function somehow.
-			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
+			d.addToEnclosingMembersOrProgram(enumLookup)
 		} else {
 			d.addEmptyInitializer(initializerFuncType, &desugaredMembers)
 		}
@@ -1598,8 +1625,20 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 
 	existingMembers := declaration.Members.Declarations()
 
-	desugaredMembers, desugared := desugarList(existingMembers, d.desugarDeclaration)
-	if !desugared {
+	var desugaredMembers []ast.Declaration
+	membersDesugared := false
+
+	for _, member := range existingMembers {
+		desugaredMember, desugared := d.desugarMember(member, &desugaredMembers)
+		membersDesugared = membersDesugared || desugared
+		if desugaredMember == nil {
+			continue
+		}
+
+		desugaredMembers = append(desugaredMembers, desugaredMember)
+	}
+
+	if !membersDesugared {
 		return declaration
 	}
 
@@ -2161,13 +2200,19 @@ func newEnumLookup(
 		ast.EmptyRange,
 	)
 
+	lookupFunctionName := ast.NewIdentifier(
+		gauge,
+		enumType.GetIdentifier(),
+		ast.EmptyPosition,
+	)
+
 	return ast.NewFunctionDeclaration(
 		gauge,
 		ast.AccessNotSpecified,
 		ast.FunctionPurityUnspecified,
+		true,
 		false,
-		false,
-		typeIdentifier,
+		lookupFunctionName,
 		nil,
 		ast.NewParameterList(gauge, parameters, ast.EmptyRange),
 		nil,

@@ -306,10 +306,8 @@ func (vm *VM) callerLocation() common.Location {
 
 // findGlobal finds a global of the current program,
 // given its name relative to the program (i.e: not location-qualified).
-func (vm *VM) findGlobal(name string) Variable {
-	context := vm.context
-	canonicalName := bbq.NewCanonicalName(context.location, name)
-	return vm.globals.Find(canonicalName)
+func (vm *VM) findGlobal(name bbq.CanonicalName) Variable {
+	return vm.globals.Find(name)
 }
 
 func (vm *VM) getGlobalFunction(canonicalName bbq.CanonicalName) (FunctionValue, error) {
@@ -568,7 +566,9 @@ func (vm *VM) InvokeTransactionWrapper() (*interpreter.SimpleCompositeValue, err
 func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	context := vm.context
 
-	initializerVariable := vm.findGlobal(commons.ProgramInitFunctionName)
+	initializerVariable := vm.findGlobal(
+		bbq.NewCanonicalName(context.location, commons.ProgramInitFunctionName),
+	)
 	if initializerVariable == nil {
 		if len(transactionArgs) > 0 {
 			return interpreter.ArgumentCountError{
@@ -596,7 +596,13 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 	// Transaction invocation happens on the concrete value.
 	var accessedReference interpreter.ReferenceValue = nil
 
-	prepareVariable := vm.findGlobal(commons.TransactionPrepareFunctionName)
+	prepareVariable := vm.findGlobal(
+		bbq.NewTypedCanonicalName(
+			context.location,
+			commons.TransactionWrapperCompositeName,
+			common.DeclarationKindPrepare.Keywords(),
+		),
+	)
 	if prepareVariable == nil {
 		if len(signers) > 0 {
 			return interpreter.ArgumentCountError{
@@ -629,7 +635,13 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeValue) error {
 	context := vm.context
 
-	executeVariable := vm.findGlobal(commons.TransactionExecuteFunctionName)
+	executeVariable := vm.findGlobal(
+		bbq.NewTypedCanonicalName(
+			context.location,
+			commons.TransactionWrapperCompositeName,
+			commons.ExecuteFunctionName,
+		),
+	)
 	if executeVariable == nil {
 		return nil
 	}
@@ -2555,7 +2567,9 @@ func (vm *VM) Reset() {
 }
 
 func (vm *VM) Global(simpleName string) Value {
-	variable := vm.findGlobal(simpleName)
+	variable := vm.findGlobal(
+		bbq.NewCanonicalName(vm.context.location, simpleName),
+	)
 	if variable == nil {
 		return nil
 	}

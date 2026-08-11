@@ -24,8 +24,6 @@ const (
 	InitFunctionName                = "init"
 	ExecuteFunctionName             = "execute"
 	TransactionWrapperCompositeName = "transaction"
-	TransactionExecuteFunctionName  = "transaction.execute"
-	TransactionPrepareFunctionName  = "transaction.prepare"
 
 	// FailPreConditionFunctionName is the name of the function which is used for failing pre-conditions
 	FailPreConditionFunctionName = "$failPreCondition"

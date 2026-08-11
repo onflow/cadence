@@ -9202,8 +9202,8 @@ func TestInterpretMemoryMeteringVariableActivation(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifCompile[uint64](0, 3), meter.getMemory(common.MemoryKindActivation))
-		assert.Equal(t, ifCompile[uint64](0, 1), meter.getMemory(common.MemoryKindActivationEntries))
+		assert.Equal(t, ifCompile[uint64](1, 3), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindActivationEntries))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -9230,8 +9230,8 @@ func TestInterpretMemoryMeteringVariableActivation(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifCompile[uint64](0, 5), meter.getMemory(common.MemoryKindActivation))
-		assert.Equal(t, ifCompile[uint64](0, 2), meter.getMemory(common.MemoryKindActivationEntries))
+		assert.Equal(t, ifCompile[uint64](1, 5), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindActivationEntries))
 
 		// TODO: assert equivalent for compiler/VM
 		if !*compile {
@@ -9257,8 +9257,8 @@ func TestInterpretMemoryMeteringVariableActivation(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifCompile[uint64](0, 4), meter.getMemory(common.MemoryKindActivation))
-		assert.Equal(t, ifCompile[uint64](0, 2), meter.getMemory(common.MemoryKindActivationEntries))
+		assert.Equal(t, ifCompile[uint64](1, 4), meter.getMemory(common.MemoryKindActivation))
+		assert.Equal(t, ifCompile[uint64](1, 2), meter.getMemory(common.MemoryKindActivationEntries))
 	})
 }
 

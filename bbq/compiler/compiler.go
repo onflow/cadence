@@ -4132,20 +4132,22 @@ func (c *Compiler[E, _]) VisitFunctionDeclaration(declaration *ast.FunctionDecla
 
 	if previousFunction == nil {
 		// Global function or method
-		isObjectMethod = !c.compositeTypeStack.isEmpty()
 
 		var enclosingType sema.Type
-		if isObjectMethod {
+		if !c.compositeTypeStack.isEmpty() {
 			enclosingType = c.compositeTypeStack.top()
+			isObjectMethod = !declaration.IsStatic()
 
-			// Declare a receiver if this is an object method.
-			parameterCount++
+			if isObjectMethod {
+				// Declare a receiver if this is an object method.
+				parameterCount++
 
-			// Attachments provide an extra parameter: `base`.
-			if typ, ok := enclosingType.(*sema.CompositeType); ok {
-				if typ.Kind == common.CompositeKindAttachment {
-					parameterCount++
-					isAttachment = true
+				// Attachments provide an extra parameter: `base`.
+				if typ, ok := enclosingType.(*sema.CompositeType); ok {
+					if typ.Kind == common.CompositeKindAttachment {
+						parameterCount++
+						isAttachment = true
+					}
 				}
 			}
 		}
