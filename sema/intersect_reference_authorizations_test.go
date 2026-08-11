@@ -40,8 +40,15 @@ import (
 // kept pointing at the originals, type-argument resolution would fail and
 // `TypeArgumentsCheck` would be silently skipped.
 //
-// An authorized reference parameter forces the rewriter to actually rebuild the
-// function type (so the identity of everything else must be shown to survive).
+// The rewriter must actually rebuild the function type for this to test anything,
+// so that the identity of everything else has to be shown to survive.
+// A `callback` parameter carrying an authorized reference in its own parameter
+// forces that: the parameter of a parameter is covariant again, so it is capped.
+//
+// A plain `ref` parameter carrying the same authorized reference is included
+// alongside it, and asserted to be left as declared:
+// a reference in a parameter is contravariant,
+// so capping it would weaken what callers are required to pass.
 func TestIntersectReferenceAuthorizationsInType_GenericFunctionBinderIdentity(t *testing.T) {
 
 	t.Parallel()
@@ -53,12 +60,31 @@ func TestIntersectReferenceAuthorizationsInType_GenericFunctionBinderIdentity(t 
 
 	genericType := &GenericType{TypeParameter: originalBinder}
 
-	// An authorized reference `auth(Mutate) &Int`, which intersecting against an
-	// unauthorized outer authorization reduces to `&Int`, forcing a rebuild.
+	authorization := NewEntitlementSetAccess(
+		[]*EntitlementType{MutateType},
+		Conjunction,
+	)
+
+	// An authorized reference `auth(Mutate) &Int`.
 	authorizedReferenceType := NewReferenceType(
 		nil,
-		NewEntitlementSetAccess([]*EntitlementType{MutateType}, Conjunction),
+		authorization,
 		IntType,
+	)
+
+	// `fun(auth(Mutate) &Int): Void`, which places the authorized reference
+	// in a covariant position when the callback type itself is a parameter,
+	// so that intersecting against an unauthorized outer authorization
+	// reduces it to `&Int`, forcing a rebuild.
+	callbackType := NewSimpleFunctionType(
+		FunctionPurityImpure,
+		[]Parameter{
+			{
+				Identifier:     "ref",
+				TypeAnnotation: NewTypeAnnotation(authorizedReferenceType),
+			},
+		},
+		VoidTypeAnnotation,
 	)
 
 	var observed Type
@@ -74,6 +100,10 @@ func TestIntersectReferenceAuthorizationsInType_GenericFunctionBinderIdentity(t 
 			{
 				Identifier:     "ref",
 				TypeAnnotation: NewTypeAnnotation(authorizedReferenceType),
+			},
+			{
+				Identifier:     "callback",
+				TypeAnnotation: NewTypeAnnotation(callbackType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(genericType),
@@ -96,12 +126,22 @@ func TestIntersectReferenceAuthorizationsInType_GenericFunctionBinderIdentity(t 
 	).(*FunctionType)
 	require.True(t, ok)
 
-	// The rewriter actually rebuilt the type: the authorized reference parameter
-	// was reduced to an unauthorized reference.
+	// The rewriter actually rebuilt the type: the authorized reference nested in the
+	// callback's parameter is covariant, and was reduced to an unauthorized reference.
 	require.NotSame(t, original, rewritten)
+	rewrittenCallback, ok := rewritten.Parameters[2].TypeAnnotation.Type.(*FunctionType)
+	require.True(t, ok)
+	rewrittenCallbackRef, ok := rewrittenCallback.Parameters[0].TypeAnnotation.Type.(*ReferenceType)
+	require.True(t, ok)
+	require.Equal(t, UnauthorizedAccess, rewrittenCallbackRef.Authorization)
+
+	// The authorized reference in the parameter itself is contravariant,
+	// and was left as declared: capping it would weaken
+	// what callers are required to pass.
 	rewrittenRef, ok := rewritten.Parameters[1].TypeAnnotation.Type.(*ReferenceType)
 	require.True(t, ok)
-	require.Equal(t, UnauthorizedAccess, rewrittenRef.Authorization)
+	require.Equal(t, authorization, rewrittenRef.Authorization)
+	require.Same(t, authorizedReferenceType, rewrittenRef)
 
 	// The type parameter binder is preserved, not cloned.
 	require.Len(t, rewritten.TypeParameters, 1)
