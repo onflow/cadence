@@ -30,7 +30,7 @@ import (
 
 type LinkedGlobals struct {
 	// globals defined in the program, indexed by name.
-	indexedGlobals map[bbq.CanonicalName]Variable
+	indexedGlobals *bbq.Activation[Variable]
 }
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
@@ -50,7 +50,7 @@ func LinkGlobals(
 
 	// reserved globals for the current program (exact)
 	globals := make([]Variable, len(program.Globals))
-	indexedGlobals := make(map[bbq.CanonicalName]Variable)
+	indexedGlobals := bbq.NewActivation[Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
 
@@ -73,7 +73,7 @@ func LinkGlobals(
 			variable.InitializeWithValue(value)
 			// Linker matches the compiled function index with the linked function index
 			globals[index] = variable
-			indexedGlobals[function.CanonicalName] = variable
+			indexedGlobals.Set(function.CanonicalName, variable)
 		case *bbq.VariableGlobal[opcode.Instruction]:
 			variable := typedGlobal.Variable
 			simpleVariable := &interpreter.SimpleVariable{}
@@ -93,7 +93,7 @@ func LinkGlobals(
 			}
 			// Linker matches the compiled variable index with the linked variable index
 			globals[index] = simpleVariable
-			indexedGlobals[variable.CanonicalName] = simpleVariable
+			indexedGlobals.Set(variable.CanonicalName, simpleVariable)
 		case *bbq.ContractGlobal:
 			contract := typedGlobal.Contract
 			contractVariable := interpreter.NewContractVariableWithGetter(
@@ -104,7 +104,7 @@ func LinkGlobals(
 			)
 			// Linker matches the compiled contract index with the linked contract index
 			globals[index] = contractVariable
-			indexedGlobals[contract.CanonicalName] = contractVariable
+			indexedGlobals.Set(contract.CanonicalName, contractVariable)
 		case *bbq.ImportedGlobal:
 			importedGlobal := linkImportedGlobal(
 				memoryGauge,
@@ -153,25 +153,15 @@ func linkImportedGlobal(
 	canonicalName := importedGlobal.CanonicalName
 	importLocation := canonicalName.Location
 
+	var indexedGlobals *bbq.Activation[Variable]
+
 	if importLocation == nil {
-		var builtinGlobals *bbq.Activation[Variable]
 		if context.BuiltinGlobalsProvider == nil {
-			builtinGlobals = DefaultBuiltinGlobals()
+			indexedGlobals = DefaultBuiltinGlobals()
 		} else {
-			builtinGlobals = context.BuiltinGlobalsProvider(location)
+			indexedGlobals = context.BuiltinGlobalsProvider(location)
 		}
-
-		global := builtinGlobals.Find(canonicalName)
-		if global == nil {
-			panic(LinkerError{
-				Message: fmt.Sprintf("cannot find import '%s'", canonicalName),
-			})
-		}
-		return global
-	}
-
-	var indexedGlobals map[bbq.CanonicalName]Variable
-	{
+	} else {
 		linkedGlobals, ok := linkedGlobalsCache[importLocation]
 		if !ok {
 			importedProgram := context.ImportHandler(importLocation)
@@ -189,7 +179,7 @@ func linkImportedGlobal(
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
-	global := indexedGlobals[canonicalName]
+	global := indexedGlobals.Find(canonicalName)
 	if global == nil {
 		panic(LinkerError{
 			Message: fmt.Sprintf("cannot find import '%s'", importedGlobal.CanonicalName),

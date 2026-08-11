@@ -918,7 +918,6 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		// Reserve a global for contract the constructor function.
 
 		var (
-			simpleConstructorName    string
 			constructorCanonicalName bbq.CanonicalName
 			constructorIsTopLevel    bool
 		)
@@ -928,8 +927,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// For contracts, a global with the type-name is used for the contract value
 			// (already reserved in `reserveGlobals` before getting here).
 			// Suffix the type-name.
-			simpleConstructorName = commons.InitFunctionName
-			constructorCanonicalName = c.canonicalName(compositeType, simpleConstructorName)
+			constructorCanonicalName = c.canonicalName(compositeType, commons.InitFunctionName)
 			// The constructor is nested inside the composite, even when the composite itself
 			// is top-level: its canonical name is qualified with the composite's type.
 			constructorIsTopLevel = false
@@ -938,14 +936,12 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 			// For enums, a global with the type-name is used for the "lookup function".
 			// For example, for `enum E: UInt8 { case A; case B }`, the lookup function is `fun E(rawValue: UInt8): E?`.
 			// Suffix the type-name.
-			simpleConstructorName = commons.InitFunctionName
-			constructorCanonicalName = c.canonicalName(compositeType, simpleConstructorName)
+			constructorCanonicalName = c.canonicalName(compositeType, commons.InitFunctionName)
 			constructorIsTopLevel = false
 
 		default:
 			// For other composite types, the type-name is used for the constructor function.
 			// So the constructor is top-level exactly when the composite itself is.
-			simpleConstructorName = declaration.Identifier.Identifier
 			constructorCanonicalName = c.canonicalNameForType(compositeType)
 			constructorIsTopLevel = isTopLevel
 		}

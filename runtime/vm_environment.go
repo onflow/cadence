@@ -100,7 +100,7 @@ func newVMEnvironment(config Config) *vmEnvironment {
 		functionValue := vmFunction.FunctionValue
 		qualifiedName := commons.TypeQualifiedName(
 			vmFunction.BaseType,
-			functionValue.Name,
+			functionValue.Name.Name,
 		)
 		env.defineValue(qualifiedName, functionValue)
 	}
@@ -310,7 +310,7 @@ func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryVa
 	for _, function := range vm.CommonBuiltinTypeBoundFunctions {
 		qualifiedFunctionName := commons.TypeQualifiedName(
 			valueDeclaration.Type,
-			function.Name,
+			function.Name.Name,
 		)
 		variable := interpreter.NewVariableWithValue(
 			nil,
@@ -634,8 +634,7 @@ func (e *vmEnvironment) getOrCreateCompilerBuiltinGlobals(
 	if globals == nil {
 		globals = bbq.NewActivation(nil, defaultBaseActivation)
 		if e.compilerBuiltinGlobalsByLocation == nil {
-			e.compilerBuiltinGlobalsByLocation =
-				map[common.Location]*bbq.Activation[compiler.GlobalImport]{}
+			e.compilerBuiltinGlobalsByLocation = map[common.Location]*bbq.Activation[compiler.GlobalImport]{}
 		}
 		e.compilerBuiltinGlobalsByLocation[location] = globals
 	}
@@ -666,8 +665,7 @@ func (e *vmEnvironment) getOrCreateVMBuiltinGlobals(
 	if globals == nil {
 		globals = bbq.NewActivation(nil, defaultBaseActivation)
 		if e.vmBuiltinGlobalsByLocation == nil {
-			e.vmBuiltinGlobalsByLocation =
-				map[common.Location]*bbq.Activation[vm.Variable]{}
+			e.vmBuiltinGlobalsByLocation = map[common.Location]*bbq.Activation[vm.Variable]{}
 		}
 		e.vmBuiltinGlobalsByLocation[location] = globals
 	}

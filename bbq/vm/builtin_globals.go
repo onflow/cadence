@@ -28,12 +28,9 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type BuiltinGlobalsProvider func(
-	location common.Location,
-) *bbq.Activation[Variable]
+type BuiltinGlobalsProvider func(location common.Location) *bbq.Activation[Variable]
 
-var defaultBuiltinGlobals =
-	bbq.NewActivation[Variable](nil, nil)
+var defaultBuiltinGlobals = bbq.NewActivation[Variable](nil, nil)
 
 func DefaultBuiltinGlobals() *bbq.Activation[Variable] {
 	return defaultBuiltinGlobals
@@ -41,7 +38,7 @@ func DefaultBuiltinGlobals() *bbq.Activation[Variable] {
 
 func registerBuiltinFunction(functionValue *NativeFunctionValue) {
 	registerGlobalFunction(
-		bbq.NewCanonicalName(nil, functionValue.Name),
+		functionValue.Name,
 		functionValue,
 		defaultBuiltinGlobals,
 	)
@@ -63,11 +60,15 @@ func registerGlobalFunction(
 
 func registerBuiltinTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Update the name of the function to be type-qualified
-	functionName := functionValue.Name
-	functionValue.Name = commons.QualifiedName(typeName, functionName)
+	canonicalName := bbq.NewTypedCanonicalName(
+		nil,
+		typeName,
+		functionValue.Name.Name,
+	)
+	functionValue.Name = canonicalName
 
 	registerGlobalFunction(
-		bbq.NewTypedCanonicalName(nil, typeName, functionName),
+		canonicalName,
 		functionValue,
 		defaultBuiltinGlobals,
 	)
@@ -78,7 +79,7 @@ func registerBuiltinTypeBoundCommonFunction(typeName string, functionValue *Nati
 	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
 	registerGlobalFunction(
-		bbq.NewTypedCanonicalName(nil, typeName, functionValue.Name),
+		bbq.NewTypedCanonicalName(nil, typeName, functionValue.Name.Name),
 		functionValue,
 		defaultBuiltinGlobals,
 	)
@@ -320,13 +321,13 @@ func registerBuiltinCommonTypeBoundFunctions() {
 	}
 
 	for _, function := range CommonBuiltinTypeBoundFunctions {
-		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
+		IndexedCommonBuiltinTypeBoundFunctions[function.Name.Name] = function
 	}
 
 	// this only available for Composites which support attachments
 	// as enforced in the compiler
 	for _, function := range compositeBuiltInFunctions {
-		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
+		IndexedCommonBuiltinTypeBoundFunctions[function.Name.Name] = function
 	}
 }
 

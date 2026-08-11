@@ -111,7 +111,7 @@ func NewNativeFunctionValue(
 	fn interpreter.NativeFunction,
 ) *NativeFunctionValue {
 	return &NativeFunctionValue{
-		Name:                name,
+		Name:                bbq.NewCanonicalName(nil, name),
 		functionType:        funcType,
 		Function:            fn,
 		dereferenceReceiver: true,
@@ -124,7 +124,7 @@ func NewNativeFunctionValueWithDerivedType(
 	fn interpreter.NativeFunction,
 ) *NativeFunctionValue {
 	return &NativeFunctionValue{
-		Name:                name,
+		Name:                bbq.NewCanonicalName(nil, name),
 		functionTypeGetter:  typeGetter,
 		Function:            fn,
 		dereferenceReceiver: true,

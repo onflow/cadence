@@ -26,8 +26,7 @@ import (
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-var defaultBuiltinGlobals =
-	bbq.NewActivation[GlobalImport](nil, nil)
+var defaultBuiltinGlobals = bbq.NewActivation[GlobalImport](nil, nil)
 
 func DefaultBuiltinGlobals() *bbq.Activation[GlobalImport] {
 	return defaultBuiltinGlobals

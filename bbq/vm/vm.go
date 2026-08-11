@@ -48,7 +48,7 @@ type VM struct {
 	ip      uint16
 
 	context *Context
-	globals map[bbq.CanonicalName]Variable
+	globals *bbq.Activation[Variable]
 }
 
 func NewVM(
@@ -309,11 +309,11 @@ func (vm *VM) callerLocation() common.Location {
 func (vm *VM) findGlobal(name string) Variable {
 	context := vm.context
 	canonicalName := bbq.NewCanonicalName(context.location, name)
-	return vm.globals[canonicalName]
+	return vm.globals.Find(canonicalName)
 }
 
 func (vm *VM) getGlobalFunction(canonicalName bbq.CanonicalName) (FunctionValue, error) {
-	functionVariable := vm.globals[canonicalName]
+	functionVariable := vm.globals.Find(canonicalName)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
 			name: canonicalName.String(),
@@ -380,7 +380,7 @@ func (vm *VM) InvokeMethodExternally(
 	v Value,
 	err error,
 ) {
-	functionVariable := vm.globals[canonicalName]
+	functionVariable := vm.globals.Find(canonicalName)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
 			name: canonicalName.String(),
@@ -1232,7 +1232,7 @@ func invokeFunction(
 					// Use the original function value, to get the correct type.
 					// The native function value might have been wrapped in a bound function.
 					originalFunctionValue.FunctionType(context).String(),
-					functionValue.Name,
+					functionValue.Name.String(),
 					time.Since(startTime),
 				)
 			}()
@@ -2507,7 +2507,7 @@ func (vm *VM) lookupFunction(name bbq.CanonicalName) FunctionValue {
 	context := vm.context
 
 	// First check in current program.
-	global := vm.globals[name]
+	global := vm.globals.Find(name)
 	if global != nil {
 		value := global.GetValue(context)
 		return value.(FunctionValue)
@@ -2516,21 +2516,22 @@ func (vm *VM) lookupFunction(name bbq.CanonicalName) FunctionValue {
 	// If not found, check in already linked imported functions,
 	// or link the function now, dynamically.
 
+	var indexedGlobals *bbq.Activation[Variable]
+
 	if name.Location == nil {
-		var indexedGlobals *bbq.Activation[Variable]
 		if context.BuiltinGlobalsProvider == nil {
 			indexedGlobals = DefaultBuiltinGlobals()
 		} else {
 			indexedGlobals = context.BuiltinGlobalsProvider(name.Location)
 		}
-		global = indexedGlobals.Find(name)
 	} else {
 		// TODO: This currently link all functions in program, unnecessarily.
 		//   Link only the requested function.
 		linkedGlobals := context.linkLocation(name.Location)
-		global = linkedGlobals.indexedGlobals[name]
+		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
+	global = indexedGlobals.Find(name)
 	if global == nil {
 		return nil
 	}
@@ -2564,7 +2565,7 @@ func (vm *VM) Global(simpleName string) Value {
 // TODO: Remove this method and refactor and repurpose `Config.BuiltinGlobalsProvider`
 // method to be able to use for any location, not just built-in/nil location.
 func (vm *VM) SetGlobal(name bbq.CanonicalName, variable Variable) {
-	vm.globals[name] = variable
+	vm.globals.Set(name, variable)
 }
 
 // LocationRange returns the location of the currently executing instruction.

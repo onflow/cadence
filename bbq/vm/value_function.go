@@ -168,7 +168,7 @@ func (v *CompiledFunctionValue) IsNative() bool {
 }
 
 type NativeFunctionValue struct {
-	Name     string
+	Name     bbq.CanonicalName
 	Function interpreter.NativeFunction
 
 	// A function value can only have either one of `functionType` or `functionTypeGetter`.
@@ -218,7 +218,7 @@ func (v *NativeFunctionValue) Transfer(
 func (v *NativeFunctionValue) String() string {
 	if v.HasComputedFunctionType() {
 		// If the type is not pre-known, just return the name.
-		return v.Name
+		return v.Name.String()
 	}
 
 	return v.functionType.String()
@@ -254,7 +254,7 @@ func (v *NativeFunctionValue) MeteredString(
 ) string {
 	if v.HasComputedFunctionType() {
 		// If the type is not pre-known, just return the name.
-		return v.Name
+		return v.Name.String()
 	}
 
 	return v.StaticType(context).MeteredString(context)

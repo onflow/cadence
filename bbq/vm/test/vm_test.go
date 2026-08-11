@@ -9717,13 +9717,13 @@ func TestAttachments(t *testing.T) {
 		compilerConfig := &compiler.Config{
 			BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 				activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-				name := bbq.NewCanonicalName(
-					nil,
-					stdlib.VMSignatureAlgorithmConstructor.Name,
-				)
+
+				name := bbq.NewCanonicalName(nil, stdlib.VMSignatureAlgorithmConstructor.Name)
 				activation.Set(name, compiler.NewGlobalImport(name))
+
 				name = bbq.NewCanonicalName(nil, validator.Name)
 				activation.Set(name, compiler.NewGlobalImport(name))
+
 				for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
 					name = bbq.NewCanonicalName(nil, v.Name)
 					activation.Set(name, compiler.NewGlobalImport(name))
@@ -12119,10 +12119,13 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 	compilerConfig := &compiler.Config{
 		BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
 			name := bbq.NewCanonicalName(nil, functionName)
 			activation.Set(name, compiler.NewGlobalImport(name))
+
 			name = bbq.NewCanonicalName(nil, conditionLogFunctionName)
 			activation.Set(name, compiler.NewGlobalImport(name))
+
 			return activation
 		},
 	}

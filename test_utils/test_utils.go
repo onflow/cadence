@@ -371,7 +371,7 @@ func ParseCheckAndPrepareWithOptions(
 					memberFunctionEntries = append(memberFunctionEntries, memberFunctionEntry{
 						qualifiedName: commons.TypeQualifiedName(
 							vmFunction.BaseType,
-							functionValue.Name,
+							functionValue.Name.Name,
 						),
 						value: functionValue,
 					})
@@ -384,9 +384,7 @@ func ParseCheckAndPrepareWithOptions(
 				return strings.Compare(a.qualifiedName.String(), b.qualifiedName.String())
 			})
 
-			vmConfig.BuiltinGlobalsProvider = func(
-				_ common.Location,
-			) *bbq.Activation[vm.Variable] {
+			vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
 
 				activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
@@ -480,9 +478,7 @@ func ParseCheckAndPrepareWithOptions(
 
 			// Register externally provided globals in compiler.
 			compilerConfig = &compiler.Config{
-				BuiltinGlobalsProvider: func(
-					_ common.Location,
-				) *bbq.Activation[compiler.GlobalImport] {
+				BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.DefaultBuiltinGlobals()
 					activation := bbq.NewActivation(nil, baseActivation)
 					for name := range interpreterBaseActivationVariables { //nolint:maprange
@@ -586,9 +582,7 @@ func ParseCheckAndPrepareWithOptions(
 	}
 
 	if vmConfig.BuiltinGlobalsProvider == nil {
-		vmConfig.BuiltinGlobalsProvider = func(
-			_ common.Location,
-		) *bbq.Activation[vm.Variable] {
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
 			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			panicVariable := interpreter.NewVariableWithValue(

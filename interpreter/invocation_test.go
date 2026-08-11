@@ -807,13 +807,7 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 
 			functionVariable := &interpreter.SimpleVariable{}
 			functionVariable.InitializeWithValue(functionValue)
-			programVM.SetGlobal(
-				bbq.NewCanonicalName(
-					location,
-					commons.QualifiedName(structType.Identifier, methodName),
-				),
-				functionVariable,
-			)
+			programVM.SetGlobal(qualifiedMethodName, functionVariable)
 
 			invokable = test_utils.NewVMInvokable(programVM, programs[location].DesugaredElaboration)
 

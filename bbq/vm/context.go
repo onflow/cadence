@@ -358,7 +358,7 @@ func functionAccess(
 	case *CompiledFunctionValue:
 		unqualifiedName = functionValue.Function.SimpleName
 	case *NativeFunctionValue:
-		unqualifiedName = functionValue.Name
+		unqualifiedName = functionValue.Name.Name
 	}
 
 	fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)
@@ -486,9 +486,7 @@ func typeLocation(semaType sema.Type) common.Location {
 	}
 }
 
-func (c *Context) GetFunction(
-	name bbq.CanonicalName,
-) FunctionValue {
+func (c *Context) GetFunction(name bbq.CanonicalName) FunctionValue {
 	return c.lookupFunction(name)
 }
 

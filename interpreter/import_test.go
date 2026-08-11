@@ -1170,9 +1170,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 
 		programs := CompiledPrograms{}
 
-		builtinGlobalsProvider := func(
-			_ common.Location,
-		) *bbq.Activation[compiler.GlobalImport] {
+		builtinGlobalsProvider := func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 			name := bbq.NewCanonicalName(nil, logFunctionName)
@@ -1383,9 +1381,7 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 
 		programs := CompiledPrograms{}
 
-		builtinGlobalsProvider := func(
-			_ common.Location,
-		) *bbq.Activation[compiler.GlobalImport] {
+		builtinGlobalsProvider := func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 			name := bbq.NewCanonicalName(nil, logFunctionName)
@@ -1462,9 +1458,7 @@ func TestInterpretDynamicallyImportedGlobals(t *testing.T) {
 
 		vmConfig := test.PrepareVMConfig(t, nil, programs)
 
-		vmConfig.BuiltinGlobalsProvider = func(
-			location common.Location,
-		) *bbq.Activation[vm.Variable] {
+		vmConfig.BuiltinGlobalsProvider = func(location common.Location) *bbq.Activation[vm.Variable] {
 			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			logVariable := &interpreter.SimpleVariable{}
@@ -2052,9 +2046,7 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 
 		programs := CompiledPrograms{}
 
-		builtinGlobalsProvider := func(
-			_ common.Location,
-		) *bbq.Activation[compiler.GlobalImport] {
+		builtinGlobalsProvider := func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
 			name := bbq.NewCanonicalName(nil, logFunctionName)
@@ -2115,9 +2107,7 @@ func TestInterpretImplicitImportThroughTypeLoading(t *testing.T) {
 
 		vmConfig := test.PrepareVMConfig(t, nil, programs)
 
-		vmConfig.BuiltinGlobalsProvider = func(
-			location common.Location,
-		) *bbq.Activation[vm.Variable] {
+		vmConfig.BuiltinGlobalsProvider = func(location common.Location) *bbq.Activation[vm.Variable] {
 			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			logVariable := &interpreter.SimpleVariable{}

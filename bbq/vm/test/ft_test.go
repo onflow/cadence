@@ -219,9 +219,7 @@ func compiledFTTransfer(tb testing.TB) {
 		return contractValues[location]
 	}
 
-	vmConfig.BuiltinGlobalsProvider = func(
-		_ common.Location,
-	) *bbq.Activation[vm.Variable] {
+	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
 		activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 		panicVariable := &interpreter.SimpleVariable{}
@@ -255,7 +253,7 @@ func compiledFTTransfer(tb testing.TB) {
 			activation.Set(
 				commons.TypeQualifiedName(
 					vmFunction.BaseType,
-					vmFunction.FunctionValue.Name,
+					vmFunction.FunctionValue.Name.Name,
 				),
 				variable,
 			)

@@ -574,9 +574,7 @@ func testAccountWithErrorHandler(
 		vmConfig.AtreeStorageValidationEnabled = true
 		vmConfig.AtreeValueValidationEnabled = true
 
-		vmConfig.BuiltinGlobalsProvider = func(
-			_ common.Location,
-		) *bbq.Activation[vm.Variable] {
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
 			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			accountVariable := &interpreter.SimpleVariable{}

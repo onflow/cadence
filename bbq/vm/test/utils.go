@@ -380,39 +380,34 @@ func CompileAndInvoke(
 	)
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(
-	_ common.Location,
-) *bbq.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 	activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
 	name := bbq.NewCanonicalName(nil, stdlib.LogFunctionName)
 	activation.Set(name, compiler.NewGlobalImport(name))
 
 	return activation
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic(
-	_ common.Location,
-) *bbq.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 	activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
 	name := bbq.NewCanonicalName(nil, stdlib.PanicFunctionName)
 	activation.Set(name, compiler.NewGlobalImport(name))
 
 	return activation
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(
-	_ common.Location,
-) *bbq.Activation[compiler.GlobalImport] {
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 	activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
 	name := bbq.NewCanonicalName(nil, conditionLogFunctionName)
 	activation.Set(name, compiler.NewGlobalImport(name))
 
 	return activation
 }
 
-func VMBuiltinGlobalsProviderWithDefaultsAndPanic(
-	_ common.Location,
-) *bbq.Activation[vm.Variable] {
+func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *bbq.Activation[vm.Variable] {
 	activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 	panicFunctionVariable := &interpreter.SimpleVariable{}
