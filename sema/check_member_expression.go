@@ -391,16 +391,18 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	}
 
 	returnReference := false
+	cappedNestedReferences := false
 
 	defer func() {
 		checker.Elaboration.SetMemberExpressionMemberAccessInfo(
 			expression,
 			MemberAccessInfo{
-				AccessedType:    accessedType,
-				ResultingType:   resultingType,
-				Member:          member,
-				IsOptional:      isOptional,
-				ReturnReference: returnReference,
+				AccessedType:           accessedType,
+				ResultingType:          resultingType,
+				Member:                 member,
+				IsOptional:             isOptional,
+				ReturnReference:        returnReference,
+				CappedNestedReferences: cappedNestedReferences,
 			},
 		)
 	}()
@@ -617,31 +619,71 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		member.DeclarationKind == common.DeclarationKindField &&
-		ShouldReturnReference(accessedType, resultingType, isAssignment) {
+		member.DeclarationKind == common.DeclarationKindField {
 
-		var pos ast.HasPosition = expression
+		switch {
+		case ShouldReturnReference(accessedType, resultingType, isAssignment):
+			// ShouldReturnReference only holds when the member is accessed
+			// through a reference, which grantedMemberAuthorization requires.
+			grantedAuthorization := checker.grantedMemberAuthorization(
+				member,
+				accessedType,
+				expression,
+			)
 
-		authorization := UnauthorizedAccess
-		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
-			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
+			// For non-reference members, the granted authorization is also
+			// the authorization of the reference the member gets wrapped in,
+			// but only for a field with mapping access:
+			// any other field is wrapped in an unauthorized reference.
+			// For reference members, the granted authorization is intersected
+			// with the member's own authorization instead, and it is not wrapped again.
+			wrappingAuthorization := UnauthorizedAccess
+			if _, isMappedAccess := member.Access.(*EntitlementMapAccess); isMappedAccess {
+				wrappingAuthorization = grantedAuthorization
+			}
+
+			resultingType = GetDescendantReferenceType(
+				checker.memoryGauge,
+				resultingType,
+				wrappingAuthorization,
+				grantedAuthorization,
+			)
+			returnReference = true
+
+		case !isAssignment:
+			// The member is not wrapped in a reference,
+			// but references nested inside its type must still be intersected
+			// with the authorization reading the member grants,
+			// so that a weak reference to the container caps every authorization
+			// exported through the member.
+			//
+			// This handles members that carry references
+			// but report no fields or elements,
+			// namely capability and function values:
+			// both `CapabilityType` and `FunctionType` return false
+			// from `ContainFieldsOrElements`, so they take
+			// `ShouldReturnReference`'s early exit
+			// even when they nest authorized references
+			// (e.g. `Capability<auth(E) &S>` or `fun(): auth(E) &S`).
+			//
+			// In assignment contexts the member is being written, not read out,
+			// so no intersection applies.
+			// For owned access, or members without nested references, this is a no-op.
+			_, isRef := MaybeReferenceType(accessedType)
+			if isRef && memberAuthorizationGatesReads(member) {
+				cappedType := intersectReferencesWithAuthorization(
+					checker.memoryGauge,
+					resultingType,
+					checker.grantedMemberAuthorization(member, accessedType, expression),
+				)
+				// Only record the cap when it actually narrowed the type,
+				// so that the runtime converts the value exactly when needed.
+				if cappedType != resultingType {
+					resultingType = cappedType
+					cappedNestedReferences = true
+				}
+			}
 		}
-
-		// For non-reference elements, `authorization` is used as the wrapping authorization.
-		// For reference elements, the outer reference's raw authorization is intersected
-		// with the inner reference's authorization (note: mapped access fields cannot have
-		// reference types, so `authorization` and outer auth differ only for non-mapped fields).
-		outerRef, isRef := MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		resultingType = GetDescendantReferenceType(
-			checker.memoryGauge,
-			resultingType,
-			authorization,
-			outerRef.Authorization,
-		)
-		returnReference = true
 	}
 
 	return accessedType, resultingType, member, isOptional
@@ -788,6 +830,79 @@ func (checker *Checker) mapAccessToAuthorization(
 
 	default:
 		return UnauthorizedAccess
+	}
+}
+
+// grantedMemberAuthorization returns the authorization
+// that reading the given member through accessedType grants.
+//
+// For a field with mapping access it is the image
+// of the accessed reference's authorization through the map,
+// and for any other member it is the accessed reference's authorization itself.
+//
+// This is what caps the authorizations of the references nested in the member's type.
+// A field with mapping access has to be capped with the mapped authorization,
+// rather than with the accessed reference's raw authorization:
+// given `entitlement mapping M { G -> E }`,
+// reading an `access(mapping M)` field through an `auth(G)` reference grants `E`,
+// so a nested `auth(E)` reference has to survive,
+// even though `G` and `E` are disjoint.
+//
+// accessedType must be a reference type, or an optional reference type.
+// An owned value's members are read as values rather than as references,
+// so there is no authorization to grant,
+// and in particular the result must not be used as a cap:
+// it would strip every nested authorization
+// from a member read from an owned value.
+//
+// NOTE: For a mapping whose image is not representable, an error is reported,
+// so this must be called at most once per member access.
+func (checker *Checker) grantedMemberAuthorization(
+	member *Member,
+	accessedType Type,
+	pos ast.HasPosition,
+) Access {
+	outerRef, isRef := MaybeReferenceType(accessedType)
+	if !isRef {
+		panic(errors.NewUnreachableError())
+	}
+
+	if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
+		return checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
+	}
+
+	return outerRef.Authorization
+}
+
+// memberAuthorizationGatesReads returns whether the authorization
+// of the reference a member is read through is what gates reading it,
+// and therefore also has to cap the references nested in the member's type.
+//
+// It does for entitlement-based and publicly readable members,
+// which code anywhere may read.
+//
+// It does not for `access(self)`, `access(contract)` and `access(account)` members,
+// which are gated by where the reading code is instead.
+// Capping those would only restrict the declaring code itself,
+// as no other code can read them through a reference of any authorization.
+//
+// An unspecified access modifier counts as publicly readable:
+// that is what it means outside a restricted access check mode,
+// and it is the conservative answer, because it caps rather than not.
+func memberAuthorizationGatesReads(member *Member) bool {
+	primitiveAccess, isPrimitiveAccess := member.Access.(PrimitiveAccess)
+	if !isPrimitiveAccess {
+		return true
+	}
+
+	switch ast.PrimitiveAccess(primitiveAccess) {
+	case ast.AccessSelf,
+		ast.AccessContract,
+		ast.AccessAccount:
+		return false
+
+	default:
+		return true
 	}
 }
 

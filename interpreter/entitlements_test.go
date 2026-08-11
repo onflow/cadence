@@ -3053,3 +3053,561 @@ func TestEntitlementMapEmptyDisjunctImageControls(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// The capped type must also be stamped onto the value:
+	// a downcast back to the uncapped function type must fail at runtime.
+	t.Run("function field, downcast to uncapped function type", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: &S = &s
+
+                let g = weak.f as! fun(): auth(E) &T
+                return g().secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	// The function's result is capped too:
+	// downcasting the returned reference must fail at runtime.
+	t.Run("function field, downcast of returned reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: &S = &s
+
+                let g = weak.f
+                let r = g() as! auth(E) &T
+                return r.secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	// When the outer reference grants the entitlement,
+	// the intersection preserves it and the call succeeds.
+	t.Run("function field, matching outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let strong = &s as auth(E) &S
+
+                let g = strong.f
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+
+	// Owned access is unaffected: there is no outer reference to cap with.
+	t.Run("function field, owned access", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let g = s.f
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+}
+
+func TestInterpretMappedMemberAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// A field with mapping access is capped with the mapped authorization,
+	// so reading it through a reference whose authorization is in the map's domain
+	// preserves the nested reference's authorization, at runtime too.
+	t.Run("mapped function field, in-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let ref = &s as auth(G) &S
+
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+
+	// Out of the map's domain the mapped authorization is unauthorized,
+	// so the nested reference is stripped, and a downcast cannot recover it.
+	t.Run("mapped function field, out-of-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let ref = &s as auth(F) &S
+
+                let g = ref.f as! fun(): auth(E) &T
+                return g().secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+}
+
+func TestInterpretOptionalMemberAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// NOTE: The subtests whose struct has an optional function-typed field use
+	// parseCheckAndPrepareWithoutStorageComparison, rather than parseCheckAndPrepare.
+	// The VM storage comparison encodes the values a program created,
+	// and an optional function value is not storable,
+	// so the comparison panics with "cannot store non-storable value"
+	// merely because such a field exists, independently of the member access.
+	// The subtests whose field is a non-optional function type
+	// do not hit that limitation, and compare storage as usual.
+
+	// An optional member type must be capped just like a non-optional one:
+	// the optional is unwrapped before the capping decision,
+	// and the cap is applied to the references nested inside it.
+	t.Run("optional function field, downcast of the function value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: (fun(): auth(E) &T)?
+                init(f: (fun(): auth(E) &T)?) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: &S = &s
+
+                let g = weak.f! as! fun(): auth(E) &T
+                return g().secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	// The capped function's result is capped as well.
+	t.Run("optional function field, downcast of the returned reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: (fun(): auth(E) &T)?
+                init(f: (fun(): auth(E) &T)?) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: &S = &s
+
+                let g = weak.f!
+                let r = g() as! auth(E) &T
+                return r.secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	// An optional field with mapping access is capped with the mapped authorization,
+	// so an in-domain outer authorization preserves the nested reference.
+	t.Run("optional mapped function field, in-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: (fun(): auth(E) &T)?
+                init(f: (fun(): auth(E) &T)?) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let ref = &s as auth(G) &S
+
+                let g = ref.f!
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+
+	// A nil field must not trip the conversion of the capped value.
+	t.Run("optional function field, nil", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepareWithoutStorageComparison(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: (fun(): auth(E) &T)?
+                init(f: (fun(): auth(E) &T)?) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Bool {
+                let s = S(f: nil)
+                let weak: &S = &s
+                return weak.f == nil
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.TrueValue, result)
+	})
+
+	// The accessed type is an optional reference, read via optional chaining.
+	// MaybeReferenceType unwraps it, so the cap applies as it does
+	// for a non-optional reference.
+	t.Run("optional chaining, downcast of the function value", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: (&S)? = &s as &S
+
+                let g = weak?.f! as! fun(): auth(E) &T
+                return g().secret()
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+	})
+
+	// Optional chaining on a reference whose authorization is in the map's domain
+	// preserves the nested reference.
+	t.Run("optional chaining, mapped in-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let ref: (auth(G) &S)? = &s as auth(G) &S
+
+                let g = ref?.f!
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+}
+
+func TestInterpretLocationRestrictedMemberAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// A location-restricted member keeps the authorizations nested in its type,
+	// at runtime as well: no cap was recorded, so the value is not converted,
+	// and a downcast back to the declared type succeeds.
+	t.Run("access(account) function field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(account) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun main(): Int {
+                let t = T()
+                let s = S(f: fun(): auth(E) &T {
+                    return &t as auth(E) &T
+                })
+
+                let weak: &S = &s
+
+                let g = weak.f as! fun(): auth(E) &T
+                return g().secret()
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(42), result)
+	})
+}
