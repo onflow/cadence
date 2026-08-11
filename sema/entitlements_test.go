@@ -20,6 +20,7 @@ package sema_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11636,4 +11637,125 @@ func TestCheckFunctionParameterAuthorizationVariance(t *testing.T) {
 			typeMismatchError.ExpectedType.ID(),
 		)
 	})
+}
+
+func TestCheckFunctionParameterAuthorizationVarianceNesting(t *testing.T) {
+
+	t.Parallel()
+
+	// Variance flips at every function parameter, and only there:
+	// a return type, and a container, pass the position through unchanged.
+	// So whether a nested reference is capped is the parity of the number of
+	// *parameter* positions it sits under, not of its total nesting depth.
+	//
+	// Each case declares a field of the given type, reads it through an
+	// unauthorized reference, and pins the resulting type exactly.
+
+	type testCase struct {
+		// parameterDepth is how many parameter positions the `auth(E) &T`
+		// reference sits under. Even means covariant, and capped.
+		parameterDepth int
+		declaredType   string
+		resultingType  string
+	}
+
+	testCases := []testCase{
+		// Alternating parameter nesting, to pin that the flip keeps alternating
+		// rather than happening only once.
+		{
+			parameterDepth: 0,
+			declaredType:   "fun(): auth(E) &T",
+			resultingType:  "fun():&S.test.T",
+		},
+		{
+			parameterDepth: 1,
+			declaredType:   "fun(auth(E) &T): Int",
+			resultingType:  "fun(auth(S.test.E)&S.test.T):Int",
+		},
+		{
+			parameterDepth: 2,
+			declaredType:   "fun(fun(auth(E) &T): Int): Int",
+			resultingType:  "fun(fun(&S.test.T):Int):Int",
+		},
+		{
+			parameterDepth: 3,
+			declaredType:   "fun(fun(fun(auth(E) &T): Int): Int): Int",
+			resultingType:  "fun(fun(fun(auth(S.test.E)&S.test.T):Int):Int):Int",
+		},
+		{
+			parameterDepth: 4,
+			declaredType:   "fun(fun(fun(fun(auth(E) &T): Int): Int): Int): Int",
+			resultingType:  "fun(fun(fun(fun(&S.test.T):Int):Int):Int):Int",
+		},
+
+		// Mixed parameter and return positions, to pin that only parameters flip.
+		{
+			parameterDepth: 1,
+			declaredType:   "fun(fun(): auth(E) &T): Int",
+			resultingType:  "fun(fun():auth(S.test.E)&S.test.T):Int",
+		},
+		{
+			parameterDepth: 1,
+			declaredType:   "fun(): fun(auth(E) &T): Int",
+			resultingType:  "fun():fun(auth(S.test.E)&S.test.T):Int",
+		},
+		{
+			parameterDepth: 0,
+			declaredType:   "fun(): fun(): auth(E) &T",
+			resultingType:  "fun():fun():&S.test.T",
+		},
+		{
+			parameterDepth: 2,
+			declaredType:   "fun(fun(fun(): auth(E) &T): Int): Int",
+			resultingType:  "fun(fun(fun():&S.test.T):Int):Int",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.declaredType, func(t *testing.T) {
+			t.Parallel()
+
+			// The `Bool` annotation always mismatches,
+			// so the error reports the resulting type.
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct T {
+                    access(E) fun secret(): Int {
+                        return 42
+                    }
+                }
+
+                struct S {
+                    access(all) let f: `+testCase.declaredType+`
+                    init(f: `+testCase.declaredType+`) {
+                        self.f = f
+                    }
+                }
+
+                fun test(ref: &S) {
+                    let x: Bool = ref.f
+                }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+
+			assert.Equal(t,
+				common.TypeID(testCase.resultingType),
+				typeMismatchError.ActualType.ID(),
+			)
+
+			// Cross-check the parity rule the cases are chosen to demonstrate.
+			capped := testCase.parameterDepth%2 == 0
+			assert.Equal(t,
+				capped,
+				!strings.Contains(testCase.resultingType, "auth("),
+				"parameter depth %d should%s be capped",
+				testCase.parameterDepth,
+				map[bool]string{true: "", false: " not"}[capped],
+			)
+		})
+	}
 }
