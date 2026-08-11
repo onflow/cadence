@@ -105,7 +105,7 @@ var VMSignatureAlgorithmCaseValues = func() []VMValue {
 			Name: commons.TypeQualifiedName(
 				sema.SignatureAlgorithmType,
 				signatureAlgorithm.Name(),
-			).String(),
+			),
 			Value: SignatureAlgorithmCaseValues[rawValue],
 		}
 	}

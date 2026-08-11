@@ -46,9 +46,6 @@ func (p *Program[E, T]) GetFunctionName(index uint16) string {
 	if !function.CanonicalName.IsEmpty() {
 		return function.CanonicalName.String()
 	}
-	if function.SimpleName != "" {
-		return function.SimpleName
-	}
 	return "<anonymous>"
 }
 

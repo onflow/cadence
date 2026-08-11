@@ -115,10 +115,7 @@ func registerBoundFunctions(typ sema.Type) {
 	}
 }
 
-func registerGlobalImport(
-	name bbq.CanonicalName,
-	activation *bbq.Activation[GlobalImport],
-) {
+func registerGlobalImport(name bbq.CanonicalName, activation *bbq.Activation[GlobalImport]) {
 	activation.Set(
 		name,
 		NewGlobalImport(name),

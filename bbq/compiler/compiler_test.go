@@ -13600,7 +13600,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 8)
 
 	defaultDestroyEventConstructor := functions[5]
-	require.Equal(t, "ResourceDestroyed", defaultDestroyEventConstructor.SimpleName)
+	require.Equal(t, "ResourceDestroyed", defaultDestroyEventConstructor.CanonicalName.Name)
 
 	const (
 		xIndex = iota
@@ -14590,7 +14590,7 @@ func TestConstructorAsFunction(t *testing.T) {
 
 	testFunction := functions[0]
 
-	assert.Equal(t, "test", testFunction.SimpleName)
+	assert.Equal(t, "test", testFunction.CanonicalName.Name)
 
 	assert.Equal(t,
 		[]opcode.Instruction{

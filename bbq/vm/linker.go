@@ -64,7 +64,7 @@ func LinkGlobals(
 
 			if function.IsNative() {
 				// Look-up using the unqualified name, in the common-builtin functions.
-				value = IndexedCommonBuiltinTypeBoundFunctions[function.SimpleName]
+				value = IndexedCommonBuiltinTypeBoundFunctions[function.CanonicalName.Name]
 			} else {
 				value = functionValueFromBBQFunction(executable, function)
 			}

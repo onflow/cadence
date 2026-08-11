@@ -942,7 +942,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		default:
 			// For other composite types, the type-name is used for the constructor function.
 			// So the constructor is top-level exactly when the composite itself is.
-			constructorCanonicalName = c.canonicalNameForType(compositeType)
+			constructorCanonicalName = compositeTypeCanonicalName(compositeType)
 			constructorIsTopLevel = isTopLevel
 		}
 
@@ -987,7 +987,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		// Reserve a global for the constructor function.
 		// The attachment's type-name is used for it,
 		// so it is top-level exactly when the attachment itself is.
-		constructorCanonicalName := c.canonicalNameForType(compositeType)
+		constructorCanonicalName := compositeTypeCanonicalName(compositeType)
 		c.addGlobal(
 			constructorCanonicalName,
 			bbq.GlobalKindFunction,
@@ -1158,7 +1158,6 @@ func (c *Compiler[E, _]) exportFunctions() []bbq.Function[E] {
 func (c *Compiler[E, _]) newBBQFunction(function *function[E]) bbq.Function[E] {
 	common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQFunctionMemoryUsage)
 	return bbq.Function[E]{
-		SimpleName:     function.simpleName,
 		CanonicalName:  function.canonicalName,
 		Code:           function.code,
 		LocalCount:     function.localCount,
@@ -1240,7 +1239,7 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 		}
 
 		contractType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
-		canonicalName := c.canonicalNameForType(contractType)
+		canonicalName := compositeTypeCanonicalName(contractType)
 
 		common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQContractMemoryUsage)
 		contract := bbq.Contract{
@@ -3942,7 +3941,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
 		functionSimpleName = enclosingType.GetIdentifier()
-		functionCanonicalName = c.canonicalNameForType(enclosingType)
+		functionCanonicalName = compositeTypeCanonicalName(enclosingType)
 	}
 
 	parameterCount := 0
@@ -3992,7 +3991,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		}
 	}
 
-	typeName := c.canonicalNameForType(enclosingType)
+	typeName := compositeTypeCanonicalName(enclosingType)
 
 	if address == common.ZeroAddress {
 
@@ -4352,7 +4351,7 @@ func (c *Compiler[_, _]) VisitImportDeclaration(declaration *ast.ImportDeclarati
 		if len(resolvedLocation.Identifiers) > 0 {
 			for _, identifier := range resolvedLocation.Identifiers {
 				originalName := identifier.Identifier
-				canonicalName := c.canonicalNameAt(location, originalName)
+				canonicalName := bbq.NewCanonicalName(location, originalName)
 				for _, export := range importedProgram.Exports {
 					if export.CanonicalName.TypeQualifier == "" &&
 						export.CanonicalName.Name == originalName {
@@ -4963,20 +4962,24 @@ func (c *Compiler[E, _]) emit(instruction opcode.Instruction) {
 
 func (c *Compiler[E, _]) canonicalName(enclosingType sema.Type, identifier string) bbq.CanonicalName {
 	if enclosingType == nil {
-		return c.canonicalNameAt(c.location, identifier)
+		return bbq.NewCanonicalName(c.location, identifier)
 	}
 
 	return commons.TypeQualifiedName(enclosingType, identifier)
 }
 
-func (c *Compiler[E, _]) canonicalNameAt(location common.Location, identifier string) bbq.CanonicalName {
-	return bbq.NewCanonicalName(location, identifier)
-}
-
+// TODO: Fix
 func (c *Compiler[E, _]) canonicalNameForType(typ sema.Type) bbq.CanonicalName {
 	name := commons.TypeQualifier(typ)
 	location := locationOfType(typ)
-	return c.canonicalNameAt(location, name)
+	return bbq.NewCanonicalName(location, name)
+}
+
+func compositeTypeCanonicalName(typ sema.CompositeKindedType) bbq.CanonicalName {
+	typeQualifier := commons.TypeQualifier(typ.GetContainerType())
+	name := typ.GetIdentifier()
+	location := locationOfType(typ)
+	return bbq.NewTypedCanonicalName(location, typeQualifier, name)
 }
 
 func locationOfType(typ sema.Type) common.Location {

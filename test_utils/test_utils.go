@@ -360,7 +360,7 @@ func ParseCheckAndPrepareWithOptions(
 				if functionValue, ok := value.(*interpreter.HostFunctionValue); ok {
 					for nestedName, nestedVar := range functionValue.NestedVariables { //nolint:maprange
 						nestedEntries = append(nestedEntries, nestedVariableEntry{
-							qualifiedName: bbq.NewCanonicalName(nil, name+"."+nestedName),
+							qualifiedName: bbq.NewTypedCanonicalName(nil, name, nestedName),
 							value:         nestedVar.GetValue(nil),
 						})
 					}

@@ -107,7 +107,7 @@ func newVMEnvironment(config Config) *vmEnvironment {
 
 	for _, vmValue := range stdlib.VMValues(env) {
 		env.defineValue(
-			bbq.NewCanonicalName(nil, vmValue.Name),
+			vmValue.Name,
 			vmValue.Value,
 		)
 	}

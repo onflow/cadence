@@ -98,6 +98,8 @@ func LocationQualifiedName(
 // TODO: Maybe make this a method on the type
 func TypeQualifier(typ sema.Type) string {
 	switch typ := typ.(type) {
+	case nil:
+		return ""
 	case *sema.ConstantSizedType:
 		return TypeQualifierArrayConstantSized
 	case *sema.VariableSizedType:

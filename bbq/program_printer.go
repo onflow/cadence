@@ -118,7 +118,7 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	if len(program.Functions) > 0 {
 		functionNames = make([]string, 0, len(program.Functions))
 		for _, function := range program.Functions {
-			functionNames = append(functionNames, function.SimpleName)
+			functionNames = append(functionNames, function.CanonicalName.Name)
 		}
 	}
 

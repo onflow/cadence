@@ -356,7 +356,7 @@ func functionAccess(
 	var unqualifiedName string
 	switch functionValue := method.(type) {
 	case *CompiledFunctionValue:
-		unqualifiedName = functionValue.Function.SimpleName
+		unqualifiedName = functionValue.Function.CanonicalName.Name
 	case *NativeFunctionValue:
 		unqualifiedName = functionValue.Name.Name
 	}

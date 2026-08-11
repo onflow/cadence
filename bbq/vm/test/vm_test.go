@@ -9725,7 +9725,7 @@ func TestAttachments(t *testing.T) {
 				activation.Set(name, compiler.NewGlobalImport(name))
 
 				for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
-					name = bbq.NewCanonicalName(nil, v.Name)
+					name = v.Name
 					activation.Set(name, compiler.NewGlobalImport(name))
 				}
 				return activation
@@ -9758,7 +9758,7 @@ func TestAttachments(t *testing.T) {
 			for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
 				variable := interpreter.NewVariableWithValue(nil, v.Value)
 				activation.Set(
-					bbq.NewCanonicalName(nil, v.Name),
+					v.Name,
 					variable,
 				)
 			}

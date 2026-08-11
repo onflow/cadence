@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
@@ -149,7 +150,7 @@ func VMFunctions(handler StandardLibraryHandler) []VMFunction {
 }
 
 type VMValue struct {
-	Name  string
+	Name  bbq.CanonicalName
 	Value vm.Value
 }
 
