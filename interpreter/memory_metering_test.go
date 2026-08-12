@@ -764,7 +764,7 @@ func TestInterpretMemoryMeteringComposite(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
-		assert.Equal(t, ifTracing(ifCompile[uint64](27, 27), ifCompile[uint64](9, 9)), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](27, 9), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -871,7 +871,7 @@ func TestInterpretMemoryMeteringCompositeField(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifTracing(ifCompile[uint64](9, 9), ifCompile[uint64](0, 0)), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](9, 0), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -902,7 +902,7 @@ func TestInterpretMemoryMeteringCompositeField(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifTracing(ifCompile[uint64](11, 11), ifCompile[uint64](2, 2)), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](11, 2), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
@@ -936,7 +936,7 @@ func TestInterpretMemoryMeteringCompositeField(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifTracing(ifCompile[uint64](13, 13), ifCompile[uint64](4, 4)), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing[uint64](13, 4), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))

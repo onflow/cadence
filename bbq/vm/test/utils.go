@@ -449,13 +449,8 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(logs *[]string) vm.Built
 		),
 	)
 
-	return func(
-		location common.Location,
-	) *bbq.Activation[vm.Variable] {
-		activation := bbq.NewActivation(
-			nil,
-			VMBuiltinGlobalsProviderWithDefaultsAndPanic(location),
-		)
+	return func(location common.Location) *bbq.Activation[vm.Variable] {
+		activation := bbq.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic(location))
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
 		logFunctionVariable.InitializeWithValue(logFunction.Value)
@@ -472,9 +467,7 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(logs *[]string)
 
 	conditionLogFunction := newConditionLogFunction(logs)
 
-	return func(
-		location common.Location,
-	) *bbq.Activation[vm.Variable] {
+	return func(location common.Location) *bbq.Activation[vm.Variable] {
 		activation := bbq.NewActivation(
 			nil,
 			VMBuiltinGlobalsProviderWithDefaultsAndPanic(location),
@@ -683,9 +676,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	if vmConfig.ContractValueHandler == nil {
 		// TODO: generalize this
 		if len(program.Contracts) == 1 {
-			vmConfig.ContractValueHandler = ContractValueHandler(
-				program.Contracts[0].CanonicalName,
-			)
+			vmConfig.ContractValueHandler = ContractValueHandler(program.Contracts[0].CanonicalName)
 		}
 	}
 
@@ -698,10 +689,7 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	return programVM, nil
 }
 
-func ContractValueHandler(
-	contractName bbq.CanonicalName,
-	arguments ...vm.Value,
-) vm.ContractValueHandler {
+func ContractValueHandler(contractName bbq.CanonicalName, arguments ...vm.Value) vm.ContractValueHandler {
 	return func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
 		contractInitializerName := bbq.NewTypedCanonicalName(
 			location,

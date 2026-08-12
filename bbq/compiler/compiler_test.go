@@ -6509,7 +6509,7 @@ func TestCompileTransaction(t *testing.T) {
 	prepareFunctionName := bbq.NewTypedCanonicalName(
 		txLocation,
 		commons.TransactionWrapperCompositeName,
-		common.DeclarationKindPrepare.Keywords(),
+		commons.TransactionPrepareFunctionName,
 	)
 	require.Equal(t, prepareFunctionName, prepareFunction.CanonicalName)
 
@@ -6571,7 +6571,7 @@ func TestCompileTransaction(t *testing.T) {
 	executeFunctionName := bbq.NewTypedCanonicalName(
 		txLocation,
 		commons.TransactionWrapperCompositeName,
-		commons.ExecuteFunctionName,
+		commons.TransactionExecuteFunctionName,
 	)
 	require.Equal(t, executeFunctionName, executeFunction.CanonicalName)
 

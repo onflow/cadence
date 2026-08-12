@@ -612,9 +612,7 @@ func testAccountWithErrorHandler(
 					CheckerErrorHandler:  checkerErrorHandler,
 					ParseAndCheckOptions: parseAndCheckOptions,
 					CompilerConfig: &compiler.Config{
-						BuiltinGlobalsProvider: func(
-							_ common.Location,
-						) *bbq.Activation[compiler.GlobalImport] {
+						BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 							activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 							for _, valueDeclaration := range valueDeclarations {
 								name := bbq.NewCanonicalName(nil, valueDeclaration.Name)

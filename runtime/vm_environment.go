@@ -106,10 +106,7 @@ func newVMEnvironment(config Config) *vmEnvironment {
 	}
 
 	for _, vmValue := range stdlib.VMValues(env) {
-		env.defineValue(
-			vmValue.Name,
-			vmValue.Value,
-		)
+		env.defineValue(vmValue.Name, vmValue.Value)
 	}
 
 	return env

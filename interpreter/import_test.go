@@ -1215,9 +1215,7 @@ func TestInterpretImportGlobals(t *testing.T) {
 				VMConfig: &vm.Config{
 					Tracer:          interpreter.NoOpTracer{},
 					StackDepthLimit: math.MaxUint64,
-					BuiltinGlobalsProvider: func(
-						location common.Location,
-					) *bbq.Activation[vm.Variable] {
+					BuiltinGlobalsProvider: func(location common.Location) *bbq.Activation[vm.Variable] {
 						activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 						logVariable := &interpreter.SimpleVariable{}

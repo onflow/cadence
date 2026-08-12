@@ -30,7 +30,6 @@ import (
 
 type function[E any] struct {
 	enclosing      *function[E]
-	simpleName     string
 	canonicalName  bbq.CanonicalName
 	code           []E
 	locals         *activations.Activations[*local]
@@ -56,7 +55,6 @@ type function[E any] struct {
 func newFunction[E any](
 	memoryGauge common.MemoryGauge,
 	enclosing *function[E],
-	simpleName string,
 	canonicalName bbq.CanonicalName,
 	parameterCount uint16,
 	functionTypeIndex uint16,
@@ -64,7 +62,6 @@ func newFunction[E any](
 	common.UseMemory(memoryGauge, common.CompilerFunctionMemoryUsage)
 	return &function[E]{
 		enclosing:      enclosing,
-		simpleName:     simpleName,
 		canonicalName:  canonicalName,
 		locals:         activations.NewActivations[*local](memoryGauge),
 		parameterCount: parameterCount,

@@ -1724,7 +1724,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 			// If there is no execute block, create an empty one.
 			executeFunc = simpleFunctionDeclaration(
 				d.memoryGauge,
-				commons.ExecuteFunctionName,
+				commons.TransactionExecuteFunctionName,
 				nil,
 				nil,
 				transaction.StartPos,

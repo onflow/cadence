@@ -336,10 +336,7 @@ func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err er
 	return vm.InvokeExternallyCanonical(canonicalName, arguments...)
 }
 
-func (vm *VM) InvokeExternallyCanonical(
-	canonicalName bbq.CanonicalName,
-	arguments ...Value,
-) (v Value, err error) {
+func (vm *VM) InvokeExternallyCanonical(canonicalName bbq.CanonicalName, arguments ...Value) (v Value, err error) {
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
@@ -600,7 +597,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 		bbq.NewTypedCanonicalName(
 			context.location,
 			commons.TransactionWrapperCompositeName,
-			common.DeclarationKindPrepare.Keywords(),
+			commons.TransactionPrepareFunctionName,
 		),
 	)
 	if prepareVariable == nil {
@@ -639,7 +636,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 		bbq.NewTypedCanonicalName(
 			context.location,
 			commons.TransactionWrapperCompositeName,
-			commons.ExecuteFunctionName,
+			commons.TransactionExecuteFunctionName,
 		),
 	)
 	if executeVariable == nil {
