@@ -23,12 +23,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 )
 
-func compileQualifiedFunctionNames(t *testing.T, code string) []string {
+func compileFunctionCanonicalNames(t *testing.T, code string) []bbq.CanonicalName {
 	checker, err := ParseAndCheck(t, code)
 	require.NoError(t, err)
 
@@ -38,9 +39,9 @@ func compileQualifiedFunctionNames(t *testing.T, code string) []string {
 	)
 	program := comp.Compile()
 
-	names := make([]string, 0, len(program.Functions))
+	names := make([]bbq.CanonicalName, 0, len(program.Functions))
 	for _, f := range program.Functions {
-		names = append(names, f.CanonicalName.String())
+		names = append(names, f.CanonicalName)
 	}
 	return names
 }
@@ -79,12 +80,12 @@ func TestCompilationDeterminismInheritedDefaultFunctions(t *testing.T) {
         struct S: I, J {}
     `
 
-	first := compileQualifiedFunctionNames(t, code)
+	first := compileFunctionCanonicalNames(t, code)
 
 	// Many repetitions, since map-iteration order is randomized per range and a
 	// single mismatch is enough to prove non-determinism.
 	for i := range 200 {
-		next := compileQualifiedFunctionNames(t, code)
+		next := compileFunctionCanonicalNames(t, code)
 		require.Equal(t, first, next, "compilation %d produced a different function order", i)
 	}
 }
