@@ -149,14 +149,33 @@ func (d *Desugar) desugarMember(
 	return d.desugarDeclaration(member)
 }
 
+func (d *Desugar) desugarMembers(members []ast.Declaration) (desugaredMembers []ast.Declaration, desugared bool) {
+	var generatedMembers []ast.Declaration
+
+	desugaredMembers, desugared = desugarList(
+		members,
+		func(member ast.Declaration) (ast.Declaration, bool) {
+			return d.desugarMember(member, &generatedMembers)
+		},
+	)
+
+	// If new members were generated (e.g: enum lookup function, etc.),
+	// then add them also to the resulting desugared-members list.
+	if len(generatedMembers) > 0 {
+		desugaredMembers = append(desugaredMembers, generatedMembers...)
+		desugared = true
+	}
+
+	return
+}
+
 func (d *Desugar) addToEnclosingMembersOrProgram(declaration ast.Declaration) {
-	enclosingMembers := d.enclosingMembers
-	if enclosingMembers == nil {
-		d.modifiedDeclarations = append(d.modifiedDeclarations, declaration)
+	if d.enclosingMembers != nil {
+		*d.enclosingMembers = append(*d.enclosingMembers, declaration)
 		return
 	}
 
-	*enclosingMembers = append(*enclosingMembers, declaration)
+	d.modifiedDeclarations = append(d.modifiedDeclarations, declaration)
 }
 
 type comparableElement interface {
@@ -966,20 +985,9 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 		d.enclosingInterfaceType = prevEnclosingInterfaceType
 	}()
 
-	var desugaredMembers []ast.Declaration
-	membersDesugared := false
-
 	// visit and desugar members.
 	existingMembers := declaration.Members.Declarations()
-	for _, member := range existingMembers {
-		desugaredMember, desugared := d.desugarMember(member, &desugaredMembers)
-		membersDesugared = membersDesugared || desugared
-		if desugaredMember == nil {
-			continue
-		}
-
-		desugaredMembers = append(desugaredMembers, desugaredMember)
-	}
+	desugaredMembers, membersDesugared := d.desugarMembers(existingMembers)
 
 	// Add inherited default functions.
 	existingFunctions := declaration.Members.FunctionsByIdentifier()
@@ -1080,15 +1088,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 	} else {
 		// Otherwise, visit and desugar members.
 		existingMembers := declaration.Members.Declarations()
-		for _, member := range existingMembers {
-			desugaredMember, desugared := d.desugarMember(member, &desugaredMembers)
-			if desugaredMember == nil {
-				continue
-			}
-
-			membersDesugared = membersDesugared || desugared
-			desugaredMembers = append(desugaredMembers, desugaredMember)
-		}
+		desugaredMembers, membersDesugared = d.desugarMembers(existingMembers)
 	}
 
 	// Add inherited default functions.
@@ -1624,19 +1624,7 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 	// Recursively de-sugar nested declarations (functions, types, etc.)
 
 	existingMembers := declaration.Members.Declarations()
-
-	var desugaredMembers []ast.Declaration
-	membersDesugared := false
-
-	for _, member := range existingMembers {
-		desugaredMember, desugared := d.desugarMember(member, &desugaredMembers)
-		membersDesugared = membersDesugared || desugared
-		if desugaredMember == nil {
-			continue
-		}
-
-		desugaredMembers = append(desugaredMembers, desugaredMember)
-	}
+	desugaredMembers, membersDesugared := d.desugarMembers(existingMembers)
 
 	if !membersDesugared {
 		return declaration
