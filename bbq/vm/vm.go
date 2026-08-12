@@ -1244,7 +1244,7 @@ func invokeFunction(
 					// Use the original function value, to get the correct type.
 					// The native function value might have been wrapped in a bound function.
 					originalFunctionValue.FunctionType(context).String(),
-					functionValue.Name.String(),
+					functionValue.Name,
 					time.Since(startTime),
 				)
 			}()

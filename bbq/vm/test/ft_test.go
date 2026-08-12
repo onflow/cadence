@@ -253,7 +253,7 @@ func compiledFTTransfer(tb testing.TB) {
 			activation.Set(
 				commons.TypeQualifiedName(
 					vmFunction.BaseType,
-					vmFunction.FunctionValue.Name.Name,
+					vmFunction.FunctionValue.Name,
 				),
 				variable,
 			)

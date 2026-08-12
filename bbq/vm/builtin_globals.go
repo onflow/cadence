@@ -38,7 +38,7 @@ func DefaultBuiltinGlobals() *bbq.Activation[Variable] {
 
 func registerBuiltinFunction(functionValue *NativeFunctionValue) {
 	registerGlobalFunction(
-		functionValue.Name,
+		bbq.NewCanonicalName(nil, functionValue.Name),
 		functionValue,
 		defaultBuiltinGlobals,
 	)
@@ -59,13 +59,11 @@ func registerGlobalFunction(
 }
 
 func registerBuiltinTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
-	// Update the name of the function to be type-qualified
 	canonicalName := bbq.NewTypedCanonicalName(
 		nil,
 		typeName,
-		functionValue.Name.Name,
+		functionValue.Name,
 	)
-	functionValue.Name = canonicalName
 
 	registerGlobalFunction(
 		canonicalName,
@@ -76,10 +74,9 @@ func registerBuiltinTypeBoundFunction(typeName string, functionValue *NativeFunc
 
 func registerBuiltinTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Here the function value is common for many types.
-	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
 	registerGlobalFunction(
-		bbq.NewTypedCanonicalName(nil, typeName, functionValue.Name.Name),
+		bbq.NewTypedCanonicalName(nil, typeName, functionValue.Name),
 		functionValue,
 		defaultBuiltinGlobals,
 	)
@@ -321,13 +318,13 @@ func registerBuiltinCommonTypeBoundFunctions() {
 	}
 
 	for _, function := range CommonBuiltinTypeBoundFunctions {
-		IndexedCommonBuiltinTypeBoundFunctions[function.Name.Name] = function
+		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
 
 	// this only available for Composites which support attachments
 	// as enforced in the compiler
 	for _, function := range compositeBuiltInFunctions {
-		IndexedCommonBuiltinTypeBoundFunctions[function.Name.Name] = function
+		IndexedCommonBuiltinTypeBoundFunctions[function.Name] = function
 	}
 }
 

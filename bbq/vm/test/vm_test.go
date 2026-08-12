@@ -10046,7 +10046,7 @@ func TestInjectedContract(t *testing.T) {
 	}
 
 	cValue := vm.NewNativeFunctionValue(
-		canonicalMethodName.String(),
+		canonicalMethodName.Name,
 		cType,
 		func(
 			context interpreter.NativeFunctionContext,

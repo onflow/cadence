@@ -371,7 +371,7 @@ func ParseCheckAndPrepareWithOptions(
 					memberFunctionEntries = append(memberFunctionEntries, memberFunctionEntry{
 						qualifiedName: commons.TypeQualifiedName(
 							vmFunction.BaseType,
-							functionValue.Name.Name,
+							functionValue.Name,
 						),
 						value: functionValue,
 					})

@@ -358,7 +358,7 @@ func functionAccess(
 	case *CompiledFunctionValue:
 		unqualifiedName = functionValue.Function.CanonicalName.Name
 	case *NativeFunctionValue:
-		unqualifiedName = functionValue.Name.Name
+		unqualifiedName = functionValue.Name
 	}
 
 	fnAccess := interpreter.GetAccessOfMember(c, v, unqualifiedName)

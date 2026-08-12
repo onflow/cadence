@@ -100,7 +100,7 @@ func newVMEnvironment(config Config) *vmEnvironment {
 		functionValue := vmFunction.FunctionValue
 		qualifiedName := commons.TypeQualifiedName(
 			vmFunction.BaseType,
-			functionValue.Name.Name,
+			functionValue.Name,
 		)
 		env.defineValue(qualifiedName, functionValue)
 	}
@@ -310,7 +310,7 @@ func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryVa
 	for _, function := range vm.CommonBuiltinTypeBoundFunctions {
 		qualifiedFunctionName := commons.TypeQualifiedName(
 			valueDeclaration.Type,
-			function.Name.Name,
+			function.Name,
 		)
 		variable := interpreter.NewVariableWithValue(
 			nil,
