@@ -44,47 +44,26 @@ func TypeQualifiedName(typ sema.Type, functionName string) bbq.CanonicalName {
 	}
 
 	return bbq.NewTypedCanonicalName(
-		typeLocation(typ),
+		locationOfType(typ),
 		TypeQualifier(typ),
 		functionName,
 	)
 }
 
-func typeLocation(typ sema.Type) common.Location {
+func locationOfType(typ sema.Type) common.Location {
 	switch typ := typ.(type) {
 	case *sema.FunctionType:
 		if typ.TypeFunctionType != nil {
-			return typeLocation(typ.TypeFunctionType)
+			return locationOfType(typ.TypeFunctionType)
 		}
 	case *sema.ReferenceType:
-		return typeLocation(typ.Type)
+		return locationOfType(typ.Type)
 	case *sema.IntersectionType:
-		return typeLocation(typ.Types[0])
+		return locationOfType(typ.Types[0])
 	case sema.LocatedType:
 		return typ.GetLocation()
 	}
 	return nil
-}
-
-func QualifiedName(typeName, functionName string) string {
-	if typeName == "" {
-		return functionName
-	}
-
-	return typeName + "." + functionName
-}
-
-func LocationQualifiedName(
-	memoryGauge common.MemoryGauge,
-	location common.Location,
-	name string,
-) string {
-	if location == nil {
-		return name
-	}
-
-	id := location.TypeID(memoryGauge, name)
-	return string(id)
 }
 
 // TypeQualifier returns the prefix to be appended to an identifier

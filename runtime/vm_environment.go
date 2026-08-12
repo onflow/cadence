@@ -271,8 +271,10 @@ func (e *vmEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValu
 func (e *vmEnvironment) declareCompilerValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
 	compilerBuiltinGlobals := e.getOrCreateCompilerBuiltinGlobals(location)
 
-	name := valueDeclaration.Name
-	canonicalName := bbq.NewCanonicalName(nil, name)
+	canonicalName := commons.TypeQualifiedName(
+		valueDeclaration.BaseType,
+		valueDeclaration.Name,
+	)
 
 	compilerBuiltinGlobals.Set(
 		canonicalName,
@@ -300,7 +302,10 @@ func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryVa
 	)
 
 	vmBuiltinGlobals.Set(
-		bbq.NewCanonicalName(nil, valueDeclaration.Name),
+		commons.TypeQualifiedName(
+			valueDeclaration.BaseType,
+			valueDeclaration.Name,
+		),
 		variable,
 	)
 
@@ -320,6 +325,7 @@ func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryVa
 	}
 
 }
+
 func (e *vmEnvironment) DeclareType(typeDeclaration stdlib.StandardLibraryType, location common.Location) {
 	e.checkingEnvironment.declareType(typeDeclaration, location)
 	if e.allDeclaredTypes == nil {
