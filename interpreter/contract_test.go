@@ -158,7 +158,7 @@ func TestInterpretContractUseBeforeInitializationComplete(t *testing.T) {
 
 		// Explicitly initialize the contract, if it's the VM.
 		if vmInvokable, ok := invokable.(*test_utils.VMInvokable); ok {
-			_, err = vmInvokable.InitializeContract("C")
+			_, err = vmInvokable.InitializeContract(vmInvokable.GetLocation(), "C")
 		}
 
 		RequireError(t, err)

@@ -301,11 +301,13 @@ func (e *vmEnvironment) declareVMValue(valueDeclaration stdlib.StandardLibraryVa
 		valueDeclaration.Value,
 	)
 
+	canonicalName := commons.TypeQualifiedName(
+		valueDeclaration.BaseType,
+		valueDeclaration.Name,
+	)
+
 	vmBuiltinGlobals.Set(
-		commons.TypeQualifiedName(
-			valueDeclaration.BaseType,
-			valueDeclaration.Name,
-		),
+		canonicalName,
 		variable,
 	)
 
@@ -419,11 +421,9 @@ func (e *vmEnvironment) LoadContractValue(
 
 	vm := e.newVM(location, compiledProgram.program)
 
-	contractTypeID := common.NewTypeIDFromQualifiedName(nil, location, name)
-
 	// NOTE: invocation.Address is not needed here, as the initializer of the contract
 	// instantiates a new contract value with the address of the contract already (newCompositeAt)
-	contract, err = vm.InitializeContract(contractTypeID, invocation.ConstructorArguments...)
+	contract, err = vm.InitializeContract(location, name, invocation.ConstructorArguments...)
 
 	return
 }

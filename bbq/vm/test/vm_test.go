@@ -1674,9 +1674,9 @@ func initializeContract(
 
 	// Assume only one contract per program
 	require.True(tb, len(program.Contracts) > 0)
-	contract := program.Contracts[0]
+	canonicalName := program.Contracts[0].CanonicalName
 
-	contractValue, err := vmInstance.InitializeContract(sema.TypeID(contract.CanonicalName.TypeID(nil)))
+	contractValue, err := vmInstance.InitializeContract(canonicalName.Location, canonicalName.Name)
 	require.NoError(tb, err)
 
 	return vmInstance, contractValue

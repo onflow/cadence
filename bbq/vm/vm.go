@@ -490,17 +490,17 @@ func (vm *VM) invokeExternally(
 	return vm.pop(), nil
 }
 
-func (vm *VM) InitializeContract(typeID sema.TypeID, arguments ...Value) (*interpreter.CompositeValue, error) {
-	location := vm.context.location
-	_, contractName, err := common.DecodeTypeID(vm.context.MemoryGauge, string(typeID))
-	if err != nil {
-		contractName = string(typeID)
-	}
+func (vm *VM) InitializeContract(
+	location common.Location,
+	name string,
+	arguments ...Value,
+) (*interpreter.CompositeValue, error) {
 	contractInitializer := bbq.NewTypedCanonicalName(
 		location,
-		contractName,
+		name,
 		commons.InitFunctionName,
 	)
+
 	value, err := vm.InvokeExternallyCanonical(contractInitializer, arguments...)
 	if err != nil {
 		return nil, err
