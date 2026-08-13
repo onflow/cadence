@@ -936,7 +936,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		default:
 			// For other composite types, the type-name is used for the constructor function.
 			// So the constructor is top-level exactly when the composite itself is.
-			constructorCanonicalName = compositeTypeCanonicalName(compositeType)
+			constructorCanonicalName = commons.CompositeTypeCanonicalName(compositeType)
 			constructorIsTopLevel = isTopLevel
 		}
 
@@ -981,7 +981,7 @@ func (c *Compiler[_, _]) initializeFunctionGlobals(
 		// Reserve a global for the constructor function.
 		// The attachment's type-name is used for it,
 		// so it is top-level exactly when the attachment itself is.
-		constructorCanonicalName := compositeTypeCanonicalName(compositeType)
+		constructorCanonicalName := commons.CompositeTypeCanonicalName(compositeType)
 		c.addGlobal(
 			constructorCanonicalName,
 			bbq.GlobalKindFunction,
@@ -1233,7 +1233,7 @@ func (c *Compiler[_, _]) exportContracts() []*bbq.Contract {
 		}
 
 		contractType := c.DesugaredElaboration.CompositeDeclarationType(declaration)
-		canonicalName := compositeTypeCanonicalName(contractType)
+		canonicalName := commons.CompositeTypeCanonicalName(contractType)
 
 		common.UseMemory(c.Config.MemoryGauge, common.CompilerBBQContractMemoryUsage)
 		contract := bbq.Contract{
@@ -2858,7 +2858,7 @@ func (c *Compiler[E, _]) globalIdentifierCanonicalName(expression *ast.Identifie
 	// 1.1) Types
 	variable, found := c.DesugaredElaboration.GetGlobalType(simpleName)
 	if found {
-		return c.canonicalNameForType(variable.Type)
+		return commons.CanonicalNameForType(variable.Type)
 	}
 
 	// 1.2) Functions and variables
@@ -3930,7 +3930,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 	default:
 		// Use the type name as the function name for initializer.
 		// So `x = Foo()` would directly call the init method.
-		functionCanonicalName = compositeTypeCanonicalName(enclosingType)
+		functionCanonicalName = commons.CompositeTypeCanonicalName(enclosingType)
 	}
 
 	parameterCount := 0
@@ -3979,7 +3979,7 @@ func (c *Compiler[_, _]) compileInitializer(declaration *ast.SpecialFunctionDecl
 		}
 	}
 
-	typeName := compositeTypeCanonicalName(enclosingType)
+	typeName := commons.CompositeTypeCanonicalName(enclosingType)
 
 	if address == common.ZeroAddress {
 
@@ -4949,33 +4949,4 @@ func (c *Compiler[E, _]) canonicalName(enclosingType sema.Type, identifier strin
 	}
 
 	return commons.TypeQualifiedName(enclosingType, identifier)
-}
-
-func (c *Compiler[E, _]) canonicalNameForType(typ sema.Type) bbq.CanonicalName {
-	name := commons.TypeQualifier(typ)
-	location := locationOfType(typ)
-	return bbq.NewCanonicalName(location, name)
-}
-
-func compositeTypeCanonicalName(typ sema.CompositeKindedType) bbq.CanonicalName {
-	typeQualifier := commons.TypeQualifier(typ.GetContainerType())
-	name := typ.GetIdentifier()
-	location := locationOfType(typ)
-	return bbq.NewTypedCanonicalName(location, typeQualifier, name)
-}
-
-func locationOfType(typ sema.Type) common.Location {
-	switch typ := typ.(type) {
-	case *sema.FunctionType:
-		if typ.TypeFunctionType != nil {
-			return locationOfType(typ.TypeFunctionType)
-		}
-	case *sema.ReferenceType:
-		return locationOfType(typ.Type)
-	case *sema.IntersectionType:
-		return locationOfType(typ.Types[0])
-	case sema.LocatedType:
-		return typ.GetLocation()
-	}
-	return nil
 }

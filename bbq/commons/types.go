@@ -111,6 +111,19 @@ func TypeQualifier(typ sema.Type) string {
 	}
 }
 
+func CanonicalNameForType(typ sema.Type) bbq.CanonicalName {
+	name := TypeQualifier(typ)
+	location := locationOfType(typ)
+	return bbq.NewCanonicalName(location, name)
+}
+
+func CompositeTypeCanonicalName(typ sema.CompositeKindedType) bbq.CanonicalName {
+	typeQualifier := TypeQualifier(typ.GetContainerType())
+	name := typ.GetIdentifier()
+	location := locationOfType(typ)
+	return bbq.NewTypedCanonicalName(location, typeQualifier, name)
+}
+
 var CollectEventsFunctionType = &sema.FunctionType{
 	Purity:               sema.FunctionPurityImpure,
 	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
