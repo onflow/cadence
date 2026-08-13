@@ -6568,6 +6568,28 @@ func TestFunctionExpression(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
 }
 
+func TestMultipleFunctionExpressions(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := CompileAndInvoke(t,
+		`
+          fun test(): Int {
+              let addOne = fun(_ x: Int): Int {
+                  return x + 1
+              }
+              let double = fun(_ x: Int): Int {
+                  return x * 2
+              }
+              return addOne(1) + double(3)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(8), actual)
+}
+
 func TestInnerFunction(t *testing.T) {
 
 	t.Parallel()
