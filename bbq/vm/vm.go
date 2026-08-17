@@ -50,6 +50,9 @@ type VM struct {
 
 	context *Context
 	globals *activations.Activation[Variable]
+
+	// entrypointLocation is the location of the entry-point program.
+	entrypointLocation common.Location
 }
 
 func NewVM(
@@ -59,15 +62,13 @@ func NewVM(
 ) *VM {
 
 	context := NewContext(config)
-	context.location = location
 
 	vm := &VM{
-		context: context,
+		context:            context,
+		entrypointLocation: location,
 	}
 
 	vm.configureContext()
-
-	context.recoverErrors = vm.RecoverErrors
 
 	// Link global variables and functions.
 	linkedGlobals := context.linkGlobals(
@@ -294,6 +295,19 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 	return poppedCallFrame
 }
 
+func (vm *VM) currentLocation() common.Location {
+	callstackLen := len(vm.callstack)
+
+	// If no invocation has been initiated yet, use the entry-point location.
+	if callstackLen == 0 {
+		return vm.entrypointLocation
+	}
+
+	// Otherwise use current function's enclosing program's location.
+	callframe := vm.callstack[callstackLen-1]
+	return callframe.function.Executable.Location
+}
+
 // callerLocation returns the location of the function that invoked the
 // currently executing function, or nil if there is no caller.
 // (i.e. the current function is the top-level invocation)
@@ -311,7 +325,7 @@ func (vm *VM) findGlobal(name string) Variable {
 	context := vm.context
 	canonicalName := commons.LocationQualifiedName(
 		context.MemoryGauge,
-		context.location,
+		vm.entrypointLocation,
 		name,
 	)
 	return vm.globals.Find(canonicalName)
@@ -336,11 +350,11 @@ func (vm *VM) getGlobalFunction(canonicalName string) (FunctionValue, error) {
 	return functionValue, nil
 }
 
-// InvokeExternally invokes a global function with the given arguments
+// InvokeExternally invokes a global function with the given arguments.
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
 	canonicalName := commons.LocationQualifiedName(
 		vm.context.MemoryGauge,
-		vm.context.location,
+		vm.entrypointLocation,
 		name,
 	)
 
@@ -366,7 +380,7 @@ func (vm *VM) InvokeExternallyCanonical(canonicalName string, arguments ...Value
 func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
 	canonicalName := commons.LocationQualifiedName(
 		vm.context.MemoryGauge,
-		vm.context.location,
+		vm.entrypointLocation,
 		name,
 	)
 
@@ -2679,6 +2693,8 @@ func (vm *VM) configureContext() {
 	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.lookupFunction
 	context.getLocationRange = vm.LocationRange
+	context.recoverErrors = vm.RecoverErrors
+	context.currentLocation = vm.currentLocation
 }
 
 func printInstructionError(

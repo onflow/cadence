@@ -38,9 +38,6 @@ import (
 type Context struct {
 	*Config
 
-	// location of the entry-point program.
-	location common.Location
-
 	CapabilityControllerIterations              map[interpreter.AddressPath]int
 	mutationDuringCapabilityControllerIteration bool
 	referencedResourceKindedValues              ReferencedResourceKindedValues
@@ -48,6 +45,7 @@ type Context struct {
 	invokeFunction                func(function Value, arguments []Value, returnType sema.Type) (Value, error)
 	lookupFunction                func(location common.Location, name string) FunctionValue
 	recoverErrors                 func(onError func(error))
+	currentLocation               func() common.Location
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
 	containerValueIteration       map[atree.ValueID]int
@@ -91,7 +89,6 @@ func NewContext(config *Config) *Context {
 func (c *Context) newReusing() *Context {
 	newContext := NewContext(c.Config)
 
-	newContext.location = c.location
 	newContext.semaTypeCache = c.semaTypeCache
 	newContext.linkedGlobalsCache = c.linkedGlobalsCache
 
@@ -325,7 +322,7 @@ func (c *Context) GetValueOfVariable(name string) interpreter.Value {
 }
 
 func (c *Context) GetLocation() common.Location {
-	return c.location
+	return c.currentLocation()
 }
 
 // InvokeFunction function invokes a given function value with the given arguments.
