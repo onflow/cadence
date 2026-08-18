@@ -32,6 +32,13 @@ type MemberAccessInfo struct {
 	Member          *Member
 	IsOptional      bool
 	ReturnReference bool
+	// CappedNestedReferences indicates that ResultingType is the member's declared type
+	// with the authorizations of its nested references capped
+	// by the authorization of the reference the member was read through.
+	// The member itself is not wrapped in a reference in this case,
+	// so the runtime must convert the value to ResultingType,
+	// for the cap to also apply to the value's own type.
+	CappedNestedReferences bool
 }
 
 type CastTypes struct {

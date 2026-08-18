@@ -20,6 +20,7 @@ package sema_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -5444,6 +5445,7 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 
 	t.Run("cannot include non-maps", func(t *testing.T) {
 		t.Parallel()
+
 		tests := []string{
 			"struct X {}",
 			"struct interface X {}",
@@ -5466,7 +5468,7 @@ func TestCheckMappingDefinitionWithInclude(t *testing.T) {
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, errs[0], &sema.InvalidEntitlementMappingInclusionError{})
+				assert.IsType(t, &sema.InvalidEntitlementMappingInclusionError{}, errs[0])
 			})
 		}
 	})
@@ -6000,6 +6002,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("three or more conjunction", func(t *testing.T) {
 		t.Parallel()
+
 		checker, err := ParseAndCheckWithOptions(t,
 			`
                 entitlement X
@@ -6058,6 +6061,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("has one entitlement of three", func(t *testing.T) {
 		t.Parallel()
+
 		checker, err := ParseAndCheckWithOptions(t,
 			`
               entitlement X
@@ -6117,6 +6121,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("has one entitlement of three", func(t *testing.T) {
 		t.Parallel()
+
 		checker, err := ParseAndCheckWithOptions(t,
 			`
               entitlement X
@@ -6175,6 +6180,7 @@ func TestCheckEntitlementErrorReporting(t *testing.T) {
 
 	t.Run("no suggestion for disjoint possession set", func(t *testing.T) {
 		t.Parallel()
+
 		checker, err := ParseAndCheckWithOptions(t, `
               entitlement X
               entitlement Y
@@ -6592,8 +6598,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("member expression in indexing assignment", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
             entitlement X
@@ -6624,8 +6630,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("function call in indexer", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
             entitlement X
@@ -6660,8 +6666,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("member expression in indexer", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
             entitlement X
@@ -6697,8 +6703,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("capture function", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
             entitlement X
@@ -6735,8 +6741,8 @@ func TestCheckEntitlementMappingEscalation(t *testing.T) {
 	})
 
 	t.Run("capture reference", func(t *testing.T) {
-
 		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
                 entitlement X
@@ -9454,8 +9460,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array filter", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9483,8 +9491,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array map", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9512,8 +9522,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array slice", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9541,8 +9553,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array concat", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9574,8 +9588,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array reverse", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9603,8 +9619,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array toVariableSized", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S; 1] = [S()]
@@ -9632,8 +9650,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array toConstantSized", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 let a1: [S] = [S()]
@@ -9667,6 +9687,7 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 		// would if such keys existed).
 		t.Run("dictionary forEachKey", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
             fun cases() {
                 // case 1
@@ -9684,6 +9705,127 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 	})
 
+	t.Run("Public copy methods, reference-carrying elements", func(t *testing.T) {
+
+		t.Parallel()
+
+		t.Run("array slice function-return element intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let slice: fun(Int, Int): [fun(): &S] = ref.slice
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array slice function-return element escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let slice: fun(Int, Int): [fun(): auth(E) &S] = ref.slice
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun(Int,Int):[fun():auth(S.test.E)&S.test.S]"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("view fun(Int,Int):[fun():&S.test.S]"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array reverse function-return element escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let reverse: fun(): [fun(): auth(E) &S] = ref.reverse
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():[fun():auth(S.test.E)&S.test.S]"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("view fun():[fun():&S.test.S]"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array slice capability-borrow element escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(cap: Capability<auth(E) &S>) {
+                    let caps: [Capability<auth(E) &S>] = [cap]
+                    let ref = &caps as auth(Mutate) &[Capability<&S>]
+
+                    let slice: fun(Int, Int): [Capability<auth(E) &S>] = ref.slice
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun(Int,Int):[Capability<auth(S.test.E)&S.test.S>]"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("view fun(Int,Int):[Capability<&S.test.S>]"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array slice function-parameter element escalation prevented", func(t *testing.T) {
+			t.Parallel()
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(fun(auth(E) &S): Void): Void) {
+                    let fns: [fun(fun(auth(E) &S): Void): Void] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                    let slice: fun(Int, Int): [fun(fun(auth(E) &S): Void): Void] = ref.slice
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun(Int,Int):[fun(fun(auth(S.test.E)&S.test.S):Void):Void]"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("view fun(Int,Int):[fun(fun(&S.test.S):Void):Void]"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+	})
+
 	t.Run("Entitled mutating/extracting methods", func(t *testing.T) {
 
 		t.Parallel()
@@ -9692,8 +9834,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array remove", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var a1: [S] = [S()]
@@ -9721,8 +9865,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array removeFirst", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var a1: [S] = [S()]
@@ -9750,8 +9896,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array removeLast", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var a1: [S] = [S()]
@@ -9779,8 +9927,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary remove", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var d1: {String: S} = {"a": S()}
@@ -9808,8 +9958,10 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary insert", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
-            access(all) struct S {}
+            struct S {}
+
             fun cases() {
                 // case 1
                 var d1: {String: S} = {}
@@ -9843,9 +9995,12 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary remove intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
                     var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
@@ -9861,9 +10016,12 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary remove intersects inner auth, escalation prevented", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
                     var d: {String: auth(E) &S} = {"a": &s as auth(E) &S}
@@ -9889,9 +10047,12 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary insert intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
                     var d: {String: auth(E) &S} = {}
@@ -9907,9 +10068,12 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("dictionary insert intersects inner auth, escalation prevented", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
                     var d: {String: auth(E) &S} = {}
@@ -9936,13 +10100,16 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array remove intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
-                    var a: [auth(E) &S] = [&s as auth(E) &S]
-                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let refs: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &refs as auth(Mutate) &[auth(E) &S]
 
                     let r: &S = ref.remove(at: 0)
                 }
@@ -9952,13 +10119,16 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array remove intersects inner auth, escalation prevented", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
-                    var a: [auth(E) &S] = [&s as auth(E) &S]
-                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let refs: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &refs as auth(Mutate) &[auth(E) &S]
 
                     let r: auth(E) &S = ref.remove(at: 0)
                 }
@@ -9978,29 +10148,35 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 
 		t.Run("array removeFirst intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
-                    var a: [auth(E) &S] = [&s as auth(E) &S]
-                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let refs: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &refs as auth(Mutate) &[auth(E) &S]
 
                     let r: &S = ref.removeFirst()
                 }
-            `)
+			`)
 			require.NoError(t, err)
 		})
 
 		t.Run("array removeLast intersects inner auth", func(t *testing.T) {
 			t.Parallel()
+
 			_, err := ParseAndCheck(t, `
                 entitlement E
-                access(all) struct S {}
+
+                struct S {}
+
                 fun cases() {
                     let s = S()
-                    var a: [auth(E) &S] = [&s as auth(E) &S]
-                    let ref = &a as auth(Mutate) &[auth(E) &S]
+                    let refs: [auth(E) &S] = [&s as auth(E) &S]
+                    let ref = &refs as auth(Mutate) &[auth(E) &S]
 
                     let r: &S = ref.removeLast()
                 }
@@ -10008,6 +10184,264 @@ func TestCheckContainerMethodElementCascading(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("array removeFirst capability borrow type intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
+                fun cases(cap: Capability<auth(E) &S>) {
+                    let caps: [Capability<auth(E) &S>] = [cap]
+                    let ref = &caps as auth(Mutate) &[Capability<&S>]
+
+                    let removeFirst: fun(): Capability<&S> = ref.removeFirst
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeFirst capability borrow type escalation prevented", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
+                fun cases(cap: Capability<auth(E) &S>) {
+                    let caps: [Capability<auth(E) &S>] = [cap]
+                    let ref = &caps as auth(Mutate) &[Capability<&S>]
+
+                    let removeFirst: fun(): Capability<auth(E) &S> = ref.removeFirst
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():Capability<auth(S.test.E)&S.test.S>"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("fun():Capability<&S.test.S>"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array removeFirst function element return type intersects inner auth", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let removeFirst: fun(): fun(): &S = ref.removeFirst
+                }
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("array removeFirst function element return type escalation prevented", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+                struct S {}
+                fun cases(f: fun(): auth(E) &S) {
+                    let fns: [fun(): auth(E) &S] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                    let removeFirst: fun(): fun(): auth(E) &S = ref.removeFirst
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():fun():auth(S.test.E)&S.test.S"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("fun():fun():&S.test.S"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array removeFirst function element parameter type escalation prevented", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
+                fun cases(f: fun(fun(auth(E) &S): Void): Void) {
+                    let fns: [fun(fun(auth(E) &S): Void): Void] = [f]
+                    let ref = &fns as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                    let removeFirst: fun(): fun(fun(auth(E) &S): Void): Void = ref.removeFirst
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():fun(fun(auth(S.test.E)&S.test.S):Void):Void"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("fun():fun(fun(&S.test.S):Void):Void"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+		t.Run("array removeFirst function element callback-parameter escalation prevented, local runner", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct S {}
+
+                fun cases() {
+                    let runner = fun(callback: fun(auth(E) &S): Void) {
+                        callback(&S() as auth(E) &S)
+                    }
+                    let runners: [fun(fun(auth(E) &S): Void): Void] = [runner]
+                    let ref = &runners as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                    let removeFirst: fun(): fun(fun(auth(E) &S): Void): Void = ref.removeFirst
+                }
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+			assert.Equal(t,
+				common.TypeID("fun():fun(fun(auth(S.test.E)&S.test.S):Void):Void"),
+				typeMismatchError.ExpectedType.ID(),
+			)
+			assert.Equal(t,
+				common.TypeID("fun():fun(fun(&S.test.S):Void):Void"),
+				typeMismatchError.ActualType.ID(),
+			)
+		})
+
+	})
+
+}
+
+// TestCheckContainerIndexingElementCascading verifies that indexing a container
+// through a reference caps the authorization of references nested inside the
+// element type, for element types that report no fields or elements (function and
+// capability values). This is the indexing counterpart to the copy-method
+// cascading in TestCheckContainerMethodElementCascading, and — unlike the method
+// case — it is directly observable at the checker level: the reference's declared
+// element type carries the strong authorization, and indexing through the
+// (here unauthorized) reference must intersect it away.
+//
+// This is the check-time defense that the runtime reproducer
+// TestRuntimeEntitlementEscalationViaContainer relied on being absent: the
+// escalation payload it used (`downCastArray[0][0]()...`) no longer type-checks,
+// because indexing the array reference caps the extracted function's return
+// authorization.
+func TestCheckContainerIndexingElementCascading(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function-return element intersects inner auth", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            struct S {}
+            fun cases(fns: [fun(): auth(E) &S]) {
+                let ref = &fns as &[fun(): auth(E) &S]
+
+                let element: fun(): &S = ref[0]
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("function-return element escalation prevented", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            struct S {}
+            fun cases(fns: [fun(): auth(E) &S]) {
+                let ref = &fns as &[fun(): auth(E) &S]
+
+                let element: fun(): auth(E) &S = ref[0]
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("fun():auth(S.test.E)&S.test.S"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("fun():&S.test.S"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Mirrors the "function returning nested reference" case of the runtime
+	// reproducer TestRuntimeEntitlementEscalationViaContainer: the authorized
+	// reference is nested inside the function's return array.
+	t.Run("function-return nested reference element escalation prevented", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            struct S {}
+            fun cases(fns: [fun(): [auth(E) &S]]) {
+                let ref = &fns as &[fun(): [auth(E) &S]]
+
+                let element: fun(): [auth(E) &S] = ref[0]
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("fun():[auth(S.test.E)&S.test.S]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("fun():[&S.test.S]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	t.Run("capability-borrow element escalation prevented", func(t *testing.T) {
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            struct S {}
+            fun cases(caps: [Capability<auth(E) &S>]) {
+                let ref = &caps as &[Capability<auth(E) &S>]
+
+                let element: Capability<auth(E) &S> = ref[0]
+            }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("Capability<auth(S.test.E)&S.test.S>"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("Capability<&S.test.S>"),
+			typeMismatchError.ActualType.ID(),
+		)
 	})
 
 }
@@ -10321,4 +10755,1007 @@ func TestCheckInvalidDisjunctiveEntitlementsEscalation(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
+}
+
+func TestEntitlementMapEmptyDisjunctImage(t *testing.T) {
+
+	t.Parallel()
+
+	// B is outside M's domain. auth(A | B) should collapse to
+	// unauthorized because M(B) = {}.
+	t.Run("empty disjunct", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            entitlement mapping M {
+                A -> C
+            }
+
+            resource Inner {
+                access(C) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            resource Holder {
+                access(mapping M) let inner: @Inner
+                init() {
+                    self.inner <- create Inner()
+                }
+            }
+
+            fun test(): Int {
+                let holder <- create Holder()
+                let holderRef = &holder as auth(B) &Holder
+
+                let widened: auth(A | B) &Holder = holderRef
+                let forged: auth(C) &Inner = widened.inner
+                let r = forged.secret()
+
+                destroy holder
+                return r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.C)&S.test.Inner"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&S.test.Inner"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Widening happens implicitly at the call boundary.
+	t.Run("widening via function parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            entitlement mapping M {
+                A -> C
+            }
+
+            resource Inner {
+                access(C) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            resource Holder {
+                access(mapping M) let inner: @Inner
+                init() {
+                    self.inner <- create Inner()
+                }
+            }
+
+            fun helper(_ ref: auth(A | B) &Holder): auth(C) &Inner {
+                return ref.inner
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.C)&S.test.Inner"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&S.test.Inner"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// M(A) = {C, D} (two arrows), M(B) = {} (empty). The honest answer
+	// is "(C & D) OR nothing" = unauthorized. The empty-disjunct collapse
+	// must take priority over the unrepresentable-output error.
+	t.Run("multi-image AND empty disjunct", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+
+            entitlement mapping M {
+                A -> C
+                A -> D
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(_ ref: auth(B) &{S}): auth(C) &[Int] {
+                let widened: auth(A | B) &{S} = ref
+                return widened.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.C)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// M(A) = {C, D}, input is auth(A | B) where B is also in the domain
+	// with a single-element image. The unrepresentable error must still
+	// fire (existing behavior preserved).
+	t.Run("multi-image without empty disjunct", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+            entitlement E
+
+            entitlement mapping M {
+                A -> C
+                A -> D
+                B -> E
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(A | B) &{S}) {
+                let x = ref.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
+	})
+
+	// auth(B) alone cannot yield auth(C) because M(B) = {}.
+	t.Run("without widening", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            entitlement mapping M {
+                A -> C
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(B) &{S}): auth(C) &[Int] {
+                return ref.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.C)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+
+	// Conjunction where all entitlements are outside the domain.
+	// The union of images is empty, so the result is unauthorized.
+	t.Run("conjunction all out-of-domain", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+            entitlement D
+
+            entitlement mapping M {
+                A -> D
+            }
+
+            struct interface S {
+                access(mapping M) let x: [Int]
+            }
+
+            fun foo(ref: auth(B, C) &{S}): auth(D) &[Int] {
+                return ref.x
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.D)&[Int]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(t,
+			common.TypeID("&[Int]"),
+			typeMismatchError.ActualType.ID(),
+		)
+	})
+}
+
+func TestCheckMemberCapabilityAndFunctionAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// A capability field read through an unauthorized reference
+	// must not yield a capability that can be borrowed with the full authorization.
+	t.Run("capability field, unauthorized outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let c: Capability<auth(E) &T>
+                init(c: Capability<auth(E) &T>) {
+                    self.c = c
+                }
+            }
+
+            fun test(ref: &S): Int {
+                return ref.c.borrow()!.secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A function field read through an unauthorized reference
+	// must not yield a function returning a fully authorized reference.
+	t.Run("function field, unauthorized outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// The outer reference is authorized, but with an unrelated entitlement,
+	// so the intersection is still empty.
+	t.Run("capability field, disjoint outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let c: Capability<auth(E) &T>
+                init(c: Capability<auth(E) &T>) {
+                    self.c = c
+                }
+            }
+
+            fun test(ref: auth(F) &S): Int {
+                return ref.c.borrow()!.secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A mapped-access field is capped by the outer reference's authorization too.
+	t.Run("mapped function field, out-of-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: auth(F) &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A field with mapping access is capped with the *mapped* authorization,
+	// not with the accessed reference's raw authorization.
+	// `M` maps `G` to `E`, so reading the field through an `auth(G)` reference
+	// grants `E`, and the nested `auth(E)` reference survives —
+	// even though `G` and `E` are disjoint.
+	t.Run("mapped function field, in-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: auth(G) &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// The same, for a mapped field that *is* wrapped in a reference.
+	// This path capped with the raw authorization as well.
+	t.Run("mapped array field, in-domain outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement G
+
+            entitlement mapping M {
+                G -> E
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let x: [auth(E) &T]
+                init(x: [auth(E) &T]) {
+                    self.x = x
+                }
+            }
+
+            fun test(ref: auth(G) &S): Int {
+                return ref.x[0].secret()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// A mapped field whose mapped authorization does not cover the nested
+	// reference is still capped.
+	t.Run("mapped array field, mapped authorization too weak", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+
+            entitlement mapping M {
+                G -> F
+            }
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(mapping M) let x: [auth(E) &T]
+                init(x: [auth(E) &T]) {
+                    self.x = x
+                }
+            }
+
+            fun test(ref: auth(G) &S): Int {
+                return ref.x[0].secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// The outer reference grants the very entitlement the nested reference carries,
+	// so the intersection preserves it and the access is valid.
+	t.Run("function field, matching outer authorization", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: auth(E) &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// Owned access is unaffected: there is no outer reference to cap with.
+	t.Run("function field, owned access", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(s: S): Int {
+                let g = s.f
+                return g().secret()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// An optional capability field: the outer reference is unwrapped
+	// before the capping decision, so the cap applies through the optional too.
+	t.Run("optional capability field, unauthorized outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let c: Capability<auth(E) &T>?
+                init(c: Capability<auth(E) &T>?) {
+                    self.c = c
+                }
+            }
+
+            fun test(ref: &S): Int {
+                return ref.c!.borrow()!.secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A function returning a capability:
+	// the cap must reach references nested at any depth.
+	t.Run("function field returning capability, unauthorized outer reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            struct T {
+                access(E) fun secret(): Int {
+                    return 42
+                }
+            }
+
+            struct S {
+                access(all) let f: fun(): Capability<auth(E) &T>
+                init(f: fun(): Capability<auth(E) &T>) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S): Int {
+                let g = ref.f
+                return g().borrow()!.secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A member that carries no references is unaffected.
+	t.Run("function field without nested references", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                access(all) let f: fun(): Int
+                init(f: fun(): Int) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S): Int {
+                let g = ref.f
+                return g()
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckLocationRestrictedMemberAuthorizationCapping(t *testing.T) {
+
+	t.Parallel()
+
+	// The authorization of the reference a member is read through
+	// only gates members that code anywhere may read.
+	// A member restricted to a location is gated by where the reading code is,
+	// so capping the references nested in its type
+	// would only restrict the declaring code itself.
+	//
+	// This is the shape FlowTransactionScheduler uses: an `access(contract)`
+	// capability field, read through an unauthorized reference to the
+	// containing resource, by the declaring contract itself.
+
+	test := func(t *testing.T, fieldAccess string, referenceType string) error {
+		t.Helper()
+
+		_, err := ParseAndCheck(t, `
+            access(all) contract C {
+                access(all) entitlement E
+                access(all) entitlement Other
+
+                access(all) resource interface H {
+                    access(E) fun secret(): Int
+                }
+
+                access(all) resource Box {
+                    `+fieldAccess+` let handler: Capability<auth(E) &{H}>
+                    init(handler: Capability<auth(E) &{H}>) {
+                        self.handler = handler
+                    }
+                }
+
+                access(all) fun read(ref: `+referenceType+`): Int {
+                    return ref.handler.borrow()!.secret()
+                }
+            }
+        `)
+		return err
+	}
+
+	t.Run("access(contract)", func(t *testing.T) {
+		t.Parallel()
+		require.NoError(t, test(t, "access(contract)", "&Box"))
+	})
+
+	t.Run("access(account)", func(t *testing.T) {
+		t.Parallel()
+		require.NoError(t, test(t, "access(account)", "&Box"))
+	})
+
+	// Publicly readable members stay capped:
+	// code anywhere may hold a reference to the container.
+	t.Run("access(all)", func(t *testing.T) {
+		t.Parallel()
+		errs := RequireCheckerErrors(t, test(t, "access(all)", "&Box"), 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// An entitlement-gated member stays capped as well.
+	// The reference carries the entitlement the field requires,
+	// so the field itself is readable and only the cap is under test.
+	t.Run("entitlement-based access", func(t *testing.T) {
+		t.Parallel()
+		errs := RequireCheckerErrors(t, test(t, "access(Other)", "auth(Other) &Box"), 1)
+		var invalidAccessError *sema.InvalidAccessError
+		require.ErrorAs(t, errs[0], &invalidAccessError)
+		assert.Equal(t, "secret", invalidAccessError.Name)
+	})
+
+	// An unspecified access modifier is publicly readable
+	// unless the access check mode is restricted, so it stays capped.
+	t.Run("unspecified", func(t *testing.T) {
+		t.Parallel()
+		errs := RequireCheckerErrors(t, test(t, "", "&Box"), 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+}
+
+func TestCheckFunctionParameterAuthorizationVariance(t *testing.T) {
+
+	t.Parallel()
+
+	const declarations = `
+        entitlement E
+        entitlement F
+
+        struct T {
+            access(E) fun secret(): Int {
+                return 42
+            }
+        }
+    `
+
+	// A reference in a parameter position is supplied by the reader,
+	// not obtained by it, so its authorization must be left as declared.
+	// Capping it would let an under-entitled reference be passed
+	// to a function that requires an entitled one.
+	t.Run("field of function type with entitled parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun(auth(E) &T): Int
+                init(f: fun(auth(E) &T): Int) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S, t: T): Int {
+                let g = ref.f
+                let unauthorized: &T = &t
+                return g(unauthorized)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E)&S.test.T"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	// The same, through an array element rather than a member.
+	t.Run("array element of function type with entitled parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            fun test(f: fun(auth(E) &T): Int, t: T): Int {
+                let fns: [fun(auth(E) &T): Int] = [f]
+                let ref = &fns as &[fun(auth(E) &T): Int]
+                let g = ref[0]
+                let unauthorized: &T = &t
+                return g(unauthorized)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("auth(S.test.E)&S.test.T"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	// Passing a properly entitled reference remains valid:
+	// the parameter's declared authorization is preserved, not widened.
+	t.Run("entitled parameter accepts an entitled argument", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun(auth(E) &T): Int
+                init(f: fun(auth(E) &T): Int) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S, t: T): Int {
+                let g = ref.f
+                let entitled = &t as auth(E) &T
+                return g(entitled)
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	// The parameter of a parameter is covariant again:
+	// the reader's callback receives the reference,
+	// so its authorization must still be capped.
+	t.Run("field of function type with entitled callback parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun(fun(auth(E) &T): Void): Void
+                init(f: fun(fun(auth(E) &T): Void): Void) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S) {
+                let g = ref.f
+                g(fun(inner: auth(E) &T) {
+                    inner.secret()
+                })
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("fun(&S.test.T):Void"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	// A return type is covariant, and is still capped.
+	t.Run("field of function type with entitled return type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun(): auth(E) &T
+                init(f: fun(): auth(E) &T) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: auth(F) &S): Int {
+                let g = ref.f
+                return g().secret()
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
+
+	// A reference nested inside a parameter, but still in a contravariant position,
+	// is also left as declared.
+	t.Run("entitled reference nested in a parameter", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, declarations+`
+            struct S {
+                access(all) let f: fun([auth(E) &T]): Int
+                init(f: fun([auth(E) &T]): Int) {
+                    self.f = f
+                }
+            }
+
+            fun test(ref: &S, t: T): Int {
+                let g = ref.f
+                let unauthorized: [&T] = [&t as &T]
+                return g(unauthorized)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errs[0], &typeMismatchError)
+		assert.Equal(t,
+			common.TypeID("[auth(S.test.E)&S.test.T]"),
+			typeMismatchError.ExpectedType.ID(),
+		)
+	})
+}
+
+func TestCheckFunctionParameterAuthorizationVarianceNesting(t *testing.T) {
+
+	t.Parallel()
+
+	// Variance flips at every function parameter, and only there:
+	// a return type, and a container, pass the position through unchanged.
+	// So whether a nested reference is capped is the parity of the number of
+	// *parameter* positions it sits under, not of its total nesting depth.
+	//
+	// Each case declares a field of the given type, reads it through an
+	// unauthorized reference, and pins the resulting type exactly.
+
+	type testCase struct {
+		// parameterDepth is how many parameter positions the `auth(E) &T`
+		// reference sits under. Even means covariant, and capped.
+		parameterDepth int
+		declaredType   string
+		resultingType  string
+	}
+
+	testCases := []testCase{
+		// Alternating parameter nesting, to pin that the flip keeps alternating
+		// rather than happening only once.
+		{
+			parameterDepth: 0,
+			declaredType:   "fun(): auth(E) &T",
+			resultingType:  "fun():&S.test.T",
+		},
+		{
+			parameterDepth: 1,
+			declaredType:   "fun(auth(E) &T): Int",
+			resultingType:  "fun(auth(S.test.E)&S.test.T):Int",
+		},
+		{
+			parameterDepth: 2,
+			declaredType:   "fun(fun(auth(E) &T): Int): Int",
+			resultingType:  "fun(fun(&S.test.T):Int):Int",
+		},
+		{
+			parameterDepth: 3,
+			declaredType:   "fun(fun(fun(auth(E) &T): Int): Int): Int",
+			resultingType:  "fun(fun(fun(auth(S.test.E)&S.test.T):Int):Int):Int",
+		},
+		{
+			parameterDepth: 4,
+			declaredType:   "fun(fun(fun(fun(auth(E) &T): Int): Int): Int): Int",
+			resultingType:  "fun(fun(fun(fun(&S.test.T):Int):Int):Int):Int",
+		},
+
+		// Mixed parameter and return positions, to pin that only parameters flip.
+		{
+			parameterDepth: 1,
+			declaredType:   "fun(fun(): auth(E) &T): Int",
+			resultingType:  "fun(fun():auth(S.test.E)&S.test.T):Int",
+		},
+		{
+			parameterDepth: 1,
+			declaredType:   "fun(): fun(auth(E) &T): Int",
+			resultingType:  "fun():fun(auth(S.test.E)&S.test.T):Int",
+		},
+		{
+			parameterDepth: 0,
+			declaredType:   "fun(): fun(): auth(E) &T",
+			resultingType:  "fun():fun():&S.test.T",
+		},
+		{
+			parameterDepth: 2,
+			declaredType:   "fun(fun(fun(): auth(E) &T): Int): Int",
+			resultingType:  "fun(fun(fun():&S.test.T):Int):Int",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.declaredType, func(t *testing.T) {
+			t.Parallel()
+
+			// The `Bool` annotation always mismatches,
+			// so the error reports the resulting type.
+			_, err := ParseAndCheck(t, `
+                entitlement E
+
+                struct T {
+                    access(E) fun secret(): Int {
+                        return 42
+                    }
+                }
+
+                struct S {
+                    access(all) let f: `+testCase.declaredType+`
+                    init(f: `+testCase.declaredType+`) {
+                        self.f = f
+                    }
+                }
+
+                fun test(ref: &S) {
+                    let x: Bool = ref.f
+                }
+            `)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			var typeMismatchError *sema.TypeMismatchError
+			require.ErrorAs(t, errs[0], &typeMismatchError)
+
+			assert.Equal(t,
+				common.TypeID(testCase.resultingType),
+				typeMismatchError.ActualType.ID(),
+			)
+
+			// Cross-check the parity rule the cases are chosen to demonstrate.
+			capped := testCase.parameterDepth%2 == 0
+			assert.Equal(t,
+				capped,
+				!strings.Contains(testCase.resultingType, "auth("),
+				"parameter depth %d should%s be capped",
+				testCase.parameterDepth,
+				map[bool]string{true: "", false: " not"}[capped],
+			)
+		})
+	}
 }

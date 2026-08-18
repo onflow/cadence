@@ -1899,6 +1899,10 @@ func (s staticTypeConversionHandler) GetCompositeType(
 	return s.getCompositeType(location, qualifiedIdentifier, typeID)
 }
 
+func (s staticTypeConversionHandler) GetEnumCaseCount(_ *sema.CompositeType) (int, error) {
+	return 0, nil
+}
+
 func (s staticTypeConversionHandler) GetEntitlementType(typeID TypeID) (*sema.EntitlementType, error) {
 	return s.getEntitlementType(typeID)
 }

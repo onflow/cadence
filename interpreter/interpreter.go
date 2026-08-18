@@ -2089,14 +2089,50 @@ func ConvertAndBox(
 	return BoxOptional(context, value, targetType)
 }
 
-// applyTargetTypeAuthorization returns a static type that preserves the
-// actual type structure but uses the target type's authorization for references.
-// This prevents entitlement escalation while allowing type narrowing.
+// applyTargetTypeAuthorization returns a static type that preserves the actual type structure,
+// but weakens reference authorizations to match the target type where doing so is safe.
+//
+// The reference case computes the safe projected authorization directly with `PermitsAccess`.
+// If that check fails, the target authorization would be stronger than the value's real authorization,
+// so the actual authorization is preserved.
+//
+// This keeps the rewrite independent of type-position variance.
+// Function parameters, returns, type parameter bounds, and default argument types
+// all recurse through the same rule.
 func applyTargetTypeAuthorization(
 	typeConverter TypeConverter,
 	actualStaticType StaticType,
 	targetType sema.Type,
 ) StaticType {
+
+	// The target may wrap the actual (non-optional) type in an optional,
+	// e.g. actual `auth(E) &Int` vs target `(&Int)?`, or `auth(E) &Int` vs `AnyStruct?`.
+	// Recurse into the target's inner type to weaken the authorization,
+	// then re-wrap the result in an optional so the computed type differs from
+	// the original. Otherwise the conversion in `convert` would take the
+	// `Equal` shortcut and skip stripping, leaving `auth(E)` on the elements
+	// (observable via `getType()`).
+	//
+	// This only applies when the actual type is not itself optional;
+	// the optional-vs-optional case is handled by the `*OptionalStaticType` case below.
+	if optionalTargetType, isOptionalTarget := targetType.(*sema.OptionalType); isOptionalTarget {
+		if _, actualIsOptional := actualStaticType.(*OptionalStaticType); !actualIsOptional {
+			innerType := applyTargetTypeAuthorization(
+				typeConverter,
+				actualStaticType,
+				optionalTargetType.Type,
+			)
+			// Only wrap (and thereby force conversion) when weakening actually occurred.
+			// For non-reference values (e.g. `Int` -> `Int?`) nothing is stripped and
+			// boxing happens lazily at access, so preserve the original type to keep
+			// the conversion a no-op, matching the pre-existing behavior.
+			if innerType.Equal(actualStaticType) {
+				return actualStaticType
+			}
+			return NewOptionalStaticType(typeConverter, innerType)
+		}
+	}
+
 	switch actual := actualStaticType.(type) {
 	case *VariableSizedStaticType:
 		var targetElementType sema.Type
@@ -2158,11 +2194,13 @@ func applyTargetTypeAuthorization(
 		return NewOptionalStaticType(typeConverter, innerType)
 
 	case *ReferenceStaticType:
-		// Use the actual referenced type as the inner type, but with the borrow type's authorization,
-		// instead of the actual referenced type's authorization.
+		// Use the actual referenced type as the inner type,
+		// but only clamp the authorization down when the target is less permissive (PermitsAccess).
+		// This prevents entitlement recovery without stamping stronger target authorization
+		// onto a value that does not actually have it.
 
 		var targetReferencedType sema.Type
-		var targetAuth Authorization
+		targetAuth := actual.Authorization
 
 		if targetType == sema.AnyStructType {
 			// `AnyStruct` must be treated as unauthorized.
@@ -2170,7 +2208,13 @@ func applyTargetTypeAuthorization(
 			targetReferencedType = sema.AnyStructType
 		} else if borrowRef, ok := targetType.(*sema.ReferenceType); ok {
 			targetReferencedType = borrowRef.Type
-			targetAuth = ConvertSemaAccessToStaticAuthorization(typeConverter, borrowRef.Authorization)
+			convertedTargetAuth := ConvertSemaAccessToStaticAuthorization(
+				typeConverter,
+				borrowRef.Authorization,
+			)
+			if PermitsAccess(typeConverter, convertedTargetAuth, actual.Authorization) {
+				targetAuth = convertedTargetAuth
+			}
 		} else {
 			break
 		}
@@ -2200,16 +2244,21 @@ func applyTargetTypeAuthorization(
 			borrowType,
 		)
 	case FunctionStaticType:
+		var targetFuncType *sema.FunctionType
 		var targetReturnType sema.Type
 
 		if targetType == sema.AnyStructType {
 			targetReturnType = sema.AnyStructType
-		} else if targetFuncType, isFuncType := targetType.(*sema.FunctionType); isFuncType {
-			targetReturnType = targetFuncType.ReturnTypeAnnotation.Type
+		} else if funcType, isFuncType := targetType.(*sema.FunctionType); isFuncType {
+			targetFuncType = funcType
+			targetReturnType = funcType.ReturnTypeAnnotation.Type
 		} else {
 			break
 		}
 
+		// Function values can hide authorized references in return types,
+		// parameter types, and default argument types.
+		// Rewrite all of those types to match the target type's authorization.
 		newReturnType := applyTargetTypeAuthorization(
 			typeConverter,
 			actual.ReturnType(typeConverter),
@@ -2217,7 +2266,22 @@ func applyTargetTypeAuthorization(
 		)
 
 		newSemaReturnType := typeConverter.SemaTypeFromStaticType(newReturnType)
+		newParameters := applyTargetTypeAuthorizationToParameters(
+			typeConverter,
+			actual.Parameters,
+			targetFuncType,
+		)
 
+		// The type parameters are preserved unchanged, rather than cloned with
+		// rewritten bounds. A type parameter bound constrains type arguments; it is
+		// not a value-bearing position, so it cannot hide a recoverable authorized
+		// reference and does not need rewriting.
+		//
+		// Preserving the original binders is also required for correctness:
+		// the `GenericType` references in the parameter and return types, and the
+		// `TypeArgumentsCheck` callback, all identify the binders by pointer identity.
+		// Cloning the binders while leaving those references pointing at the originals
+		// would break type-argument resolution and silently skip `TypeArgumentsCheck`.
 		return NewFunctionStaticType(
 			typeConverter,
 			&sema.FunctionType{
@@ -2228,7 +2292,7 @@ func applyTargetTypeAuthorization(
 				TypeArgumentsCheck:       actual.TypeArgumentsCheck,
 				Members:                  actual.Members,
 				TypeParameters:           actual.TypeParameters,
-				Parameters:               actual.Parameters,
+				Parameters:               newParameters,
 				IsConstructor:            actual.IsConstructor,
 				TypeFunctionType:         actual.TypeFunctionType,
 			},
@@ -2271,6 +2335,13 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 
 	case *sema.FunctionType:
 		newReturnType := semaTypeWithStrippedEntitlements(gauge, t.ReturnTypeAnnotation.Type)
+		newParameters := semaParametersWithStrippedEntitlements(gauge, t.Parameters)
+		// The type parameters are preserved unchanged, rather than cloned with
+		// stripped bounds. A type parameter bound constrains type arguments; it is
+		// not a value-bearing position and cannot hide a recoverable authorized
+		// reference. Preserving the original binders also keeps the `GenericType`
+		// references in the parameter and return types, and the `TypeArgumentsCheck`
+		// callback, consistent, since all identify the binders by pointer identity.
 		return &sema.FunctionType{
 			Purity:                   t.Purity,
 			ReturnTypeAnnotation:     sema.NewTypeAnnotation(newReturnType),
@@ -2279,7 +2350,7 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 			TypeArgumentsCheck:       t.TypeArgumentsCheck,
 			Members:                  t.Members,
 			TypeParameters:           t.TypeParameters,
-			Parameters:               t.Parameters,
+			Parameters:               newParameters,
 			IsConstructor:            t.IsConstructor,
 			TypeFunctionType:         t.TypeFunctionType,
 		}
@@ -2287,6 +2358,121 @@ func semaTypeWithStrippedEntitlements(gauge common.MemoryGauge, typ sema.Type) s
 	default:
 		return typ
 	}
+}
+
+func applyTargetTypeAuthorizationToParameters(
+	typeConverter TypeConverter,
+	parameters []sema.Parameter,
+	targetFuncType *sema.FunctionType,
+) []sema.Parameter {
+	parameterCount := len(parameters)
+	if parameterCount == 0 {
+		return parameters
+	}
+
+	newParameters := make([]sema.Parameter, parameterCount)
+
+	for i, parameter := range parameters {
+		var targetParameterType sema.Type
+		var targetDefaultArgument sema.Type
+		if targetFuncType == nil || i >= len(targetFuncType.Parameters) {
+			// If the target function type is absent or malformed, erase against
+			// `AnyStruct` defensively. Valid conversions have matching arity.
+			targetParameterType = sema.AnyStructType
+		} else {
+			targetParameter := targetFuncType.Parameters[i]
+			targetParameterType = targetParameter.TypeAnnotation.Type
+			if targetParameterType == nil {
+				// Parameter types are required for valid function types.
+				// A nil target parameter type is malformed, not unconstrained.
+				targetParameterType = sema.AnyStructType
+			}
+			targetDefaultArgument = targetParameter.DefaultArgument
+		}
+
+		newType := semaTypeWithTargetAuthorization(
+			typeConverter,
+			parameter.TypeAnnotation.Type,
+			targetParameterType,
+		)
+
+		var newDefaultArgument sema.Type
+		if parameter.DefaultArgument != nil {
+			if targetDefaultArgument == nil {
+				targetDefaultArgument = targetParameterType
+			}
+
+			newDefaultArgument = semaTypeWithTargetAuthorization(
+				typeConverter,
+				parameter.DefaultArgument,
+				targetDefaultArgument,
+			)
+		}
+
+		newParameters[i] = sema.Parameter{
+			TypeAnnotation:  sema.NewTypeAnnotation(newType),
+			DefaultArgument: newDefaultArgument,
+			Label:           parameter.Label,
+			Identifier:      parameter.Identifier,
+		}
+	}
+
+	return newParameters
+}
+
+func semaTypeWithTargetAuthorization(
+	typeConverter TypeConverter,
+	actualType sema.Type,
+	targetType sema.Type,
+) sema.Type {
+	if actualType == nil {
+		return nil
+	}
+
+	actualStaticType := ConvertSemaToStaticType(typeConverter, actualType)
+	if actualStaticType == PrimitiveStaticTypeUnknown || actualStaticType == nil {
+		// Some sema types, such as bare generic type parameters, do not have a
+		// static representation that can carry reference authorization metadata.
+		return actualType
+	}
+
+	newStaticType := applyTargetTypeAuthorization(
+		typeConverter,
+		actualStaticType,
+		targetType,
+	)
+
+	return typeConverter.SemaTypeFromStaticType(newStaticType)
+}
+
+func semaParametersWithStrippedEntitlements(
+	gauge common.MemoryGauge,
+	parameters []sema.Parameter,
+) []sema.Parameter {
+	parameterCount := len(parameters)
+	if parameterCount == 0 {
+		return parameters
+	}
+
+	newParameters := make([]sema.Parameter, parameterCount)
+
+	for i, parameter := range parameters {
+		newType := semaTypeWithStrippedEntitlements(gauge, parameter.TypeAnnotation.Type)
+
+		var newDefaultArgument sema.Type
+		if parameter.DefaultArgument != nil {
+			newDefaultArgument = semaTypeWithStrippedEntitlements(gauge, parameter.DefaultArgument)
+		}
+
+		newParameters[i] = sema.Parameter{
+			TypeAnnotation:  sema.NewTypeAnnotation(newType),
+			DefaultArgument: newDefaultArgument,
+			Label:           parameter.Label,
+			Identifier:      parameter.Identifier,
+		}
+	}
+
+	return newParameters
 }
 
 func convert(
@@ -2646,7 +2832,7 @@ func convert(
 					}
 
 					value := MustConvertStoredValue(context, element)
-					return convert(context, value, targetElementType)
+					return ConvertAndBox(context, value, targetElementType)
 				},
 			)
 		}
@@ -2690,8 +2876,8 @@ func convert(
 					key := MustConvertStoredValue(context, k)
 					value := MustConvertStoredValue(context, v)
 
-					convertedKey := convert(context, key, targetKeyType)
-					convertedValue := convert(context, value, targetValueType)
+					convertedKey := ConvertAndBox(context, key, targetKeyType)
+					convertedValue := ConvertAndBox(context, value, targetValueType)
 
 					return convertedKey, convertedValue
 				},
@@ -5600,10 +5786,42 @@ func AccountStorageLoad(
 
 	storageMapKey := StringStorageMapKey(identifier)
 
-	storable := invocationContext.RemoveStored(address, domain, storageMapKey)
+	// Read without removing, so the type check runs before the removal:
+	// read -> type-check -> remove.
+	// A type mismatch panics, and on that path storage must be left untouched;
+	// do not reorder to remove-then-check.
+	// (Remove-then-check would not actually lose a resource,
+	// since mutations are cached and written back only on success,
+	// but this order avoids a transient removed-but-not-returned state
+	// and the incorrect "resource loss on type mismatch" reports it invites.)
+	value := invocationContext.ReadStored(address, domain, storageMapKey)
 
-	if storable == nil {
+	if value == nil {
 		return Nil
+	}
+
+	// If there is a value stored for the given path,
+	// check that it satisfies the type given as the type argument,
+	// before removing it from storage.
+
+	valueStaticType := value.StaticType(invocationContext)
+
+	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
+		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
+
+		panic(&StoredValueTypeMismatchError{
+			ExpectedType: typeParameter,
+			ActualType:   valueSemaType,
+		})
+	}
+
+	// The type matches: now remove the value from storage and transfer it out.
+
+	storable := invocationContext.RemoveStored(address, domain, storageMapKey)
+	if storable == nil {
+		// Unreachable: the value was just read above, and nothing runs between
+		// the read and this removal that could mutate the storage map.
+		panic(errors.NewUnreachableError())
 	}
 
 	transferedValue := StoredValue(invocationContext, storable, invocationContext.Storage()).
@@ -5615,20 +5833,6 @@ func AccountStorageLoad(
 			nil,
 			true, // value is standalone because it was removed from parent container.
 		)
-
-	// If there is value stored for the given path,
-	// check that it satisfies the type given as the type argument.
-
-	valueStaticType := transferedValue.StaticType(invocationContext)
-
-	if !IsSubTypeOfSemaType(invocationContext, valueStaticType, typeParameter) {
-		valueSemaType := invocationContext.SemaTypeFromStaticType(valueStaticType)
-
-		panic(&StoredValueTypeMismatchError{
-			ExpectedType: typeParameter,
-			ActualType:   valueSemaType,
-		})
-	}
 
 	return NewSomeValueNonCopying(invocationContext, transferedValue)
 }
@@ -6026,6 +6230,33 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 	return elaboration.CompositeType(typeID)
 }
 
+// GetEnumCaseCount returns the number of declared cases of the given enum type.
+// It returns an error if the case count cannot be determined,
+// e.g. because the enum's elaboration is not available.
+func (interpreter *Interpreter) GetEnumCaseCount(enumType *sema.CompositeType) (int, error) {
+	elaboration := interpreter.getElaboration(enumType.Location)
+	return EnumCaseCount(enumType, elaboration)
+}
+
+func EnumCaseCount(enumType *sema.CompositeType, elaboration *sema.Elaboration) (int, error) {
+	if elaboration == nil {
+		return 0, errors.NewUnexpectedError(
+			"cannot determine cases of enum %s: elaboration not available",
+			enumType.QualifiedIdentifier(),
+		)
+	}
+
+	lookupFunctionType := elaboration.EnumLookupFunctionType(enumType)
+	if lookupFunctionType == nil {
+		return 0, errors.NewUnexpectedError(
+			"cannot determine cases of enum %s: enum lookup function type not available",
+			enumType.QualifiedIdentifier(),
+		)
+	}
+
+	return lookupFunctionType.Members.Len(), nil
+}
+
 func (interpreter *Interpreter) GetInterfaceType(
 	location common.Location,
 	qualifiedIdentifier string,
@@ -6205,13 +6436,17 @@ var NativeIsInstanceFunction = NativeFunction(
 )
 
 func isInstanceFunction(context FunctionCreationContext, self Value, accessedReference ReferenceValue) FunctionValue {
+	// The receiver is kept as-is (not dereferenced), so that when `isInstance` is
+	// invoked through a reference, `IsInstance` can compute the type through the
+	// reference's view and avoid leaking entitlements hidden by the borrow type.
+	// For a non-reference receiver this has no effect.
 	return NewBoundHostFunctionValue(
 		context,
 		self,
 		accessedReference,
 		sema.IsInstanceFunctionType,
 		NativeIsInstanceFunction,
-	)
+	).WithDereferenceReceiver(false)
 }
 
 func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeValue) Value {
@@ -6222,10 +6457,44 @@ func IsInstance(invocationContext InvocationContext, self Value, typeValue TypeV
 		return FalseValue
 	}
 
-	// NOTE: not invocation.Self, as that is only set for composite values
-	selfType := self.StaticType(invocationContext)
+	// When `isInstance` is invoked through a reference, the receiver is kept as
+	// the reference (the bound function does not dereference it, see
+	// `isInstanceFunction` and the VM's registration). Use the type as seen
+	// through the reference's view, so that entitlements hidden by the borrow
+	// type are not observable via `isInstance` (which would otherwise disagree
+	// with `getType` and leak the hidden entitlements as a boolean oracle).
+	var selfType StaticType
+	if reference, isReference := self.(ReferenceValue); isReference {
+		selfType = referenceViewStaticType(invocationContext, reference)
+	} else {
+		// NOTE: not invocation.Self, as that is only set for composite values
+		selfType = self.StaticType(invocationContext)
+	}
+
 	return BoolValue(
 		IsSubType(invocationContext, selfType, staticType),
+	)
+}
+
+// referenceViewStaticType returns the static type of the value referenced by the
+// given reference, as seen through the reference's view: authorizations are
+// weakened to match the borrow type, while the concrete type structure is
+// preserved (e.g. a reference with borrow type `&AnyStruct` over an `Int` value
+// still yields `Int`). Used by `getType` and `isInstance` so that entitlements
+// hidden by the borrow type are not observable through a reference. This matches
+// how the reference's own `StaticType` and element accesses compute the view.
+func referenceViewStaticType(context ValueStaticTypeContext, reference ReferenceValue) StaticType {
+	referencedValue := reference.ReferencedValue(context, true)
+	// The referenced value may have been moved out (e.g. a storage reference
+	// whose target no longer exists), matching the check in
+	// `MaybeDereferenceReceiver`.
+	if referencedValue == nil {
+		panic(&ReferencedValueChangedError{})
+	}
+	return applyTargetTypeAuthorization(
+		context,
+		(*referencedValue).StaticType(context),
+		reference.BorrowType(),
 	)
 }
 
@@ -6237,18 +6506,33 @@ var NativeGetTypeFunction = NativeFunction(
 		receiver Value,
 		args []Value,
 	) Value {
+		// When `getType` is invoked through a reference, the receiver is kept as
+		// the reference (the bound function does not dereference it, see
+		// `getTypeFunction` and the VM's registration). Report the type as seen
+		// through the reference's view, rather than the concrete referenced
+		// value's type. Otherwise entitlements that the reference's borrow type
+		// strips from nested references (e.g. `&[&Int]` over an `[auth(E) &Int]`
+		// value) would be leaked through the returned `Type` value.
+		if reference, isReference := receiver.(ReferenceValue); isReference {
+			return NewTypeValue(context, referenceViewStaticType(context, reference))
+		}
+
 		return ValueGetType(context, receiver)
 	},
 )
 
 func getTypeFunction(context FunctionCreationContext, self Value, accessedReference ReferenceValue) FunctionValue {
+	// The receiver is kept as-is (not dereferenced), so that when `getType` is
+	// invoked through a reference, `NativeGetTypeFunction` can compute the type
+	// through the reference's view and avoid leaking entitlements hidden by the
+	// borrow type. For a non-reference receiver this has no effect.
 	return NewBoundHostFunctionValue(
 		context,
 		self,
 		accessedReference,
 		sema.GetTypeFunctionType,
 		NativeGetTypeFunction,
-	)
+	).WithDereferenceReceiver(false)
 }
 
 func ValueGetType(context InvocationContext, self Value) Value {
