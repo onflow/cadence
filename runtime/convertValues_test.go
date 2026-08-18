@@ -2756,6 +2756,181 @@ func TestRuntimeEnumValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+}
+
+func TestRuntimeImportEnumValueValidation(t *testing.T) {
+
+	t.Parallel()
+
+	// Direction always has exactly 4 cases (UP=0, DOWN=1, LEFT=2, RIGHT=3),
+	// so the valid raw values are exactly 0, 1, 2, 3.
+	makeScript := func(rawTypeKeyword string) string {
+		return fmt.Sprintf(`
+            access(all) fun main(dir: Direction): Direction {
+                if !dir.isInstance(Type<Direction>()) {
+                    panic("Not a Direction value")
+                }
+                return dir
+            }
+
+            access(all) enum Direction: %s {
+                access(all) case UP
+                access(all) case DOWN
+                access(all) case LEFT
+                access(all) case RIGHT
+            }
+        `, rawTypeKeyword)
+	}
+
+	makeEnum := func(rawValue cadence.Value, rawType cadence.Type) cadence.Enum {
+		return cadence.NewEnum([]cadence.Value{rawValue}).WithType(
+			cadence.NewEnumType(
+				common.ScriptLocation{},
+				"Direction",
+				rawType,
+				[]cadence.Field{
+					{
+						Identifier: sema.EnumRawValueFieldName,
+						Type:       rawType,
+					},
+				},
+				nil,
+			),
+		)
+	}
+
+	// makeForgedStruct builds a value that claims to be the enum type `Direction`
+	// but is serialized as a struct, to exercise the resolved-kind guard.
+	makeForgedStruct := func(rawValue cadence.Value, rawType cadence.Type) cadence.Struct {
+		return cadence.NewStruct([]cadence.Value{rawValue}).WithType(
+			cadence.NewStructType(
+				common.ScriptLocation{},
+				"Direction",
+				[]cadence.Field{
+					{
+						Identifier: sema.EnumRawValueFieldName,
+						Type:       rawType,
+					},
+				},
+				nil,
+			),
+		)
+	}
+
+	type testCase struct {
+		name string
+		// declaredRawType is the raw type keyword in the Cadence enum declaration.
+		declaredRawType string
+		// arg is the value passed as the argument.
+		arg cadence.Value
+		// errorContains is the expected error substring; empty means success.
+		errorContains string
+	}
+
+	tests := []testCase{
+		// Valid cases
+		{
+			name:            "first valid case",
+			declaredRawType: "UInt8",
+			arg:             makeEnum(cadence.NewUInt8(0), cadence.UInt8Type),
+		},
+		{
+			name:            "last valid case",
+			declaredRawType: "UInt8",
+			arg:             makeEnum(cadence.NewUInt8(3), cadence.UInt8Type),
+		},
+
+		// Out-of-range raw values (case membership violation)
+		{
+			name:            "one past last case",
+			declaredRawType: "UInt8",
+			arg:             makeEnum(cadence.NewUInt8(4), cadence.UInt8Type),
+			errorContains:   "is not a valid enum case",
+		},
+		{
+			name:            "far out of range",
+			declaredRawType: "UInt8",
+			arg:             makeEnum(cadence.NewUInt8(99), cadence.UInt8Type),
+			errorContains:   "is not a valid enum case",
+		},
+		{
+			name:            "out of range, signed raw type",
+			declaredRawType: "Int",
+			arg:             makeEnum(cadence.NewInt(99), cadence.IntType),
+			errorContains:   "is not a valid enum case",
+		},
+		{
+			name:            "negative raw value",
+			declaredRawType: "Int",
+			arg:             makeEnum(cadence.NewInt(-1), cadence.IntType),
+			errorContains:   "is not a valid enum case",
+		},
+		{
+			// A negative signed fixed-size raw value: its bytes (Int8(-1) is 0xFF)
+			// read as the magnitude 255, which is >= caseCount, so it is rejected
+			// as out-of-range. See enumRawValueToBigInt for why the magnitude
+			// suffices for fixed-size types.
+			name:            "negative raw value, signed fixed-size raw type",
+			declaredRawType: "Int8",
+			arg:             makeEnum(cadence.NewInt8(-1), cadence.Int8Type),
+			errorContains:   "is not a valid enum case",
+		},
+		{
+			// A positive signed fixed-size raw value must still be accepted.
+			name:            "valid case, signed fixed-size raw type",
+			declaredRawType: "Int8",
+			arg:             makeEnum(cadence.NewInt8(2), cadence.Int8Type),
+		},
+
+		// Resolved-kind guard: a value whose resolved type is an enum but which
+		// is serialized as another composite kind must be rejected, rather than
+		// skipping the enum validation.
+		{
+			name:            "enum type serialized as struct",
+			declaredRawType: "UInt8",
+			arg:             makeForgedStruct(cadence.NewUInt8(0), cadence.UInt8Type),
+			errorContains:   "expected enum, got",
+		},
+
+		// Raw value type mismatch (validated by the enum importer, which requires
+		// the exact declared raw type, even when the value is numerically in range)
+		{
+			name:            "wrong numeric raw type (Int for UInt8)",
+			declaredRawType: "UInt8",
+			arg:             makeEnum(cadence.NewInt(2), cadence.IntType),
+			errorContains:   "raw value has type Int, expected UInt8",
+		},
+		{
+			name:            "wrong numeric raw type (UInt64 for UInt8)",
+			declaredRawType: "UInt8",
+			arg:             makeEnum(cadence.NewUInt64(2), cadence.UInt64Type),
+			errorContains:   "raw value has type UInt64, expected UInt8",
+		},
+
+		// Non-numeric raw value
+		{
+			name:            "non-numeric raw value",
+			declaredRawType: "UInt8",
+			arg:             makeEnum(cadence.String("x"), cadence.StringType),
+			errorContains:   "invalid raw value",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := executeTestScript(t, makeScript(tc.declaredRawType), tc.arg)
+
+			if tc.errorContains == "" {
+				require.NoError(t, err)
+			} else {
+				RequireError(t, err)
+				assert.ErrorContains(t, err, tc.errorContains)
+			}
+		})
+	}
 }
 
 func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
