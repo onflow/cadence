@@ -49,6 +49,9 @@ type VM struct {
 
 	context *Context
 	globals *bbq.Activation[Variable]
+
+	// entrypointLocation is the location of the entry-point program.
+	entrypointLocation common.Location
 }
 
 func NewVM(
@@ -58,15 +61,13 @@ func NewVM(
 ) *VM {
 
 	context := NewContext(config)
-	context.location = location
 
 	vm := &VM{
-		context: context,
+		context:            context,
+		entrypointLocation: location,
 	}
 
 	vm.configureContext()
-
-	context.recoverErrors = vm.RecoverErrors
 
 	// Link global variables and functions.
 	linkedGlobals := context.linkGlobals(
@@ -293,6 +294,19 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 	return poppedCallFrame
 }
 
+func (vm *VM) currentLocation() common.Location {
+	callstackLen := len(vm.callstack)
+
+	// If no invocation has been initiated yet, use the entry-point location.
+	if callstackLen == 0 {
+		return vm.entrypointLocation
+	}
+
+	// Otherwise use current function's enclosing program's location.
+	callframe := vm.callstack[callstackLen-1]
+	return callframe.function.Executable.Location
+}
+
 // callerLocation returns the location of the function that invoked the
 // currently executing function, or nil if there is no caller.
 // (i.e. the current function is the top-level invocation)
@@ -329,9 +343,9 @@ func (vm *VM) getGlobalFunction(canonicalName bbq.CanonicalName) (FunctionValue,
 	return functionValue, nil
 }
 
-// InvokeExternally invokes a global function with the given arguments
+// InvokeExternally invokes a global function with the given arguments.
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
-	canonicalName := bbq.NewCanonicalName(vm.context.location, name)
+	canonicalName := bbq.NewCanonicalName(vm.entrypointLocation, name)
 
 	return vm.InvokeExternallyCanonical(canonicalName, arguments...)
 }
@@ -353,7 +367,7 @@ func (vm *VM) InvokeExternallyCanonical(canonicalName bbq.CanonicalName, argumen
 // without validating them.
 // NOTE: FOR TESTING PURPOSES ONLY! Use InvokeExternally instead
 func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
-	canonicalName := bbq.NewCanonicalName(vm.context.location, name)
+	canonicalName := bbq.NewCanonicalName(vm.entrypointLocation, name)
 
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
@@ -564,7 +578,7 @@ func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	context := vm.context
 
 	initializerVariable := vm.findGlobal(
-		bbq.NewCanonicalName(context.location, commons.ProgramInitFunctionName),
+		bbq.NewCanonicalName(vm.entrypointLocation, commons.ProgramInitFunctionName),
 	)
 	if initializerVariable == nil {
 		if len(transactionArgs) > 0 {
@@ -595,7 +609,7 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 
 	prepareVariable := vm.findGlobal(
 		bbq.NewTypedCanonicalName(
-			context.location,
+			vm.entrypointLocation,
 			commons.TransactionWrapperCompositeName,
 			commons.TransactionPrepareFunctionName,
 		),
@@ -634,7 +648,7 @@ func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeV
 
 	executeVariable := vm.findGlobal(
 		bbq.NewTypedCanonicalName(
-			context.location,
+			vm.entrypointLocation,
 			commons.TransactionWrapperCompositeName,
 			commons.TransactionExecuteFunctionName,
 		),
@@ -2565,7 +2579,7 @@ func (vm *VM) Reset() {
 
 func (vm *VM) Global(simpleName string) Value {
 	variable := vm.findGlobal(
-		bbq.NewCanonicalName(vm.context.location, simpleName),
+		bbq.NewCanonicalName(vm.entrypointLocation, simpleName),
 	)
 	if variable == nil {
 		return nil
@@ -2689,6 +2703,8 @@ func (vm *VM) configureContext() {
 	context.invokeFunction = vm.invokeFunction
 	context.lookupFunction = vm.lookupFunction
 	context.getLocationRange = vm.LocationRange
+	context.recoverErrors = vm.RecoverErrors
+	context.currentLocation = vm.currentLocation
 }
 
 func printInstructionError(
