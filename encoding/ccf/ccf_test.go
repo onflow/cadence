@@ -8789,7 +8789,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 
 	var missingTests []string
 
-	for ty := ccf.SimpleType(0); ty < ccf.SimpleType_Count; ty++ {
+	for ty := range ccf.SimpleType_Count {
 		if ty == ccf.SimpleTypeFunction {
 			continue
 		}

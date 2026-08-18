@@ -3125,13 +3125,32 @@ func intersectContainerElementReferences(
 	if !ok {
 		return elementType
 	}
-	if !elementType.IsOrContainsReferenceType() {
-		return elementType
-	}
-	return intersectReferenceAuthorizationsInType(
+	return intersectReferencesWithAuthorization(
 		memoryGauge,
 		elementType,
 		outerRef.Authorization,
+	)
+}
+
+// intersectReferencesWithAuthorization returns typ with the authorizations
+// of the references it contains intersected with the given authorization.
+// Returns typ unchanged when it contains no references.
+//
+// Callers that already know the granted authorization use this directly.
+// Callers that derive it from the type a descendant is read through
+// use intersectContainerElementReferences instead.
+func intersectReferencesWithAuthorization(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	authorization Access,
+) Type {
+	if !typ.IsOrContainsReferenceType() {
+		return typ
+	}
+	return intersectReferenceAuthorizationsInType(
+		memoryGauge,
+		typ,
+		authorization,
 	)
 }
 
@@ -4514,8 +4533,29 @@ func (t *FunctionType) IsInvalidType() bool {
 }
 
 func (t *FunctionType) IsOrContainsReferenceType() bool {
-	returnType := t.ReturnTypeAnnotation.Type
-	return returnType.IsOrContainsReferenceType()
+
+	if t.ReturnTypeAnnotation.Type.IsOrContainsReferenceType() {
+		return true
+	}
+
+	for _, parameter := range t.Parameters {
+		if parameter.TypeAnnotation.Type.IsOrContainsReferenceType() {
+			return true
+		}
+		if parameter.DefaultArgument != nil &&
+			parameter.DefaultArgument.IsOrContainsReferenceType() {
+			return true
+		}
+	}
+
+	for _, typeParameter := range t.TypeParameters {
+		if typeParameter.TypeBound != nil &&
+			typeParameter.TypeBound.IsOrContainsReferenceType() {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {

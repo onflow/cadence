@@ -390,16 +390,14 @@ var _ StringValueFunctionContext = &Interpreter{}
 // TODO: This is used by the FVM.
 //
 //	Check and the functionalities needed.
-type AccountCapabilityGetValidationContext interface {
-}
+type AccountCapabilityGetValidationContext any
 
 var _ AccountCapabilityGetValidationContext = &Interpreter{}
 
 // TODO: This is used by the FVM.
 //
 //	Check and the functionalities needed.
-type AccountCapabilityPublishValidationContext interface {
-}
+type AccountCapabilityPublishValidationContext any
 
 var _ AccountCapabilityPublishValidationContext = &Interpreter{}
 
@@ -653,6 +651,10 @@ func (NoOpStringContext) GetInterfaceType(_ common.Location, _ string, _ TypeID)
 }
 
 func (NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeID) (*sema.CompositeType, error) {
+	panic(errors.NewUnreachableError())
+}
+
+func (NoOpStringContext) GetEnumCaseCount(_ *sema.CompositeType) (int, error) {
 	panic(errors.NewUnreachableError())
 }
 

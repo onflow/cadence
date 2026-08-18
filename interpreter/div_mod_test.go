@@ -3429,7 +3429,6 @@ func TestNegativeMod(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		for name, test := range tests {
-			test := test
 
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
@@ -3467,7 +3466,6 @@ func TestNegativeMod(t *testing.T) {
 		require.NoError(t, err)
 
 		for name, test := range tests {
-			test := test
 
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()

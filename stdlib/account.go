@@ -19,9 +19,9 @@
 package stdlib
 
 import (
+	"crypto/sha3"
 	"fmt"
 
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
 
 	"github.com/onflow/atree"
@@ -896,7 +896,7 @@ func AccountKeysForEach(
 		panic(err)
 	}
 
-	for index := uint32(0); index < count; index++ {
+	for index := range count {
 
 		accountKey, err := provider.GetAccountKey(address, index)
 		if err != nil {
@@ -1752,7 +1752,7 @@ func nativeAccountContractsChangeFunction(
 	) interpreter.Value {
 
 		argumentValueTypes := make([]sema.Type, len(args))
-		for i := 0; i < len(args); i++ {
+		for i := range args {
 			// TODO: optimize, avoid gathering the types
 			staticType := args[i].StaticType(context)
 			argumentValueTypes[i] = context.SemaTypeFromStaticType(staticType)
@@ -2162,7 +2162,7 @@ func nativeAccountContractsTryUpdateFunction(
 
 		// TODO: optimize, avoid gathering the types
 		argumentValueTypes := make([]sema.Type, len(args))
-		for i := 0; i < len(args); i++ {
+		for i := range args {
 			staticType := args[i].StaticType(context)
 			argumentValueTypes[i] = context.SemaTypeFromStaticType(staticType)
 		}
@@ -2437,7 +2437,7 @@ func instantiateContract(
 
 	// Check arguments match parameter
 
-	for argumentIndex := 0; argumentIndex < argumentCount; argumentIndex++ {
+	for argumentIndex := range argumentCount {
 
 		parameter := constructorParameters[argumentIndex]
 		parameterType := parameter.TypeAnnotation.Type
@@ -3789,6 +3789,32 @@ func newStorageCapabilityControllerSetTargetFunction(
 			newTargetPathValue,
 			capabilityID,
 		)
+
+		// Update the controller's target and persist the updated controller record.
+		//
+		// The in-memory field write alone is not enough:
+		// the controller value is stored as a single (non-atree-container) storable,
+		// so mutating a field does not mark its slab dirty,
+		// and the change would be lost on commit unless the controller record
+		// is explicitly written back.
+		controller.TargetPath = newTargetPathValue
+		existed := context.WriteStored(
+			address,
+			common.StorageDomainCapabilityController,
+			interpreter.Uint64StorageMapKey(capabilityID),
+			controller,
+		)
+		// The retarget operates on an existing controller,
+		// so its record must already exist:
+		// the write above is expected to overwrite it, not create a new one.
+		// A missing record indicates an internal stale-controller inconsistency,
+		// which must fail loudly rather than silently recreate the record.
+		if !existed {
+			panic(errors.NewUnexpectedError(
+				"retarget: capability controller record %d does not exist",
+				capabilityID,
+			))
+		}
 
 		addressValue := interpreter.AddressValue(address)
 

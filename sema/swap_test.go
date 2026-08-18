@@ -274,7 +274,7 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
 
 	t.Parallel()
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 
 		first := "var"
 		second := "let"

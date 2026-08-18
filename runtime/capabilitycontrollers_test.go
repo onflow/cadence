@@ -3672,7 +3672,7 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
 
 			rt := NewTestRuntime()
 
-			tx := []byte(fmt.Sprintf(
+			tx := fmt.Appendf(nil,
 				`
                   transaction {
                       prepare(signer: auth(Capabilities) &Account) {
@@ -3683,7 +3683,7 @@ func TestRuntimeCapabilityControllerOperationAfterDeletion(t *testing.T) {
                 `,
 				testCase.setup,
 				operation.code,
-			))
+			)
 
 			address := common.MustBytesToAddress([]byte{0x1})
 			accountIDs := map[common.Address]uint64{}
@@ -4133,4 +4133,148 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 			},
 		})
 	})
+}
+
+func TestRuntimeStorageCapabilityControllerRetargetPersisted(t *testing.T) {
+	t.Parallel()
+
+	rt := NewTestRuntime()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+	signers := []Address{address}
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage:      NewTestLedger(nil, nil),
+		OnProgramLog: func(_ string) {},
+		OnEmitEvent:  func(_ cadence.Event) error { return nil },
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Transaction 1: store two values, issue the capability, and issue filler
+	// controllers so the controller map is a separate, non-inlined slab.
+	//
+	// IMPORTANT: The fillers are load-bearing.
+	// `retarget` updates the controller's TargetPath in memory but never re-stores the record,
+	// so the new target survives only if the map's slab is re-serialized on commit.
+	// A small map is inlined and gets re-serialized by any account-storage write, masking the bug;
+	// only its own slab can stay clean across the retarget and expose the dropped write.
+	// The map inlines up to ~10 controllers here, so 100 gives margin.
+	//
+	// For the same reason the fillers go in a separate transaction:
+	// issuing dirties the map, so the retarget transaction below must do no other controller write.
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              transaction {
+                  prepare(signer: auth(Storage, Capabilities) &Account) {
+                      signer.storage.save(42, to: /storage/val1)
+                      signer.storage.save(43, to: /storage/val2)
+
+                      // Issue the capability under test first, so it gets a stable ID of 1.
+                      let cap = signer.capabilities.storage.issue<&Int>(/storage/val1)
+                      assert(cap.id == 1, message: "unexpected capability ID")
+
+                      // NOTE: Create filler controllers (see the Go comment above).
+                      var i = 0
+                      while i < 100 {
+                          signer.capabilities.storage.issue<&Int>(/storage/val1)
+                          i = i + 1
+                      }
+
+                      // Sanity check: it resolves to the first value.
+                      let controller = signer.capabilities.storage.getController(byCapabilityID: 1)!
+                      assert(*controller.capability.borrow<&Int>()! == 42)
+                  }
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Verify the fillers worked: if the map were still inlined the retarget would
+	// persist incidentally, so this test would pass without exercising the bug.
+	// Assert the precondition so an inlining-threshold change fails loudly here.
+	storage, inter, err := rt.Storage(Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	controllerMap := storage.GetDomainStorageMap(
+		inter,
+		address,
+		common.StorageDomainCapabilityController,
+		false,
+	)
+	require.NotNil(t, controllerMap)
+	require.False(t,
+		controllerMap.Inlined(),
+		"controller map must not be inlined; increase the filler count",
+	)
+
+	// Transaction 2: retarget the capability to the second path.
+	// Within this transaction the retarget appears to succeed.
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              transaction {
+                  prepare(signer: auth(Capabilities) &Account) {
+                      let controller = signer.capabilities.storage.getController(byCapabilityID: 1)!
+
+                      controller.retarget(/storage/val2)
+
+                      // In-transaction confirmation reports the new target.
+                      assert(controller.target() == /storage/val2)
+                      assert(*controller.capability.borrow<&Int>()! == 43)
+                  }
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Transaction 3: reload the controller from storage and observe its target.
+
+	err = rt.ExecuteTransaction(
+		Script{
+			Source: []byte(`
+              transaction {
+                  prepare(signer: auth(Capabilities) &Account) {
+                      let controller = signer.capabilities.storage.getController(byCapabilityID: 1)!
+
+                      assert(
+                          controller.target() == /storage/val2,
+                          message: "retarget was not persisted: target reverted to the old path"
+                      )
+                      assert(
+                          *controller.capability.borrow<&Int>()! == 43,
+                          message: "retarget was not persisted: borrow resolved to the old target"
+                      )
+                  }
+              }
+            `),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
 }

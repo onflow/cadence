@@ -3581,7 +3581,6 @@ func TestInterpretDynamicCastingResourceConstructor(t *testing.T) {
 	t.Parallel()
 
 	for operation, returnsOptional := range dynamicCastingOperations {
-		returnsOptional := returnsOptional
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
 			t.Parallel()
@@ -4756,6 +4755,917 @@ func TestInterpretDynamicCastingEntitledCapability(t *testing.T) {
 		assert.Equal(t,
 			common.TypeID("Capability<auth(S.test.E1,S.test.E2)&Int>"),
 			resultType.ID(),
+		)
+	})
+}
+
+func TestInterpretDynamicCastingEntitledCapabilityThroughBoundContainerMethod(t *testing.T) {
+
+	t.Parallel()
+
+	newCapabilityValue := func(t *testing.T, inter Invokable) interpreter.Value {
+		t.Helper()
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		borrowType := result.(interpreter.TypeValue).Type
+
+		capabilityValue := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+		return capabilityValue
+	}
+
+	t.Run("unparameterized capability downcast is allowed", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun unparameterizedCapabilityDowncast(
+                cap: Capability<auth(E1, E2) &Int>
+            ): Bool {
+                let erased: Capability = cap
+                let recovered = erased as? Capability<auth(E1, E2) &Int>
+                return recovered != nil
+            }
+        `)
+
+		result, err := inter.Invoke(
+			"unparameterizedCapabilityDowncast",
+			newCapabilityValue(t, inter),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(true), result)
+	})
+
+	t.Run("typed capability downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun typedCapabilityDowncast(
+                cap: Capability<auth(E1, E2) &Int>
+            ): Bool {
+                let downgraded: Capability<&Int> = cap
+                let recovered = downgraded as? Capability<auth(E1, E2) &Int>
+                return recovered != nil
+            }
+        `)
+
+		result, err := inter.Invoke(
+			"typedCapabilityDowncast",
+			newCapabilityValue(t, inter),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("bound container method downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun boundContainerMethodDowncast(
+                cap: Capability<auth(E1, E2) &Int>
+            ): Bool {
+                var caps: [Capability<auth(E1, E2) &Int>] = [cap]
+                let ref = &caps as auth(Mutate) &[Capability<&Int>]
+
+                let removeFirst =
+                    ref.removeFirst as? fun(): Capability<auth(E1, E2) &Int>
+
+                return removeFirst != nil
+            }
+        `)
+
+		result, err := inter.Invoke(
+			"boundContainerMethodDowncast",
+			newCapabilityValue(t, inter),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+}
+
+func TestInterpretDynamicCastingEntitledReferenceThroughBoundContainerElement(t *testing.T) {
+
+	t.Parallel()
+
+	// Reading a function- or capability-typed element out of a bound container
+	// reference must cap the element's nested reference authorizations to the
+	// container reference's authorization, so an inline downcast on the extracted
+	// value cannot recover a stronger authorization than the container permits.
+	// Function and capability values report no fields or elements, so they are
+	// not wrapped in a reference on extraction; the cap is applied via conversion.
+
+	t.Run("array element function-type downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let functions: [fun(): auth(E) &S] = [provider]
+                let arrayRef = &functions as auth(Mutate) &[fun(): &S]
+
+                return (arrayRef[0] as? fun(): auth(E) &S) != nil
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("dictionary element function-type downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let dictionary: {String: fun(): auth(E) &S} = {"x": provider}
+                let dictionaryRef =
+                    &dictionary as auth(Mutate) &{String: fun(): &S}
+
+                return (dictionaryRef["x"] as? fun(): auth(E) &S) != nil
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("recovered callback cannot escalate to entitled method", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+                let provider = fun(): auth(E) &S {
+                    return &s as auth(E) &S
+                }
+                let functions: [fun(): auth(E) &S] = [provider]
+                let arrayRef = &functions as auth(Mutate) &[fun(): &S]
+
+                if let strong = arrayRef[0] as? fun(): auth(E) &S {
+                    strong().bump()
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
+
+	t.Run("array element capability downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		newCapabilityValue := func(t *testing.T, inter Invokable) interpreter.Value {
+			t.Helper()
+
+			result, err := inter.Invoke("getBorrowType")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.TypeValue{}, result)
+			borrowType := result.(interpreter.TypeValue).Type
+
+			return interpreter.NewUnmeteredCapabilityValue(
+				4,
+				interpreter.AddressValue{},
+				borrowType,
+			)
+		}
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E1
+            entitlement E2
+
+            fun getBorrowType(): Type {
+                return Type<auth(E1, E2) &Int>()
+            }
+
+            fun main(cap: Capability<auth(E1, E2) &Int>): Bool {
+                let caps: [Capability<auth(E1, E2) &Int>] = [cap]
+                let ref = &caps as auth(Mutate) &[Capability<&Int>]
+
+                return (ref[0] as? Capability<auth(E1, E2) &Int>) != nil
+            }
+        `)
+
+		result, err := inter.Invoke("main", newCapabilityValue(t, inter))
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+}
+
+func TestInterpretIndexedFunctionDowncasting(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("indexed function downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                access(Withdraw) fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <- create Vault(balance: amount)
+                }
+            }
+
+            access(all) fun main() {
+                let vault <- create Vault(balance: 100.0)
+                let privileged = &vault as auth(Withdraw) &Vault
+                let callbacks: [fun(): auth(Withdraw) &Vault] = [
+                    fun(): auth(Withdraw) &Vault {
+                        return privileged
+                    }
+                ]
+                let weak = &callbacks as &[fun(): &Vault]
+                let _ = weak[0] as! fun(): auth(Withdraw) &Vault
+                destroy vault
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun():&S.test.Vault"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun():auth(S.test.Withdraw)&S.test.Vault"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	t.Run("recovered indexed function cannot invoke withdraw", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                access(Withdraw) fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <- create Vault(balance: amount)
+                }
+            }
+
+            access(all) fun main() {
+                let vault <- create Vault(balance: 100.0)
+                let privileged = &vault as auth(Withdraw) &Vault
+
+                let callbacks: [fun(): auth(Withdraw) &Vault] = [
+                    fun(): auth(Withdraw) &Vault {
+                        return privileged
+                    }
+                ]
+
+                let weak = &callbacks as &[fun(): &Vault]
+                let strong = weak[0] as! fun(): auth(Withdraw) &Vault
+                let stolen <- strong().withdraw(amount: 10.0)
+
+                destroy stolen
+                destroy vault
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun():&S.test.Vault"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun():auth(S.test.Withdraw)&S.test.Vault"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	t.Run("direct function return conversion", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+            }
+
+            access(all) fun main() {
+                let vault <- create Vault(balance: 100.0)
+                let privileged = &vault as auth(Withdraw) &Vault
+
+                let direct: fun(): &Vault = fun(): auth(Withdraw) &Vault {
+                    return privileged
+                }
+
+                let _ = direct as! fun(): auth(Withdraw) &Vault
+                destroy vault
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("fun():&S.test.Vault"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun():auth(S.test.Withdraw)&S.test.Vault"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+}
+
+func TestInterpretCapabilityDowncasting(t *testing.T) {
+
+	t.Parallel()
+
+	newCapabilityValue := func(t *testing.T, inter Invokable) interpreter.Value {
+		t.Helper()
+
+		result, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+
+		require.IsType(t, interpreter.TypeValue{}, result)
+		borrowType := result.(interpreter.TypeValue).Type
+
+		return interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+	}
+
+	t.Run("indexed capability downcast", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+            }
+
+            fun getBorrowType(): Type {
+                return Type<auth(Withdraw) &Vault>()
+            }
+
+            access(all) fun main(cap: Capability<auth(Withdraw) &Vault>) {
+                let caps: [Capability<auth(Withdraw) &Vault>] = [cap]
+                let weak = &caps as &[Capability<&Vault>]
+                let _ = weak[0] as! Capability<auth(Withdraw) &Vault>
+            }
+        `)
+
+		_, err := inter.Invoke("main", newCapabilityValue(t, inter))
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<&S.test.Vault>"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("Capability<auth(S.test.Withdraw)&S.test.Vault>"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+
+	t.Run("weak-local assignment", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            access(all) entitlement Withdraw
+
+            access(all) resource Vault {
+                access(all) var balance: UFix64
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+            }
+
+            fun getBorrowType(): Type {
+                return Type<auth(Withdraw) &Vault>()
+            }
+
+            access(all) fun main(cap: Capability<auth(Withdraw) &Vault>) {
+                let caps: [Capability<auth(Withdraw) &Vault>] = [cap]
+                let weak = &caps as &[Capability<&Vault>]
+                let low: Capability<&Vault> = weak[0]
+                let _ = low as! Capability<auth(Withdraw) &Vault>
+            }
+        `)
+
+		_, err := inter.Invoke("main", newCapabilityValue(t, inter))
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		require.ErrorAs(t, err, &forceCastTypeMismatchError)
+
+		assert.Equal(
+			t,
+			common.TypeID("Capability<&S.test.Vault>"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("Capability<auth(S.test.Withdraw)&S.test.Vault>"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+	})
+}
+
+func TestInterpretDynamicCastingEntitledReferenceThroughBoundContainerMethodInFunctionType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("bound container method downcast is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun boundContainerMethodDowncast(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let removeFirst =
+                    ref.removeFirst as? fun(): fun(): auth(E) &S
+
+                return removeFirst != nil
+            }
+        `)
+
+		result, err := inter.Invoke("boundContainerMethodDowncast")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("recovered callback cannot escalate to entitled method", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+                let provider = fun(): auth(E) &S {
+                    return &s as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                if let strong = ref.removeFirst as? fun(): fun(): auth(E) &S {
+                    strong()().bump()
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
+
+	t.Run("bound container method downcast is rejected, function parameter position", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun boundContainerMethodDowncast(): Bool {
+                let runner = fun(callback: fun(auth(E) &S): Void) {
+                    callback(&S() as auth(E) &S)
+                }
+                let runners: [fun(fun(auth(E) &S): Void): Void] = [runner]
+                let ref = &runners as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                let removeFirst =
+                    ref.removeFirst as? fun(): fun(fun(auth(E) &S): Void): Void
+
+                return removeFirst != nil
+            }
+        `)
+
+		result, err := inter.Invoke("boundContainerMethodDowncast")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("recovered callback cannot escalate to entitled method, function parameter position", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+                let runner = fun(callback: fun(auth(E) &S): Void) {
+                    callback(&s as auth(E) &S)
+                }
+                let runners: [fun(fun(auth(E) &S): Void): Void] = [runner]
+                let ref = &runners as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                if let strong = ref.removeFirst as? fun(): fun(fun(auth(E) &S): Void): Void {
+                    strong()(fun(strongRef: auth(E) &S) {
+                        strongRef.bump()
+                    })
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
+		)
+	})
+}
+
+// TestInterpretDynamicCastingEntitledReferenceThroughBoundCopyMethod verifies that
+// the public array copy methods (slice, reverse, concat, filter, toVariableSized)
+// cap every authorization exported through the bound method when the array is
+// accessed through a weaker reference.
+//
+// Unlike the extracting methods (remove/removeFirst/removeLast),
+// which route their return type through intersectContainerElementReferences,
+// the copy methods route it through sema.GetDescendantTypeForAccess.
+// That helper derives the bound-function type from the *backing* array's element type
+// — the strong, owned type — and must intersect it against the outer reference's authorization
+// even for element types that carry authorized references but report no fields or elements
+// (function and capability values).
+func TestInterpretDynamicCastingEntitledReferenceThroughBoundCopyMethod(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, code string) {
+		t.Helper()
+
+		inter := parseCheckAndPrepare(t, code)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	}
+
+	t.Run("array slice, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let slice = ref.slice as? fun(Int, Int): [fun(): auth(E) &S]
+
+                return slice != nil
+            }
+        `)
+	})
+
+	t.Run("array reverse, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let reverse = ref.reverse as? fun(): [fun(): auth(E) &S]
+
+                return reverse != nil
+            }
+        `)
+	})
+
+	t.Run("array concat, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let concat =
+                    ref.concat as? fun([fun(): auth(E) &S]): [fun(): auth(E) &S]
+
+                return concat != nil
+            }
+        `)
+	})
+
+	t.Run("array filter, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                let filter =
+                    ref.filter as? fun(view fun(fun(): &S): Bool): [fun(): auth(E) &S]
+
+                return filter != nil
+            }
+        `)
+	})
+
+	t.Run("array toVariableSized, function-return element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let provider = fun(): auth(E) &S {
+                    return &S() as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S; 1] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S; 1]
+
+                let toVariableSized =
+                    ref.toVariableSized as? fun(): [fun(): auth(E) &S]
+
+                return toVariableSized != nil
+            }
+        `)
+	})
+
+	t.Run("array slice, capability-borrow element", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {}
+
+            fun getBorrowType(): Type {
+                return Type<auth(E) &S>()
+            }
+
+            fun main(cap: Capability<auth(E) &S>): Bool {
+                let caps: [Capability<auth(E) &S>] = [cap]
+                let ref = &caps as auth(Mutate) &[Capability<&S>]
+
+                let slice = ref.slice as? fun(Int, Int): [Capability<auth(E) &S>]
+
+                return slice != nil
+            }
+        `)
+
+		btResult, err := inter.Invoke("getBorrowType")
+		require.NoError(t, err)
+		require.IsType(t, interpreter.TypeValue{}, btResult)
+		borrowType := btResult.(interpreter.TypeValue).Type
+
+		capability := interpreter.NewUnmeteredCapabilityValue(
+			4,
+			interpreter.AddressValue{},
+			borrowType,
+		)
+
+		result, err := inter.Invoke("main", capability)
+		require.NoError(t, err)
+		assert.Equal(t, interpreter.BoolValue(false), result)
+	})
+
+	t.Run("array slice, function-parameter element", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, `
+            entitlement E
+
+            struct S {}
+
+            fun main(): Bool {
+                let runner = fun(callback: fun(auth(E) &S): Void) {
+                    callback(&S() as auth(E) &S)
+                }
+                let runners: [fun(fun(auth(E) &S): Void): Void] = [runner]
+                let ref = &runners as auth(Mutate) &[fun(fun(&S): Void): Void]
+
+                let slice =
+                    ref.slice as? fun(Int, Int): [fun(fun(auth(E) &S): Void): Void]
+
+                return slice != nil
+            }
+        `)
+	})
+
+	t.Run("recovered slice provider cannot escalate to entitled method", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            fun main(): Int {
+                let s = S()
+                let provider = fun(): auth(E) &S {
+                    return &s as auth(E) &S
+                }
+                let fns: [fun(): auth(E) &S] = [provider]
+                let ref = &fns as auth(Mutate) &[fun(): &S]
+
+                if let strong = ref.slice as? fun(Int, Int): [fun(): auth(E) &S] {
+                    strong(0, 1)[0]().bump()
+                }
+
+                return s.count
+            }
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(0),
+			result,
 		)
 	})
 }

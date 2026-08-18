@@ -1365,7 +1365,7 @@ func (i valueImporter) importDictionaryValue(
 		keyTypes := make([]sema.Type, size)
 		valueTypes := make([]sema.Type, size)
 
-		for i := 0; i < size; i++ {
+		for i := range size {
 			keyType, err := interpreter.ConvertStaticToSemaType(inter, keysAndValues[i*2].StaticType(inter))
 			if err != nil {
 				return nil, err
@@ -1590,6 +1590,38 @@ func (i valueImporter) importCompositeValue(
 		}
 	}
 
+	// For user-defined enums, ensure the imported raw value corresponds to a
+	// declared case. Unlike the language's only enum constructor `E(rawValue:)`,
+	// which returns nil for out-of-range raw values, the import path reconstructs
+	// the value field-by-field. Without this check, an out-of-range raw value
+	// would produce an enum value that no Cadence program could ever construct,
+	// breaking the invariant that an enum value is always one of its cases.
+	// Built-in enums (location == nil) are handled by their dedicated
+	// constructors above and never reach here.
+	//
+	// The validation is driven by the *resolved* declaration's kind
+	// (`compositeType.Kind`), not the caller-controlled serialized `kind`:
+	// a forged value that mislabels an enum as another composite kind
+	// must not be able to skip validation.
+	if compositeType.Kind == common.CompositeKindEnum {
+		// A value whose resolved type is an enum must also be serialized as an enum.
+		// Otherwise, the constructed CompositeValue would carry a kind
+		// that is inconsistent with its type, which no conforming value ever has.
+		if kind != common.CompositeKindEnum {
+			return nil, errors.NewDefaultUserError(
+				"cannot import value of type '%s': expected %s, got %s",
+				compositeType.QualifiedIdentifier(),
+				common.CompositeKindEnum.Name(),
+				kind.Name(),
+			)
+		}
+
+		err := i.validateImportedEnumCase(compositeType, fields)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return interpreter.NewCompositeValue(
 		inter,
 		location,
@@ -1598,6 +1630,85 @@ func (i valueImporter) importCompositeValue(
 		fields,
 		common.ZeroAddress,
 	), nil
+}
+
+func (i valueImporter) validateImportedEnumCase(
+	enumType *sema.CompositeType,
+	fields []interpreter.CompositeField,
+) error {
+
+	var rawValue interpreter.NumberValue
+	for _, field := range fields {
+		if field.Name != sema.EnumRawValueFieldName {
+			continue
+		}
+		numberValue, ok := field.Value.(interpreter.NumberValue)
+		if !ok {
+			return errors.NewDefaultUserError(
+				"cannot import value of type '%s': invalid raw value",
+				enumType.QualifiedIdentifier(),
+			)
+		}
+		rawValue = numberValue
+	}
+
+	if rawValue == nil {
+		return errors.NewDefaultUserError(
+			"cannot import value of type '%s': missing raw value",
+			enumType.QualifiedIdentifier(),
+		)
+	}
+
+	// The raw value must have exactly the enum's declared raw-value type,
+	// not merely a subtype or some other integer type.
+	// The interpreter constructs each case's raw value as the case index
+	// converted to the declared raw type (see EnumLookupFunction),
+	// and looks cases up by the exact big-endian byte representation of that typed value.
+	// A raw value of a different integer type therefore never identifies a declared case,
+	// even when it is numerically in range.
+	rawType := enumType.EnumRawType
+	expectedRawStaticType := interpreter.ConvertSemaToStaticType(i.context, rawType)
+	actualRawStaticType := rawValue.StaticType(i.context)
+	if !actualRawStaticType.Equal(expectedRawStaticType) {
+		return errors.NewDefaultUserError(
+			"cannot import value of type '%s': raw value has type %s, expected %s",
+			enumType.QualifiedIdentifier(),
+			actualRawStaticType,
+			expectedRawStaticType,
+		)
+	}
+
+	// Enum raw values are positional: case i has raw value i,
+	// so the valid raw values are exactly the range [0, caseCount).
+	caseCount, err := i.context.GetEnumCaseCount(enumType)
+	if err != nil {
+		return err
+	}
+
+	rawValueBigInt := enumRawValueToBigInt(i.context, rawValue)
+	if rawValueBigInt.Sign() < 0 ||
+		rawValueBigInt.Cmp(big.NewInt(int64(caseCount))) >= 0 {
+
+		return errors.NewDefaultUserError(
+			"cannot import value of type '%s': raw value %s is not a valid enum case",
+			enumType.QualifiedIdentifier(),
+			rawValueBigInt,
+		)
+	}
+
+	return nil
+}
+
+// enumRawValueToBigInt returns the numeric value of an imported enum raw value.
+// Arbitrary-precision values are read via ToBigInt (which preserves sign),
+// while fixed-size values are read from their big-endian byte representation.
+// This is only used to check membership in the small, non-negative range of
+// valid enum cases, so any negative or out-of-range value is safely rejected.
+func enumRawValueToBigInt(gauge common.MemoryGauge, value interpreter.NumberValue) *big.Int {
+	if bigNumberValue, ok := value.(interpreter.BigNumberValue); ok {
+		return bigNumberValue.ToBigInt(gauge)
+	}
+	return new(big.Int).SetBytes(value.ToBigEndianBytes())
 }
 
 func (i valueImporter) importPublicKey(

@@ -24,7 +24,7 @@ import (
 )
 
 func DeploymentTransaction(name string, contract []byte) []byte {
-	return []byte(fmt.Sprintf(
+	return fmt.Appendf(nil,
 		`
           transaction {
 
@@ -35,11 +35,11 @@ func DeploymentTransaction(name string, contract []byte) []byte {
         `,
 		name,
 		hex.EncodeToString(contract),
-	))
+	)
 }
 
 func RemovalTransaction(name string) []byte {
-	return []byte(fmt.Sprintf(
+	return fmt.Appendf(nil,
 		`
           transaction {
 
@@ -49,11 +49,11 @@ func RemovalTransaction(name string) []byte {
           }
         `,
 		name,
-	))
+	)
 }
 
 func UpdateTransaction(name string, contract []byte) []byte {
-	return []byte(fmt.Sprintf(
+	return fmt.Appendf(nil,
 		`
           transaction {
 
@@ -64,5 +64,5 @@ func UpdateTransaction(name string, contract []byte) []byte {
         `,
 		name,
 		hex.EncodeToString(contract),
-	))
+	)
 }

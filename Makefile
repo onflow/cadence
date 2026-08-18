@@ -215,8 +215,12 @@ generate:
 check-headers:
 	@./check-headers.sh
 
+.PHONY: fix
+fix:
+	go fix ./...
+
 .PHONY: check-tidy
-check-tidy: generate
+check-tidy: generate fix
 	go mod tidy
 	git diff --exit-code
 
