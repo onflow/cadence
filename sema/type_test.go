@@ -3271,6 +3271,64 @@ func TestType_IsOrContainsReference(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "Function with a reference parameter",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+				Parameters: []Parameter{
+					{
+						TypeAnnotation: NewTypeAnnotation(
+							&ReferenceType{
+								Type: someNonReferenceType,
+							},
+						),
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Function with a reference parameter default argument",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+				Parameters: []Parameter{
+					{
+						TypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+						DefaultArgument: &ReferenceType{
+							Type: someNonReferenceType,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Function with a reference type-parameter bound",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+				TypeParameters: []*TypeParameter{
+					{
+						Name: "T",
+						TypeBound: &ReferenceType{
+							Type: someNonReferenceType,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Function without any reference",
+			ty: &FunctionType{
+				ReturnTypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+				Parameters: []Parameter{
+					{
+						TypeAnnotation: NewTypeAnnotation(someNonReferenceType),
+					},
+				},
+			},
+			expected: false,
+		},
+		{
 			name:     "Interface",
 			ty:       &InterfaceType{},
 			expected: false,
@@ -3327,6 +3385,242 @@ func TestType_IsOrContainsReference(t *testing.T) {
 
 	for _, testCase := range tests {
 		test(testCase)
+	}
+}
+
+func TestGetDescendantTypeForAccess(t *testing.T) {
+
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	entitlementE := NewEntitlementType(nil, testLocation, "E")
+	entitlementF := NewEntitlementType(nil, testLocation, "F")
+	entitlementG := NewEntitlementType(nil, testLocation, "G")
+
+	accessE := NewEntitlementSetAccess([]*EntitlementType{entitlementE}, Conjunction)
+	accessF := NewEntitlementSetAccess([]*EntitlementType{entitlementF}, Conjunction)
+	accessEF := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF}, Conjunction)
+	accessFG := NewEntitlementSetAccess([]*EntitlementType{entitlementF, entitlementG}, Conjunction)
+
+	// Type constructors, to keep the cases below readable.
+	ref := func(authorization Access, referent Type) *ReferenceType {
+		return &ReferenceType{Authorization: authorization, Type: referent}
+	}
+	array := func(element Type) *VariableSizedType {
+		return &VariableSizedType{Type: element}
+	}
+	optional := func(inner Type) *OptionalType {
+		return &OptionalType{Type: inner}
+	}
+	capability := func(borrowType Type) *CapabilityType {
+		return &CapabilityType{BorrowType: borrowType}
+	}
+	funcReturning := func(returnType Type) *FunctionType {
+		return &FunctionType{ReturnTypeAnnotation: NewTypeAnnotation(returnType)}
+	}
+
+	// A reference to a container of `element`, authorized with `outer`.
+	// Only `outer` is consulted by GetDescendantTypeForAccess.
+	accessedRef := func(outer Access, element Type) Type {
+		return ref(outer, array(element))
+	}
+
+	type testCase struct {
+		name         string
+		accessedType Type
+		descendant   Type
+		isAssignment bool
+		// expectedID is the type ID of the returned type.
+		expectedID common.TypeID
+		// expectWrapped is the expected returned boolean:
+		// whether the descendant was wrapped in a reference.
+		expectWrapped bool
+		// expectIdentity asserts the returned type is the *same instance*
+		// as the descendant, i.e. nothing changed and no new type was allocated.
+		expectIdentity bool
+	}
+
+	tests := []testCase{
+
+		// Read through a reference, not wrapped:
+		// the descendant reports no fields or elements (function and capability values), or is a primitive.
+		// Nested reference authorizations are still intersected with the outer one.
+
+		{
+			// A function value carries an authorized reference but is not itself wrapped;
+			// its nested reference authorization is intersected with the outer one (E ∩ F = ∅).
+			name:          "function value, nested reference intersected, not wrapped",
+			accessedType:  accessedRef(accessE, funcReturning(ref(accessF, IntType))),
+			descendant:    funcReturning(ref(accessF, IntType)),
+			expectedID:    "fun():&Int",
+			expectWrapped: false,
+		},
+		{
+			// A capability value behaves like a function value.
+			name:          "capability value, nested reference intersected, not wrapped",
+			accessedType:  accessedRef(accessE, capability(ref(accessF, IntType))),
+			descendant:    capability(ref(accessF, IntType)),
+			expectedID:    "Capability<&Int>",
+			expectWrapped: false,
+		},
+		{
+			// Partial overlap: the intersection is a non-empty, smaller set
+			// ({E, F} ∩ {F, G} = {F}), not just an empty or unchanged one.
+			name:          "function value, nested reference partially intersected, not wrapped",
+			accessedType:  accessedRef(accessEF, funcReturning(ref(accessFG, IntType))),
+			descendant:    funcReturning(ref(accessFG, IntType)),
+			expectedID:    "fun():auth(S.test.F)&Int",
+			expectWrapped: false,
+		},
+		{
+			// The outer authorization already grants the nested one ({E, F} ⊇ {E}),
+			// so the intersection is a no-op and the same instance is returned.
+			name:           "function value, outer superset, unchanged and not wrapped",
+			accessedType:   accessedRef(accessEF, funcReturning(ref(accessE, IntType))),
+			descendant:     funcReturning(ref(accessE, IntType)),
+			expectedID:     "fun():auth(S.test.E)&Int",
+			expectWrapped:  false,
+			expectIdentity: true,
+		},
+		{
+			// A function value nested in an optional: the optional shape is preserved
+			// and the nested reference authorization is intersected (E ∩ F = ∅).
+			name:          "optional function value, nested reference intersected, not wrapped",
+			accessedType:  accessedRef(accessE, optional(funcReturning(ref(accessF, IntType)))),
+			descendant:    optional(funcReturning(ref(accessF, IntType))),
+			expectedID:    "(fun():&Int)?",
+			expectWrapped: false,
+		},
+		{
+			// A primitive read through a reference is neither wrapped nor
+			// intersected, so it is returned unchanged.
+			name:           "primitive descendant, unchanged and not wrapped",
+			accessedType:   accessedRef(accessE, IntType),
+			descendant:     IntType,
+			expectedID:     "Int",
+			expectWrapped:  false,
+			expectIdentity: true,
+		},
+
+		// Read through a reference, wrapped: the descendant is already a reference,
+		// or contains fields or elements. It is returned as / wrapped in a reference,
+		// and nested reference authorizations are intersected with the outer one.
+
+		{
+			// A descendant that is already a reference is returned as a reference
+			// with its authorization intersected with the outer one (E ∩ F = ∅).
+			// (GetDescendantReferenceType's *ReferenceType path.)
+			name:          "reference descendant, wrapped and intersected",
+			accessedType:  accessedRef(accessE, ref(accessF, IntType)),
+			descendant:    ref(accessF, IntType),
+			expectedID:    "&Int",
+			expectWrapped: true,
+		},
+		{
+			// Partial overlap on the wrapped path: {E, F} ∩ {F, G} = {F}.
+			name:          "reference descendant, partially intersected, wrapped",
+			accessedType:  accessedRef(accessEF, ref(accessFG, IntType)),
+			descendant:    ref(accessFG, IntType),
+			expectedID:    "auth(S.test.F)&Int",
+			expectWrapped: true,
+		},
+		{
+			// A reference nested in an optional is found by unwrapping the optional;
+			// the optional shape is preserved and the inner authorization is
+			// intersected with the outer one (E ∩ F = ∅).
+			// (GetDescendantReferenceType's *OptionalType path.)
+			name:          "optional reference descendant, wrapped and intersected",
+			accessedType:  accessedRef(accessE, optional(ref(accessF, IntType))),
+			descendant:    optional(ref(accessF, IntType)),
+			expectedID:    "(&Int)?",
+			expectWrapped: true,
+		},
+		{
+			// A non-reference type that contains elements is wrapped in an
+			// unauthorized reference. It has no nested references, so no intersection
+			// applies. (GetDescendantReferenceType's default path.)
+			name:          "fielded non-reference descendant, wrapped",
+			accessedType:  accessedRef(accessE, array(IntType)),
+			descendant:    array(IntType),
+			expectedID:    "&[Int]",
+			expectWrapped: true,
+		},
+		{
+			// A fielded type that also carries an authorized reference is wrapped in
+			// an unauthorized reference, and its element's authorization is
+			// intersected with the outer one (E ∩ F = ∅). This is the default path
+			// with a non-trivial intersection.
+			name:          "fielded descendant carrying a reference, wrapped and intersected",
+			accessedType:  accessedRef(accessE, array(ref(accessF, IntType))),
+			descendant:    array(ref(accessF, IntType)),
+			expectedID:    "&[&Int]",
+			expectWrapped: true,
+		},
+
+		// Not read through a reference, or written to: returned unchanged.
+
+		{
+			// Owned access (accessedType is not a reference): the descendant is
+			// returned unchanged, with no wrapping or intersection, even when it
+			// carries an authorized reference.
+			name:           "owned access, unchanged and not wrapped",
+			accessedType:   array(funcReturning(ref(accessF, IntType))),
+			descendant:     funcReturning(ref(accessF, IntType)),
+			expectedID:     "fun():auth(S.test.F)&Int",
+			expectWrapped:  false,
+			expectIdentity: true,
+		},
+		{
+			// In an assignment context the descendant is being written, not read out,
+			// so it is returned unchanged. Read (isAssignment false) with the same
+			// inputs intersects the nested reference — see the "function value,
+			// nested reference intersected" case, which yields fun():&Int.
+			name:           "function value in assignment, unchanged and not wrapped",
+			accessedType:   accessedRef(accessE, funcReturning(ref(accessF, IntType))),
+			descendant:     funcReturning(ref(accessF, IntType)),
+			isAssignment:   true,
+			expectedID:     "fun():auth(S.test.F)&Int",
+			expectWrapped:  false,
+			expectIdentity: true,
+		},
+		{
+			// Assignment also suppresses wrapping: a reference descendant that would
+			// be wrapped and intersected on read (see the "reference descendant,
+			// wrapped and intersected" case, which yields &Int) is returned unchanged
+			// when assigned to.
+			name:           "reference descendant in assignment, unchanged and not wrapped",
+			accessedType:   accessedRef(accessE, ref(accessF, IntType)),
+			descendant:     ref(accessF, IntType),
+			isAssignment:   true,
+			expectedID:     "auth(S.test.F)&Int",
+			expectWrapped:  false,
+			expectIdentity: true,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, wrapped := GetDescendantTypeForAccess(
+				nil,
+				testCase.accessedType,
+				testCase.descendant,
+				testCase.isAssignment,
+			)
+
+			assert.Equal(t, testCase.expectedID, result.ID())
+			assert.Equal(t, testCase.expectWrapped, wrapped)
+
+			if testCase.expectIdentity {
+				assert.True(t,
+					result == testCase.descendant,
+					"expected the same instance to be returned unchanged, got a new %s",
+					result.ID(),
+				)
+			}
+		})
 	}
 }
 
