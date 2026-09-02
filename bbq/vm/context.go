@@ -43,7 +43,7 @@ type Context struct {
 	referencedResourceKindedValues              ReferencedResourceKindedValues
 
 	invokeFunction                func(function Value, arguments []Value, returnType sema.Type) (Value, error)
-	lookupFunction                func(location common.Location, name string) FunctionValue
+	lookupFunction                func(name bbq.CanonicalName) FunctionValue
 	recoverErrors                 func(onError func(error))
 	currentLocation               func() common.Location
 	inStorageIteration            bool
@@ -353,7 +353,7 @@ func functionAccess(
 	var unqualifiedName string
 	switch functionValue := method.(type) {
 	case *CompiledFunctionValue:
-		unqualifiedName = functionValue.Function.SimpleName
+		unqualifiedName = functionValue.Function.CanonicalName.Name
 	case *NativeFunctionValue:
 		unqualifiedName = functionValue.Name
 	}
@@ -395,11 +395,9 @@ func (c *Context) GetMethod(
 
 	semaType := c.SemaTypeFromStaticType(staticType)
 
-	location := typeLocation(semaType)
-
 	qualifiedFuncName := commons.TypeQualifiedName(semaType, name)
 
-	method := c.GetFunction(location, qualifiedFuncName)
+	method := c.GetFunction(qualifiedFuncName)
 	if method == nil {
 		return nil
 	}
@@ -474,22 +472,8 @@ func attachmentBaseForMethod(
 	return
 }
 
-func typeLocation(semaType sema.Type) common.Location {
-	switch semaType := semaType.(type) {
-	case sema.LocatedType:
-		return semaType.GetLocation()
-	case *sema.ReferenceType:
-		return typeLocation(semaType.Type)
-	default:
-		return nil
-	}
-}
-
-func (c *Context) GetFunction(
-	location common.Location,
-	name string,
-) FunctionValue {
-	return c.lookupFunction(location, name)
+func (c *Context) GetFunction(name bbq.CanonicalName) FunctionValue {
+	return c.lookupFunction(name)
 }
 
 func (c *Context) DefaultDestroyEvents(resourceValue *interpreter.CompositeValue) []*interpreter.CompositeValue {

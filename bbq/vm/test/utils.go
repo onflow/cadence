@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
@@ -381,44 +380,41 @@ func CompileAndInvoke(
 	)
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndLog(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+	activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-	activation.Set(
-		stdlib.LogFunctionName,
-		compiler.NewGlobalImport(stdlib.LogFunctionName),
-	)
+	name := bbq.NewCanonicalName(nil, stdlib.LogFunctionName)
+	activation.Set(name, compiler.NewGlobalImport(name))
 
 	return activation
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndPanic(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+	activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-	activation.Set(
-		stdlib.PanicFunctionName,
-		compiler.NewGlobalImport(stdlib.PanicFunctionName),
-	)
+	name := bbq.NewCanonicalName(nil, stdlib.PanicFunctionName)
+	activation.Set(name, compiler.NewGlobalImport(name))
 
 	return activation
 }
 
-func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-	activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+func CompilerDefaultBuiltinGlobalsWithDefaultsAndConditionLog(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+	activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-	activation.Set(
-		conditionLogFunctionName,
-		compiler.NewGlobalImport(conditionLogFunctionName),
-	)
+	name := bbq.NewCanonicalName(nil, conditionLogFunctionName)
+	activation.Set(name, compiler.NewGlobalImport(name))
 
 	return activation
 }
 
-func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *activations.Activation[vm.Variable] {
-	activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+func VMBuiltinGlobalsProviderWithDefaultsAndPanic(_ common.Location) *bbq.Activation[vm.Variable] {
+	activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 	panicFunctionVariable := &interpreter.SimpleVariable{}
-	activation.Set(stdlib.PanicFunctionName, panicFunctionVariable)
+	activation.Set(
+		bbq.NewCanonicalName(nil, stdlib.PanicFunctionName),
+		panicFunctionVariable,
+	)
 	panicFunctionVariable.InitializeWithValue(
 		vm.NewNativeFunctionValue(
 			stdlib.PanicFunctionName,
@@ -453,12 +449,15 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndLog(logs *[]string) vm.Built
 		),
 	)
 
-	return func(location common.Location) *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic(location))
+	return func(location common.Location) *bbq.Activation[vm.Variable] {
+		activation := bbq.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic(location))
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
 		logFunctionVariable.InitializeWithValue(logFunction.Value)
-		activation.Set(stdlib.LogFunctionName, logFunctionVariable)
+		activation.Set(
+			bbq.NewCanonicalName(nil, stdlib.LogFunctionName),
+			logFunctionVariable,
+		)
 
 		return activation
 	}
@@ -468,12 +467,18 @@ func NewVMBuiltinGlobalsProviderWithDefaultsPanicAndConditionLog(logs *[]string)
 
 	conditionLogFunction := newConditionLogFunction(logs)
 
-	return func(location common.Location) *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, VMBuiltinGlobalsProviderWithDefaultsAndPanic(location))
+	return func(location common.Location) *bbq.Activation[vm.Variable] {
+		activation := bbq.NewActivation(
+			nil,
+			VMBuiltinGlobalsProviderWithDefaultsAndPanic(location),
+		)
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
 		logFunctionVariable.InitializeWithValue(conditionLogFunction.Value)
-		activation.Set(conditionLogFunctionName, logFunctionVariable)
+		activation.Set(
+			bbq.NewCanonicalName(nil, conditionLogFunctionName),
+			logFunctionVariable,
+		)
 
 		return activation
 	}
@@ -684,17 +689,22 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	return programVM, nil
 }
 
-func ContractValueHandler(contractName string, arguments ...vm.Value) vm.ContractValueHandler {
+func ContractValueHandler(contractName bbq.CanonicalName, arguments ...vm.Value) vm.ContractValueHandler {
 	return func(context *vm.Context, location common.Location) *interpreter.CompositeValue {
-		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
-		contractInitializer := context.GetFunction(location, contractInitializerName)
+		contractInitializerName := bbq.NewTypedCanonicalName(
+			location,
+			contractName.Name,
+			commons.InitFunctionName,
+		)
+		contractInitializer := context.GetFunction(contractInitializerName)
+		contractTypeID := contractName.String()
 
-		// contractName is already location-qualified (e.g. "S.test.C"),
+		// contractTypeID is already location-qualified (e.g. "S.test.C"),
 		// so use it directly as the typeID rather than re-qualifying with location.
 		compositeType, err := context.GetCompositeType(
 			location,
-			contractName,
-			common.TypeID(contractName),
+			contractTypeID,
+			common.TypeID(contractTypeID),
 		)
 		if err != nil {
 			panic(err)

@@ -16,26 +16,37 @@
  * limitations under the License.
  */
 
-package compiler
+package bbq_test
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 )
 
-type BuiltinGlobalsProvider func(location common.Location) *bbq.Activation[GlobalImport]
+func TestCanonicalNameMapIdentityIncludesCompleteLocation(t *testing.T) {
+	t.Parallel()
 
-type ElaborationResolver func(location common.Location) (*DesugaredElaboration, error)
+	address := common.MustBytesToAddress([]byte{1})
+	first := bbq.NewCanonicalName(
+		common.NewAddressLocation(nil, address, "First"),
+		"value",
+	)
+	second := bbq.NewCanonicalName(
+		common.NewAddressLocation(nil, address, "Second"),
+		"value",
+	)
 
-type Config struct {
-	MemoryGauge         common.MemoryGauge
-	ImportHandler       commons.ImportHandler
-	LocationHandler     commons.LocationHandler
-	ElaborationResolver ElaborationResolver
-	// BuiltinGlobalsProvider provides the built-in globals for a given location.
-	// NOTE: all global imports must be for location nil!
-	BuiltinGlobalsProvider BuiltinGlobalsProvider
+	// Address-location TypeIDs omit the program name.
+	require.Equal(t, first.String(), second.String())
+	require.NotEqual(t, first, second)
 
-	PeepholeOptimizationsEnabled bool
+	values := map[bbq.CanonicalName]int{
+		first:  1,
+		second: 2,
+	}
+	require.Len(t, values, 2)
 }

@@ -24,8 +24,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
@@ -115,23 +115,17 @@ func BenchmarkCompileFungibleTokenTransferTransaction(b *testing.B) {
 
 	compilerConfig := &compiler.Config{
 		LocationHandler: locationHandler,
-		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+		BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 
-			activation.Set(
-				stdlib.AssertFunctionName,
-				compiler.NewGlobalImport(stdlib.AssertFunctionName),
-			)
+			name := bbq.NewCanonicalName(nil, stdlib.AssertFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
-			activation.Set(
-				stdlib.GetAccountFunctionName,
-				compiler.NewGlobalImport(stdlib.GetAccountFunctionName),
-			)
+			name = bbq.NewCanonicalName(nil, stdlib.GetAccountFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
-			activation.Set(
-				stdlib.PanicFunctionName,
-				compiler.NewGlobalImport(stdlib.PanicFunctionName),
-			)
+			name = bbq.NewCanonicalName(nil, stdlib.PanicFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 
 			return activation
 		},

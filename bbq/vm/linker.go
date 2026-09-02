@@ -21,7 +21,6 @@ package vm
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/opcode"
 	"github.com/onflow/cadence/common"
@@ -31,7 +30,7 @@ import (
 
 type LinkedGlobals struct {
 	// globals defined in the program, indexed by name.
-	indexedGlobals *activations.Activation[Variable]
+	indexedGlobals *bbq.Activation[Variable]
 }
 
 // LinkGlobals performs the linking of global functions and variables for a given program.
@@ -51,7 +50,7 @@ func LinkGlobals(
 
 	// reserved globals for the current program (exact)
 	globals := make([]Variable, len(program.Globals))
-	indexedGlobals := activations.NewActivation[Variable](memoryGauge, nil)
+	indexedGlobals := bbq.NewActivation[Variable](memoryGauge, nil)
 
 	// NOTE: ensure both the context and the mapping are updated
 
@@ -65,7 +64,7 @@ func LinkGlobals(
 
 			if function.IsNative() {
 				// Look-up using the unqualified name, in the common-builtin functions.
-				value = IndexedCommonBuiltinTypeBoundFunctions[function.SimpleName]
+				value = IndexedCommonBuiltinTypeBoundFunctions[function.CanonicalName.Name]
 			} else {
 				value = functionValueFromBBQFunction(executable, function)
 			}
@@ -151,9 +150,10 @@ func linkImportedGlobal(
 	context *Context,
 	linkedGlobalsCache map[common.Location]LinkedGlobals,
 ) Variable {
-	importLocation := importedGlobal.Location
+	canonicalName := importedGlobal.CanonicalName
+	importLocation := canonicalName.Location
 
-	var indexedGlobals *activations.Activation[Variable]
+	var indexedGlobals *bbq.Activation[Variable]
 
 	if importLocation == nil {
 		if context.BuiltinGlobalsProvider == nil {
@@ -162,7 +162,6 @@ func linkImportedGlobal(
 			indexedGlobals = context.BuiltinGlobalsProvider(location)
 		}
 	} else {
-
 		linkedGlobals, ok := linkedGlobalsCache[importLocation]
 		if !ok {
 			importedProgram := context.ImportHandler(importLocation)
@@ -180,10 +179,7 @@ func linkImportedGlobal(
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
-	// When linking/finding the global in the imported program,
-	// use the unqualified-name.
-	// Because
-	global := indexedGlobals.Find(importedGlobal.CanonicalName)
+	global := indexedGlobals.Find(canonicalName)
 	if global == nil {
 		panic(LinkerError{
 			Message: fmt.Sprintf("cannot find import '%s'", importedGlobal.CanonicalName),
@@ -239,5 +235,5 @@ func loadContractValue(contract *bbq.Contract, context *Context) Value {
 		))
 	}
 
-	return context.ContractValueHandler(context, contract.Location)
+	return context.ContractValueHandler(context, contract.CanonicalName.Location)
 }

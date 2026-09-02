@@ -25,7 +25,6 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -49,7 +48,7 @@ type VM struct {
 	ip      uint16
 
 	context *Context
-	globals *activations.Activation[Variable]
+	globals *bbq.Activation[Variable]
 
 	// entrypointLocation is the location of the entry-point program.
 	entrypointLocation common.Location
@@ -264,7 +263,7 @@ func (vm *VM) popCallFrame() (poppedCallFrame *callFrame) {
 		defer func() {
 			vm.context.ReportInvokeTrace(
 				function.FunctionType(vm.context).String(),
-				function.Function.CanonicalName,
+				function.Function.CanonicalName.String(),
 				time.Since(startTime),
 			)
 		}()
@@ -321,21 +320,15 @@ func (vm *VM) callerLocation() common.Location {
 
 // findGlobal finds a global of the current program,
 // given its name relative to the program (i.e: not location-qualified).
-func (vm *VM) findGlobal(name string) Variable {
-	context := vm.context
-	canonicalName := commons.LocationQualifiedName(
-		context.MemoryGauge,
-		vm.entrypointLocation,
-		name,
-	)
-	return vm.globals.Find(canonicalName)
+func (vm *VM) findGlobal(name bbq.CanonicalName) Variable {
+	return vm.globals.Find(name)
 }
 
-func (vm *VM) getGlobalFunction(canonicalName string) (FunctionValue, error) {
+func (vm *VM) getGlobalFunction(canonicalName bbq.CanonicalName) (FunctionValue, error) {
 	functionVariable := vm.globals.Find(canonicalName)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
-			name: canonicalName,
+			name: canonicalName.String(),
 		}
 	}
 
@@ -352,16 +345,12 @@ func (vm *VM) getGlobalFunction(canonicalName string) (FunctionValue, error) {
 
 // InvokeExternally invokes a global function with the given arguments.
 func (vm *VM) InvokeExternally(name string, arguments ...Value) (v Value, err error) {
-	canonicalName := commons.LocationQualifiedName(
-		vm.context.MemoryGauge,
-		vm.entrypointLocation,
-		name,
-	)
+	canonicalName := bbq.NewCanonicalName(vm.entrypointLocation, name)
 
 	return vm.InvokeExternallyCanonical(canonicalName, arguments...)
 }
 
-func (vm *VM) InvokeExternallyCanonical(canonicalName string, arguments ...Value) (v Value, err error) {
+func (vm *VM) InvokeExternallyCanonical(canonicalName bbq.CanonicalName, arguments ...Value) (v Value, err error) {
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
 	})
@@ -378,11 +367,7 @@ func (vm *VM) InvokeExternallyCanonical(canonicalName string, arguments ...Value
 // without validating them.
 // NOTE: FOR TESTING PURPOSES ONLY! Use InvokeExternally instead
 func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...Value) (v Value, err error) {
-	canonicalName := commons.LocationQualifiedName(
-		vm.context.MemoryGauge,
-		vm.entrypointLocation,
-		name,
-	)
+	canonicalName := bbq.NewCanonicalName(vm.entrypointLocation, name)
 
 	defer vm.RecoverErrors(func(internalErr error) {
 		err = internalErr
@@ -397,7 +382,7 @@ func (vm *VM) InvokeExternallyUncheckedForTestingOnly(name string, arguments ...
 }
 
 func (vm *VM) InvokeMethodExternally(
-	canonicalName string,
+	canonicalName bbq.CanonicalName,
 	receiver interpreter.MemberAccessibleValue,
 	arguments ...Value,
 ) (
@@ -407,7 +392,7 @@ func (vm *VM) InvokeMethodExternally(
 	functionVariable := vm.globals.Find(canonicalName)
 	if functionVariable == nil {
 		return nil, UnknownFunctionError{
-			name: canonicalName,
+			name: canonicalName.String(),
 		}
 	}
 
@@ -519,8 +504,17 @@ func (vm *VM) invokeExternally(
 	return vm.pop(), nil
 }
 
-func (vm *VM) InitializeContract(typeID sema.TypeID, arguments ...Value) (*interpreter.CompositeValue, error) {
-	contractInitializer := commons.QualifiedName(string(typeID), commons.InitFunctionName)
+func (vm *VM) InitializeContract(
+	location common.Location,
+	name string,
+	arguments ...Value,
+) (*interpreter.CompositeValue, error) {
+	contractInitializer := bbq.NewTypedCanonicalName(
+		location,
+		name,
+		commons.InitFunctionName,
+	)
+
 	value, err := vm.InvokeExternallyCanonical(contractInitializer, arguments...)
 	if err != nil {
 		return nil, err
@@ -583,7 +577,9 @@ func (vm *VM) InvokeTransactionWrapper() (*interpreter.SimpleCompositeValue, err
 func (vm *VM) InvokeTransactionInit(transactionArgs []Value) error {
 	context := vm.context
 
-	initializerVariable := vm.findGlobal(commons.ProgramInitFunctionName)
+	initializerVariable := vm.findGlobal(
+		bbq.NewCanonicalName(vm.entrypointLocation, commons.ProgramInitFunctionName),
+	)
 	if initializerVariable == nil {
 		if len(transactionArgs) > 0 {
 			return interpreter.ArgumentCountError{
@@ -611,7 +607,13 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 	// Transaction invocation happens on the concrete value.
 	var accessedReference interpreter.ReferenceValue = nil
 
-	prepareVariable := vm.findGlobal(commons.TransactionPrepareFunctionName)
+	prepareVariable := vm.findGlobal(
+		bbq.NewTypedCanonicalName(
+			vm.entrypointLocation,
+			commons.TransactionWrapperCompositeName,
+			commons.TransactionPrepareFunctionName,
+		),
+	)
 	if prepareVariable == nil {
 		if len(signers) > 0 {
 			return interpreter.ArgumentCountError{
@@ -644,7 +646,13 @@ func (vm *VM) InvokeTransactionPrepare(transaction *interpreter.SimpleCompositeV
 func (vm *VM) InvokeTransactionExecute(transaction *interpreter.SimpleCompositeValue) error {
 	context := vm.context
 
-	executeVariable := vm.findGlobal(commons.TransactionExecuteFunctionName)
+	executeVariable := vm.findGlobal(
+		bbq.NewTypedCanonicalName(
+			vm.entrypointLocation,
+			commons.TransactionWrapperCompositeName,
+			commons.TransactionExecuteFunctionName,
+		),
+	)
 	if executeVariable == nil {
 		return nil
 	}
@@ -2518,11 +2526,11 @@ func (vm *VM) invokeFunction(
 	)
 }
 
-func (vm *VM) lookupFunction(location common.Location, canonicalName string) FunctionValue {
+func (vm *VM) lookupFunction(name bbq.CanonicalName) FunctionValue {
 	context := vm.context
 
 	// First check in current program.
-	global := vm.globals.Find(canonicalName)
+	global := vm.globals.Find(name)
 	if global != nil {
 		value := global.GetValue(context)
 		return value.(FunctionValue)
@@ -2531,22 +2539,22 @@ func (vm *VM) lookupFunction(location common.Location, canonicalName string) Fun
 	// If not found, check in already linked imported functions,
 	// or link the function now, dynamically.
 
-	var indexedGlobals *activations.Activation[Variable]
+	var indexedGlobals *bbq.Activation[Variable]
 
-	if location == nil {
+	if name.Location == nil {
 		if context.BuiltinGlobalsProvider == nil {
 			indexedGlobals = DefaultBuiltinGlobals()
 		} else {
-			indexedGlobals = context.BuiltinGlobalsProvider(location)
+			indexedGlobals = context.BuiltinGlobalsProvider(name.Location)
 		}
 	} else {
 		// TODO: This currently link all functions in program, unnecessarily.
 		//   Link only the requested function.
-		linkedGlobals := context.linkLocation(location)
+		linkedGlobals := context.linkLocation(name.Location)
 		indexedGlobals = linkedGlobals.indexedGlobals
 	}
 
-	global = indexedGlobals.Find(canonicalName)
+	global = indexedGlobals.Find(name)
 	if global == nil {
 		return nil
 	}
@@ -2570,7 +2578,9 @@ func (vm *VM) Reset() {
 }
 
 func (vm *VM) Global(simpleName string) Value {
-	variable := vm.findGlobal(simpleName)
+	variable := vm.findGlobal(
+		bbq.NewCanonicalName(vm.entrypointLocation, simpleName),
+	)
 	if variable == nil {
 		return nil
 	}
@@ -2579,7 +2589,7 @@ func (vm *VM) Global(simpleName string) Value {
 
 // TODO: Remove this method and refactor and repurpose `Config.BuiltinGlobalsProvider`
 // method to be able to use for any location, not just built-in/nil location.
-func (vm *VM) SetGlobal(name string, variable Variable) {
+func (vm *VM) SetGlobal(name bbq.CanonicalName, variable Variable) {
 	vm.globals.Set(name, variable)
 }
 

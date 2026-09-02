@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -766,9 +767,9 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 			qualifiedMethodName := commons.TypeQualifiedName(structType, methodName)
 
 			compilerConfig := &compiler.Config{
-				BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+				BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
 					baseActivation := compiler.DefaultBuiltinGlobals()
-					activation := activations.NewActivation(nil, baseActivation)
+					activation := bbq.NewActivation(nil, baseActivation)
 					activation.Set(
 						qualifiedMethodName,
 						compiler.NewGlobalImport(qualifiedMethodName),

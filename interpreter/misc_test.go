@@ -4356,8 +4356,8 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 			// Explicitly initialize the contract, if it's the VM.
 			if compositeKind == common.CompositeKindContract {
 				if vmInvokable, ok := invokable.(*test_utils.VMInvokable); ok {
-					typeId := invokable.GetLocation().TypeID(nil, identifier)
-					_, err = vmInvokable.InitializeContract(typeId, argument)
+					location := invokable.GetLocation()
+					_, err = vmInvokable.InitializeContract(location, identifier, argument)
 					require.NoError(t, err)
 				}
 			}

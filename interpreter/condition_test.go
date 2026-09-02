@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
-	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
@@ -1001,7 +1000,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					if *compile {
 						vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
 						vmConfig.ContractValueHandler = compilerUtils.ContractValueHandler(
-							commons.LocationQualifiedName(nil, TestLocation, "TestImpl"),
+							bbq.NewCanonicalName(TestLocation, "TestImpl"),
 							interpreter.NewUnmeteredIntValueFromInt64(value),
 						)
 						vmConfig.OnEventEmitted = onEmitEvents
@@ -1364,12 +1363,13 @@ func TestInterpretIsInstanceCheckInPreCondition(t *testing.T) {
 
 		// Explicitly initialize the contracts, if it's the VM.
 		if vmInvokable, ok := inter.(*test_utils.VMInvokable); ok {
-			c1Type := RequireGlobalType(t, inter, "C1")
-			_, err = vmInvokable.InitializeContract(c1Type.ID())
+			c1Type := RequireGlobalType(t, inter, "C1").(*sema.CompositeType)
+
+			_, err = vmInvokable.InitializeContract(c1Type.Location, c1Type.Identifier)
 			require.NoError(t, err)
 
-			c2Type := RequireGlobalType(t, inter, "C2")
-			_, err = vmInvokable.InitializeContract(c2Type.ID())
+			c2Type := RequireGlobalType(t, inter, "C2").(*sema.CompositeType)
+			_, err = vmInvokable.InitializeContract(c2Type.Location, c2Type.Identifier)
 			require.NoError(t, err)
 		}
 

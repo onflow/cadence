@@ -19,16 +19,16 @@
 package compiler
 
 import (
-	"github.com/onflow/cadence/activations"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 
 	"github.com/onflow/cadence/bbq/commons"
 )
 
-var defaultBuiltinGlobals = activations.NewActivation[GlobalImport](nil, nil)
+var defaultBuiltinGlobals = bbq.NewActivation[GlobalImport](nil, nil)
 
-func DefaultBuiltinGlobals() *activations.Activation[GlobalImport] {
+func DefaultBuiltinGlobals() *bbq.Activation[GlobalImport] {
 	return defaultBuiltinGlobals
 }
 
@@ -70,24 +70,32 @@ func init() {
 
 	for _, constructor := range valueConstructorFunctions {
 		// Register the constructor. e.g: `String()`
-		registerDefaultBuiltinGlobal(constructor.Name)
+		registerDefaultBuiltinGlobal(bbq.NewCanonicalName(nil, constructor.Name))
 
 		// Register the members of the constructor/type. e.g: `String.join()`
 		registerBoundFunctions(constructor.Type)
 	}
 
 	// The panic function is needed for pre/post conditions.
-	registerDefaultBuiltinGlobal(commons.FailPreConditionFunctionName)
-	registerDefaultBuiltinGlobal(commons.FailPostConditionFunctionName)
+	registerDefaultBuiltinGlobal(
+		bbq.NewCanonicalName(nil, commons.FailPreConditionFunctionName),
+	)
+	registerDefaultBuiltinGlobal(
+		bbq.NewCanonicalName(nil, commons.FailPostConditionFunctionName),
+	)
 
 	// Type constructors
 	for _, typeConstructor := range sema.RuntimeTypeConstructors {
-		registerDefaultBuiltinGlobal(typeConstructor.Name)
+		registerDefaultBuiltinGlobal(
+			bbq.NewCanonicalName(nil, typeConstructor.Name),
+		)
 	}
 
 	// Value conversion functions
 	for _, declaration := range interpreter.ConverterDeclarations {
-		registerDefaultBuiltinGlobal(declaration.Name)
+		registerDefaultBuiltinGlobal(
+			bbq.NewCanonicalName(nil, declaration.Name),
+		)
 		declarationVariable := sema.BaseValueActivation.Find(declaration.Name)
 		registerBoundFunctions(declarationVariable.Type)
 	}
@@ -107,14 +115,13 @@ func registerBoundFunctions(typ sema.Type) {
 	}
 }
 
-func registerGlobalImport(name string, activation *activations.Activation[GlobalImport]) {
+func registerGlobalImport(name bbq.CanonicalName, activation *bbq.Activation[GlobalImport]) {
 	activation.Set(
 		name,
-		// This is a native function, so the location is nil.
 		NewGlobalImport(name),
 	)
 }
 
-func registerDefaultBuiltinGlobal(name string) {
+func registerDefaultBuiltinGlobal(name bbq.CanonicalName) {
 	registerGlobalImport(name, defaultBuiltinGlobals)
 }

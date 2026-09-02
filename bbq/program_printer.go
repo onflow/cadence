@@ -118,7 +118,7 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	if len(program.Functions) > 0 {
 		functionNames = make([]string, 0, len(program.Functions))
 		for _, function := range program.Functions {
-			functionNames = append(functionNames, function.SimpleName)
+			functionNames = append(functionNames, function.CanonicalName.Name)
 		}
 	}
 
@@ -141,7 +141,7 @@ func (p *ProgramPrinter[E, T]) printFunction(
 	types []T,
 	functionNames []string,
 ) {
-	p.printHeader(function.CanonicalName)
+	p.printHeader(function.CanonicalName.String())
 
 	// Decode types
 	staticTypes := make([]interpreter.StaticType, len(types))
@@ -222,17 +222,11 @@ func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
 	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
 
 	for index, impt := range imports {
-
-		name := impt.CanonicalName
-		if impt.Location != nil {
-			name = string(impt.Location.TypeID(nil, impt.CanonicalName))
-		}
-
 		_, _ = fmt.Fprintf(
 			tabWriter,
 			"%s |\t %s\n",
 			p.colorizeIndex(index),
-			name,
+			impt.CanonicalName,
 		)
 	}
 
@@ -250,7 +244,7 @@ func (p *ProgramPrinter[_, _]) printExports(exports []Export) {
 			tabWriter,
 			"%s |\t %s\t %s\n",
 			p.colorizeIndex(index),
-			export.SimpleName,
+			export.CanonicalName.Name,
 			export.CanonicalName,
 		)
 	}

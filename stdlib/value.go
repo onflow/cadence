@@ -26,7 +26,13 @@ import (
 )
 
 type StandardLibraryValue struct {
-	Type           sema.Type
+	Type sema.Type
+	// BaseType is the type that owns/declares this value.
+	// e.g: receiver type of type-bound functions.
+	// It is nil for top-level value declarations, such as
+	// top level functions, contract values, etc.
+	// Currently only used by the compiler/vm.
+	BaseType       sema.Type
 	Value          interpreter.Value
 	Position       *ast.Position
 	Name           string

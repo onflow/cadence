@@ -19,6 +19,7 @@
 package commons
 
 import (
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
@@ -37,44 +38,47 @@ var BuiltinTypes = common.Concat[sema.Type](
 	},
 )
 
-func TypeQualifiedName(typ sema.Type, functionName string) string {
+func TypeQualifiedName(typ sema.Type, functionName string) bbq.CanonicalName {
 	if typ == nil {
-		return functionName
+		return bbq.NewCanonicalName(nil, functionName)
 	}
 
-	typeQualifier := TypeQualifier(typ)
-	return typeQualifier + "." + functionName
+	return bbq.NewTypedCanonicalName(
+		locationOfType(typ),
+		TypeQualifier(typ),
+		functionName,
+	)
 }
 
-func QualifiedName(typeName, functionName string) string {
-	if typeName == "" {
-		return functionName
+func locationOfType(typ sema.Type) common.Location {
+	switch typ := typ.(type) {
+	case *sema.FunctionType:
+		if typ.TypeFunctionType != nil {
+			return locationOfType(typ.TypeFunctionType)
+		}
+	case *sema.ReferenceType:
+		return locationOfType(typ.Type)
+	case *sema.IntersectionType:
+		return locationOfType(typ.Types[0])
+	case sema.LocatedType:
+		return typ.GetLocation()
 	}
-
-	return typeName + "." + functionName
-}
-
-func LocationQualifiedName(
-	memoryGauge common.MemoryGauge,
-	location common.Location,
-	name string,
-) string {
-	if location == nil {
-		return name
-	}
-
-	id := location.TypeID(memoryGauge, name)
-	return string(id)
+	return nil
 }
 
 // TypeQualifier returns the prefix to be appended to an identifier
 // (e.g: to a function name), to make it type-qualified.
-// For primitive types, the type-qualifier is the typeID itself.
+// For primitive types, the type-qualifier is the type name itself.
 // For derived types (e.g: arrays, dictionaries, capabilities, etc.) the type-qualifier
 // is a predefined identifier.
+// For nominal/located types, the type-qualifier is the type name only,
+// without location qualification (e.g. "Foo", not "A.01.Foo").
+// The location is carried separately by CanonicalName.Location.
 // TODO: Maybe make this a method on the type
 func TypeQualifier(typ sema.Type) string {
 	switch typ := typ.(type) {
+	case nil:
+		return ""
 	case *sema.ConstantSizedType:
 		return TypeQualifierArrayConstantSized
 	case *sema.VariableSizedType:
@@ -103,11 +107,21 @@ func TypeQualifier(typ sema.Type) string {
 	case *sema.InclusiveRangeType:
 		return TypeQualifierInclusiveRange
 	default:
-		// Use the canonical type ID for all nominal types.
-		// For located types, this includes the declaration location (e.g. `A.01.Foo`)
-		// and prevents same-named types from different programs from sharing a BBQ global.
-		return string(typ.ID())
+		return typ.QualifiedString()
 	}
+}
+
+func CanonicalNameForType(typ sema.Type) bbq.CanonicalName {
+	name := TypeQualifier(typ)
+	location := locationOfType(typ)
+	return bbq.NewCanonicalName(location, name)
+}
+
+func CompositeTypeCanonicalName(typ sema.CompositeKindedType) bbq.CanonicalName {
+	typeQualifier := TypeQualifier(typ.GetContainerType())
+	name := typ.GetIdentifier()
+	location := locationOfType(typ)
+	return bbq.NewTypedCanonicalName(location, typeQualifier, name)
 }
 
 var CollectEventsFunctionType = &sema.FunctionType{

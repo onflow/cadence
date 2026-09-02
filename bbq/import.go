@@ -18,9 +18,6 @@
 
 package bbq
 
-import "github.com/onflow/cadence/common"
-
 type Import struct {
-	Location      common.Location
-	CanonicalName string
+	CanonicalName CanonicalName
 }

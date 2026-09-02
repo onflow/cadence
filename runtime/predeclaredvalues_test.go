@@ -641,10 +641,11 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					},
 					// Only required for VM, not necessary for interpreter.
 					{
-						Name:  "B.c",
-						Type:  cType,
-						Value: function,
-						Kind:  common.DeclarationKindFunction,
+						Name:     "c",
+						BaseType: bType,
+						Type:     cType,
+						Value:    function,
+						Kind:     common.DeclarationKindFunction,
 					},
 				},
 			},
@@ -710,7 +711,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		var function interpreter.FunctionValue
 		if *compile {
 			function = vm.NewNativeFunctionValue(
-				"B.c",
+				"c",
 				cType,
 				func(
 					_ interpreter.NativeFunctionContext,
@@ -759,10 +760,11 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 					},
 					// Only required for VM, not necessary for interpreter.
 					{
-						Name:  "B.c",
-						Type:  cType,
-						Value: function,
-						Kind:  common.DeclarationKindFunction,
+						Name:     "c",
+						BaseType: bType,
+						Type:     cType,
+						Value:    function,
+						Kind:     common.DeclarationKindFunction,
 					},
 				},
 			},

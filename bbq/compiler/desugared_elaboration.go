@@ -20,6 +20,7 @@ package compiler
 
 import (
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/sema"
@@ -63,7 +64,7 @@ type DesugaredElaboration struct {
 	// Each elaboration has its own mapping, so that inherited code resolves identifiers
 	// against the imports of the program that declared the inherited code,
 	// not the program currently being compiled.
-	importCanonicalNames map[string]string
+	importCanonicalNames map[string]bbq.CanonicalName
 }
 
 func NewDesugaredElaboration(elaboration *sema.Elaboration, location common.Location) *DesugaredElaboration {
@@ -440,9 +441,9 @@ func (e *DesugaredElaboration) SetGlobalValue(name string, variable *sema.Variab
 	e.elaboration.SetGlobalValue(name, variable)
 }
 
-func (e *DesugaredElaboration) SetImportCanonicalName(simpleName string, canonicalName string) {
+func (e *DesugaredElaboration) SetImportCanonicalName(simpleName string, canonicalName bbq.CanonicalName) {
 	if e.importCanonicalNames == nil {
-		e.importCanonicalNames = make(map[string]string)
+		e.importCanonicalNames = make(map[string]bbq.CanonicalName)
 	}
 
 	if existing, ok := e.importCanonicalNames[simpleName]; ok {
@@ -457,9 +458,9 @@ func (e *DesugaredElaboration) SetImportCanonicalName(simpleName string, canonic
 	e.importCanonicalNames[simpleName] = canonicalName
 }
 
-func (e *DesugaredElaboration) ImportCanonicalName(simpleName string) (string, bool) {
+func (e *DesugaredElaboration) ImportCanonicalName(simpleName string) (bbq.CanonicalName, bool) {
 	if e.importCanonicalNames == nil {
-		return "", false
+		return bbq.CanonicalName{}, false
 	}
 	canonicalName, ok := e.importCanonicalNames[simpleName]
 	return canonicalName, ok

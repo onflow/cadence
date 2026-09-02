@@ -44,7 +44,13 @@ type Desugar struct {
 	config                 *Config
 	enclosingInterfaceType *sema.InterfaceType
 
-	modifiedDeclarations           []ast.Declaration
+	modifiedDeclarations []ast.Declaration
+
+	// enclosingMembers are the members of the declaration that encloses
+	// the declaration which is currently being desugared.
+	// It is nil if the current declaration is a top-level declaration.
+	enclosingMembers *[]ast.Declaration
+
 	inheritedFuncsWithConditions   map[string][]*inheritedFunction
 	inheritedEvents                map[sema.Type][]*inheritedEvent
 	postConditionIndices           map[*ast.FunctionBlock]int
@@ -127,6 +133,51 @@ func (d *Desugar) desugarDeclaration(declaration ast.Declaration) (result ast.De
 	desugaredDeclaration := ast.AcceptDeclaration[ast.Declaration](declaration, d)
 	desugared = desugaredDeclaration != declaration
 	return desugaredDeclaration, desugared
+}
+
+// desugarMember desugars the given member of a declaration,
+// where the provided members are the members of the enclosing declaration.
+// The previously enclosing members are restored when unwinding.
+func (d *Desugar) desugarMember(
+	member ast.Declaration,
+	enclosingMembers *[]ast.Declaration,
+) (result ast.Declaration, desugared bool) {
+	prevEnclosingMembers := d.enclosingMembers
+	d.enclosingMembers = enclosingMembers
+	defer func() {
+		d.enclosingMembers = prevEnclosingMembers
+	}()
+
+	return d.desugarDeclaration(member)
+}
+
+func (d *Desugar) desugarMembers(members []ast.Declaration) (desugaredMembers []ast.Declaration, desugared bool) {
+	var generatedMembers []ast.Declaration
+
+	desugaredMembers, desugared = desugarList(
+		members,
+		func(member ast.Declaration) (ast.Declaration, bool) {
+			return d.desugarMember(member, &generatedMembers)
+		},
+	)
+
+	// If new members were generated (e.g: enum lookup function, etc.),
+	// then add them also to the resulting desugared-members list.
+	if len(generatedMembers) > 0 {
+		desugaredMembers = append(desugaredMembers, generatedMembers...)
+		desugared = true
+	}
+
+	return
+}
+
+func (d *Desugar) addToEnclosingMembersOrProgram(declaration ast.Declaration) {
+	if d.enclosingMembers != nil {
+		*d.enclosingMembers = append(*d.enclosingMembers, declaration)
+		return
+	}
+
+	d.modifiedDeclarations = append(d.modifiedDeclarations, declaration)
 }
 
 type comparableElement interface {
@@ -936,20 +987,9 @@ func (d *Desugar) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclarat
 		d.enclosingInterfaceType = prevEnclosingInterfaceType
 	}()
 
-	var desugaredMembers []ast.Declaration
-	membersDesugared := false
-
 	// visit and desugar members.
 	existingMembers := declaration.Members.Declarations()
-	for _, member := range existingMembers {
-		desugaredMember, desugared := d.desugarDeclaration(member)
-		if desugaredMember == nil {
-			continue
-		}
-
-		membersDesugared = membersDesugared || desugared
-		desugaredMembers = append(desugaredMembers, desugaredMember)
-	}
+	desugaredMembers, membersDesugared := d.desugarMembers(existingMembers)
 
 	// Add inherited default functions.
 	existingFunctions := declaration.Members.FunctionsByIdentifier()
@@ -1050,15 +1090,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 	} else {
 		// Otherwise, visit and desugar members.
 		existingMembers := declaration.Members.Declarations()
-		for _, member := range existingMembers {
-			desugaredMember, desugared := d.desugarDeclaration(member)
-			if desugaredMember == nil {
-				continue
-			}
-
-			membersDesugared = membersDesugared || desugared
-			desugaredMembers = append(desugaredMembers, desugaredMember)
-		}
+		desugaredMembers, membersDesugared = d.desugarMembers(existingMembers)
 	}
 
 	// Add inherited default functions.
@@ -1109,12 +1141,7 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 			)
 			enumLookupFuncType := sema.EnumLookupFunctionType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
-
-			// TODO: Instead of appending as a top level function,
-			// see if this can be added as a member of the enclosing container,
-			// similar to how struct constructors are placed.
-			// The caveat is that this needs to be marked as a static-function somehow.
-			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
+			d.addToEnclosingMembersOrProgram(enumLookup)
 		} else {
 			d.addEmptyInitializer(initializerFuncType, &desugaredMembers)
 		}
@@ -1578,9 +1605,9 @@ func (d *Desugar) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaratio
 	// Recursively de-sugar nested declarations (functions, types, etc.)
 
 	existingMembers := declaration.Members.Declarations()
+	desugaredMembers, membersDesugared := d.desugarMembers(existingMembers)
 
-	desugaredMembers, desugared := desugarList(existingMembers, d.desugarDeclaration)
-	if !desugared {
+	if !membersDesugared {
 		return declaration
 	}
 
@@ -1678,7 +1705,7 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 			// If there is no execute block, create an empty one.
 			executeFunc = simpleFunctionDeclaration(
 				d.memoryGauge,
-				commons.ExecuteFunctionName,
+				commons.TransactionExecuteFunctionName,
 				nil,
 				nil,
 				transaction.StartPos,
@@ -2142,13 +2169,19 @@ func newEnumLookup(
 		ast.EmptyRange,
 	)
 
+	lookupFunctionName := ast.NewIdentifier(
+		gauge,
+		enumType.GetIdentifier(),
+		ast.EmptyPosition,
+	)
+
 	return ast.NewFunctionDeclaration(
 		gauge,
 		ast.AccessNotSpecified,
 		ast.FunctionPurityUnspecified,
+		true,
 		false,
-		false,
-		typeIdentifier,
+		lookupFunctionName,
 		nil,
 		ast.NewParameterList(gauge, parameters, ast.EmptyRange),
 		nil,

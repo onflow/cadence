@@ -29,6 +29,7 @@ import (
 
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -214,8 +215,12 @@ func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
 	return v.elaboration.GetGlobalType(name)
 }
 
-func (v *VMInvokable) InitializeContract(typeID sema.TypeID, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
-	return v.vmInstance.InitializeContract(typeID, arguments...)
+func (v *VMInvokable) InitializeContract(
+	location common.Location,
+	name string,
+	arguments ...interpreter.Value,
+) (*interpreter.CompositeValue, error) {
+	return v.vmInstance.InitializeContract(location, name, arguments...)
 }
 
 func compareSlabs(a, b atree.Slab) int {

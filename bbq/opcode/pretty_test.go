@@ -45,12 +45,13 @@ func TestPrettyInstructionWithResolvableOperands(t *testing.T) {
 		},
 		Functions: []bbq.Function[opcode.Instruction]{
 			{
-				SimpleName:    "myFunction",
-				CanonicalName: "MyContract.myFunction",
+				CanonicalName: bbq.NewTypedCanonicalName(
+					nil,
+					"MyContract",
+					"myFunction",
+				),
 			},
-			{
-				SimpleName: "anonFunc",
-			},
+			{},
 		},
 	}
 
@@ -198,12 +199,13 @@ func TestPrettyInstructionMapping(t *testing.T) {
 		},
 		Functions: []bbq.Function[opcode.Instruction]{
 			{
-				SimpleName:    "myFunction",
-				CanonicalName: "MyContract.myFunction",
+				CanonicalName: bbq.NewTypedCanonicalName(
+					nil,
+					"MyContract",
+					"myFunction",
+				),
 			},
-			{
-				SimpleName: "anonFunc",
-			},
+			{},
 		},
 	}
 

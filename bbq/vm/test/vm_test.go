@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
 	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
@@ -1675,9 +1674,9 @@ func initializeContract(
 
 	// Assume only one contract per program
 	require.True(tb, len(program.Contracts) > 0)
-	contract := program.Contracts[0]
+	canonicalName := program.Contracts[0].CanonicalName
 
-	contractValue, err := vmInstance.InitializeContract(common.TypeID(contract.CanonicalName))
+	contractValue, err := vmInstance.InitializeContract(canonicalName.Location, canonicalName.Name)
 	require.NoError(tb, err)
 
 	return vmInstance, contractValue
@@ -2101,12 +2100,10 @@ func TestNativeFunctions(t *testing.T) {
 		require.NoError(t, err)
 
 		compConfig := &compiler.Config{
-			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-				activation.Set(
-					stdlib.AssertFunctionName,
-					compiler.NewGlobalImport(stdlib.AssertFunctionName),
-				)
+			BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+				activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+				name := bbq.NewCanonicalName(nil, stdlib.AssertFunctionName)
+				activation.Set(name, compiler.NewGlobalImport(name))
 				return activation
 			},
 		}
@@ -2119,11 +2116,14 @@ func TestNativeFunctions(t *testing.T) {
 		program := comp.Compile()
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
+			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(stdlib.VMAssertFunction.Value)
-			activation.Set(stdlib.AssertFunctionName, variable)
+			activation.Set(
+				bbq.NewCanonicalName(nil, stdlib.AssertFunctionName),
+				variable,
+			)
 			return activation
 		}
 
@@ -6568,6 +6568,28 @@ func TestFunctionExpression(t *testing.T) {
 	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(6), actual)
 }
 
+func TestMultipleFunctionExpressions(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := CompileAndInvoke(t,
+		`
+          fun test(): Int {
+              let addOne = fun(_ x: Int): Int {
+                  return x + 1
+              }
+              let double = fun(_ x: Int): Int {
+                  return x * 2
+              }
+              return addOne(1) + double(3)
+          }
+        `,
+		"test",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, interpreter.NewUnmeteredIntValueFromInt64(8), actual)
+}
+
 func TestInnerFunction(t *testing.T) {
 
 	t.Parallel()
@@ -9116,12 +9138,10 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 	})
 
 	compilerConfig := &compiler.Config{
-		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-			activation.Set(
-				functionName,
-				compiler.NewGlobalImport(functionName),
-			)
+		BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+			name := bbq.NewCanonicalName(nil, functionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
 			return activation
 		},
 	}
@@ -9153,11 +9173,11 @@ func TestFunctionInvocationWithOptionalArgs(t *testing.T) {
 	)
 
 	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
+		activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 		variable := &interpreter.SimpleVariable{}
 		variable.InitializeWithValue(functionValue)
-		activation.Set(functionName, variable)
+		activation.Set(bbq.NewCanonicalName(nil, functionName), variable)
 		return activation
 	}
 
@@ -9463,23 +9483,24 @@ func TestGetAuthAccount(t *testing.T) {
 		activation.DeclareValue(stdlib.NewVMGetAuthAccountFunction(nil))
 
 		compilerConfig := &compiler.Config{
-			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-				activation.Set(
-					stdlib.GetAuthAccountFunctionName,
-					compiler.NewGlobalImport(stdlib.GetAuthAccountFunctionName),
-				)
+			BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+				activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+				name := bbq.NewCanonicalName(nil, stdlib.GetAuthAccountFunctionName)
+				activation.Set(name, compiler.NewGlobalImport(name))
 				return activation
 			},
 		}
 
 		vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
+			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 			variable := &interpreter.SimpleVariable{}
 			variable.InitializeWithValue(stdlib.NewVMGetAuthAccountFunction(&testAccountHandler{}).Value)
-			activation.Set(stdlib.GetAuthAccountFunctionName, variable)
+			activation.Set(
+				bbq.NewCanonicalName(nil, stdlib.GetAuthAccountFunctionName),
+				variable,
+			)
 
 			return activation
 		}
@@ -9716,27 +9737,18 @@ func TestAttachments(t *testing.T) {
 		}
 
 		compilerConfig := &compiler.Config{
-			BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-				activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-				activation.Set(
-					stdlib.VMSignatureAlgorithmConstructor.Name,
-					compiler.GlobalImport{
-						CanonicalName: stdlib.VMSignatureAlgorithmConstructor.Name,
-					},
-				)
-				activation.Set(
-					validator.Name,
-					compiler.GlobalImport{
-						CanonicalName: validator.Name,
-					},
-				)
+			BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+				activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+				name := bbq.NewCanonicalName(nil, stdlib.VMSignatureAlgorithmConstructor.Name)
+				activation.Set(name, compiler.NewGlobalImport(name))
+
+				name = bbq.NewCanonicalName(nil, validator.Name)
+				activation.Set(name, compiler.NewGlobalImport(name))
+
 				for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
-					activation.Set(
-						v.Name,
-						compiler.GlobalImport{
-							CanonicalName: v.Name,
-						},
-					)
+					name = v.Name
+					activation.Set(name, compiler.NewGlobalImport(name))
 				}
 				return activation
 			},
@@ -9746,25 +9758,31 @@ func TestAttachments(t *testing.T) {
 
 		vmConfig := vm.NewConfig(storage)
 
-		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-			activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
+			activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 			signatureVar := &interpreter.SimpleVariable{}
 			signatureVar.InitializeWithValue(stdlib.VMSignatureAlgorithmConstructor.Value)
 			activation.Set(
-				stdlib.VMSignatureAlgorithmConstructor.Name,
+				bbq.NewCanonicalName(
+					nil,
+					stdlib.VMSignatureAlgorithmConstructor.Name,
+				),
 				signatureVar,
 			)
 
 			publicKeyVar := &interpreter.SimpleVariable{}
 			publicKeyVar.InitializeWithValue(validator.Value)
 			activation.Set(
-				validator.Name,
+				bbq.NewCanonicalName(nil, validator.Name),
 				publicKeyVar,
 			)
 
 			for _, v := range stdlib.VMSignatureAlgorithmCaseValues {
 				variable := interpreter.NewVariableWithValue(nil, v.Value)
-				activation.Set(v.Name, variable)
+				activation.Set(
+					v.Name,
+					variable,
+				)
 			}
 			return activation
 		}
@@ -10027,13 +10045,16 @@ func TestInjectedContract(t *testing.T) {
 		Kind:  common.DeclarationKindContract,
 	})
 
-	canonicalTypeName := commons.TypeQualifier(bType)
+	canonicalTypeName := bbq.NewCanonicalName(
+		nil,
+		commons.TypeQualifier(bType),
+	)
 	canonicalMethodName := commons.TypeQualifiedName(bType, "c")
 
 	compilerConfig := &compiler.Config{
-		BuiltinGlobalsProvider: func(location common.Location) *activations.Activation[compiler.GlobalImport] {
+		BuiltinGlobalsProvider: func(location common.Location) *bbq.Activation[compiler.GlobalImport] {
 			assert.Equal(t, TestLocation, location)
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
 			activation.Set(
 				canonicalTypeName,
 				compiler.NewGlobalImport(canonicalTypeName),
@@ -10047,7 +10068,7 @@ func TestInjectedContract(t *testing.T) {
 	}
 
 	cValue := vm.NewNativeFunctionValue(
-		canonicalMethodName,
+		canonicalMethodName.Name,
 		cType,
 		func(
 			context interpreter.NativeFunctionContext,
@@ -10067,9 +10088,9 @@ func TestInjectedContract(t *testing.T) {
 	)
 
 	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-	vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
+	vmConfig.BuiltinGlobalsProvider = func(location common.Location) *bbq.Activation[vm.Variable] {
 		assert.Equal(t, TestLocation, location)
-		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+		activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 		bVariable := &interpreter.SimpleVariable{}
 		bVariable.InitializeWithValue(bValue)
@@ -10090,7 +10111,7 @@ func TestInjectedContract(t *testing.T) {
 	vmConfig.EntitlementMapTypeHandler = CompiledProgramsEntitlementMapTypeLoader(programs)
 
 	vmConfig.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
-		if location == contractBLocation && string(typeID) == canonicalTypeName {
+		if location == contractBLocation && string(typeID) == canonicalTypeName.String() {
 			return bType
 		}
 
@@ -10374,21 +10395,25 @@ func TestFunctionInclusiveRangeConstruction(t *testing.T) {
 	activation.DeclareValue(stdlib.VMInclusiveRangeConstructor)
 
 	compilerConfig := &compiler.Config{
-		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-			activation.Set(
+		BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+			name := bbq.NewCanonicalName(
+				nil,
 				stdlib.VMInclusiveRangeConstructor.Name,
-				compiler.NewGlobalImport(stdlib.VMInclusiveRangeConstructor.Name),
 			)
+			activation.Set(name, compiler.NewGlobalImport(name))
 			return activation
 		},
 	}
 	vmConfig := vm.NewConfig(NewUnmeteredInMemoryStorage())
-	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
+		activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 		variable := &interpreter.SimpleVariable{}
 		variable.InitializeWithValue(stdlib.VMInclusiveRangeConstructor.Value)
-		activation.Set(stdlib.VMInclusiveRangeConstructor.Name, variable)
+		activation.Set(
+			bbq.NewCanonicalName(nil, stdlib.VMInclusiveRangeConstructor.Name),
+			variable,
+		)
 		return activation
 	}
 
@@ -12114,16 +12139,15 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 	require.NoError(t, err)
 
 	compilerConfig := &compiler.Config{
-		BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
-			activation := activations.NewActivation(nil, compiler.DefaultBuiltinGlobals())
-			activation.Set(
-				functionName,
-				compiler.NewGlobalImport(functionName),
-			)
-			activation.Set(
-				conditionLogFunctionName,
-				compiler.NewGlobalImport(conditionLogFunctionName),
-			)
+		BuiltinGlobalsProvider: func(_ common.Location) *bbq.Activation[compiler.GlobalImport] {
+			activation := bbq.NewActivation(nil, compiler.DefaultBuiltinGlobals())
+
+			name := bbq.NewCanonicalName(nil, functionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
+
+			name = bbq.NewCanonicalName(nil, conditionLogFunctionName)
+			activation.Set(name, compiler.NewGlobalImport(name))
+
 			return activation
 		},
 	}
@@ -12168,16 +12192,19 @@ func TestBorrowContractLinksGlobals(t *testing.T) {
 	)
 
 	vmConfig := vm.NewConfig(interpreter.NewInMemoryStorage(nil, nil))
-	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *activations.Activation[vm.Variable] {
-		activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
+	vmConfig.BuiltinGlobalsProvider = func(_ common.Location) *bbq.Activation[vm.Variable] {
+		activation := bbq.NewActivation(nil, vm.DefaultBuiltinGlobals())
 
 		variable := &interpreter.SimpleVariable{}
 		variable.InitializeWithValue(functionValue)
-		activation.Set(functionName, variable)
+		activation.Set(bbq.NewCanonicalName(nil, functionName), variable)
 
 		logFunctionVariable := &interpreter.SimpleVariable{}
 		logFunctionVariable.InitializeWithValue(conditionLogFunction.Value)
-		activation.Set(conditionLogFunctionName, logFunctionVariable)
+		activation.Set(
+			bbq.NewCanonicalName(nil, conditionLogFunctionName),
+			logFunctionVariable,
+		)
 
 		return activation
 	}

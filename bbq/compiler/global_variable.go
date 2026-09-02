@@ -18,8 +18,9 @@
 
 package compiler
 
+import "github.com/onflow/cadence/bbq"
+
 type globalVariable[E any] struct {
-	// CanonicalName is the location-qualified canonical name
-	CanonicalName string
+	CanonicalName bbq.CanonicalName
 	Getter        *function[E]
 }

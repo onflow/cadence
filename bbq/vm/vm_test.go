@@ -26,9 +26,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/bbq"
+	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 )
+
+func TestBuiltinTypeBoundNativeFunctionName(t *testing.T) {
+	t.Parallel()
+
+	functionName := sema.NumericTypeSaturatingAddFunctionName
+	canonicalName := bbq.NewTypedCanonicalName(
+		nil,
+		commons.TypeQualifier(sema.UInt8Type),
+		functionName,
+	)
+
+	variable := DefaultBuiltinGlobals().Find(canonicalName)
+	require.NotNil(t, variable)
+
+	function, ok := variable.GetValue(nil).(*NativeFunctionValue)
+	require.True(t, ok)
+	assert.Equal(
+		t,
+		functionName,
+		function.Name,
+	)
+}
 
 func TestVM_pop(t *testing.T) {
 	t.Parallel()

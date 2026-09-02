@@ -19,8 +19,8 @@
 package vm
 
 import (
-	"github.com/onflow/cadence/activations"
 	"github.com/onflow/cadence/ast"
+	"github.com/onflow/cadence/bbq"
 	"github.com/onflow/cadence/bbq/commons"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
@@ -28,26 +28,26 @@ import (
 	"github.com/onflow/cadence/sema"
 )
 
-type BuiltinGlobalsProvider func(location common.Location) *activations.Activation[Variable]
+type BuiltinGlobalsProvider func(location common.Location) *bbq.Activation[Variable]
 
-var defaultBuiltinGlobals = activations.NewActivation[Variable](nil, nil)
+var defaultBuiltinGlobals = bbq.NewActivation[Variable](nil, nil)
 
-func DefaultBuiltinGlobals() *activations.Activation[Variable] {
+func DefaultBuiltinGlobals() *bbq.Activation[Variable] {
 	return defaultBuiltinGlobals
 }
 
 func registerBuiltinFunction(functionValue *NativeFunctionValue) {
 	registerGlobalFunction(
-		functionValue.Name,
+		bbq.NewCanonicalName(nil, functionValue.Name),
 		functionValue,
 		defaultBuiltinGlobals,
 	)
 }
 
 func registerGlobalFunction(
-	functionName string,
+	functionName bbq.CanonicalName,
 	functionValue *NativeFunctionValue,
-	activation *activations.Activation[Variable],
+	activation *bbq.Activation[Variable],
 ) {
 	existing := activation.Find(functionName)
 	if existing != nil {
@@ -59,20 +59,24 @@ func registerGlobalFunction(
 }
 
 func registerBuiltinTypeBoundFunction(typeName string, functionValue *NativeFunctionValue) {
-	// Update the name of the function to be type-qualified
-	qualifiedName := commons.QualifiedName(typeName, functionValue.Name)
-	functionValue.Name = qualifiedName
+	canonicalName := bbq.NewTypedCanonicalName(
+		nil,
+		typeName,
+		functionValue.Name,
+	)
 
-	registerBuiltinFunction(functionValue)
+	registerGlobalFunction(
+		canonicalName,
+		functionValue,
+		defaultBuiltinGlobals,
+	)
 }
 
 func registerBuiltinTypeBoundCommonFunction(typeName string, functionValue *NativeFunctionValue) {
 	// Here the function value is common for many types.
-	// Hence, do not update the function name to be type-qualified.
 	// Only the key in the map is type-qualified.
-	qualifiedName := commons.QualifiedName(typeName, functionValue.Name)
 	registerGlobalFunction(
-		qualifiedName,
+		bbq.NewTypedCanonicalName(nil, typeName, functionValue.Name),
 		functionValue,
 		defaultBuiltinGlobals,
 	)
