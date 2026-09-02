@@ -5050,6 +5050,127 @@ func TestInterpretNestedEphemeralReferenceCasting(t *testing.T) {
 			forceCastTypeMismatchError.ActualType.ID(),
 		)
 	})
+
+	t.Run("higher-order function with entitled callback parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                access(all) var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            // Only accepts an entitled callback, and invokes it with an entitled reference.
+            fun runner(_ callback: fun(auth(E) &S): Void) {
+                let s = S()
+                callback(&s as auth(E) &S)
+            }
+
+            // Publicly exposes 'runner' behind a weak callback boundary.
+            fun weakRunner(): fun(fun(&S): Void): Void {
+                let f: fun(fun(&S): Void): Void = runner
+                return f
+            }
+
+            // Force-cast the weak function back to the strong higher-order type.
+            fun testCasting() {
+                let weak = weakRunner()
+                let strong = weak as! fun(fun(auth(E) &S): Void): Void
+            }
+
+            // End-to-end escalation attempt: if the cast (incorrectly) succeeds, the
+            // recovered callback receives an auth(E) &S and can call the access(E) bump().
+            fun testEscalation(): Int {
+                let weak = weakRunner()
+                var observed = -1
+                if let strong = weak as? fun(fun(auth(E) &S): Void): Void {
+                    strong(fun(ref: auth(E) &S): Void {
+                        ref.bump()
+                        observed = ref.count
+                    })
+                }
+                return observed
+            }
+        `)
+
+		// Recovering the strong higher-order function type must fail:
+		// the entitlement on the (nested) callback parameter must not be recoverable.
+		_, err := inter.Invoke("testCasting")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+		assert.Equal(
+			t,
+			common.TypeID("fun(fun(auth(S.test.E)&S.test.S):Void):Void"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun(fun(&S.test.S):Void):Void"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+
+		// The optional-cast escalation path must not recover the entitled callback,
+		// so bump() must never be reachable and the state must stay unmutated.
+		result, err := inter.Invoke("testEscalation")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(-1),
+			result,
+		)
+	})
+
+	t.Run("higher-order function with subtyped value parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            // runner's true type is fun(fun(Int8): Void): Void
+            fun runner(_ callback: fun(Int8): Void) {
+                callback(5)
+            }
+
+            // Widen to the broader nested-parameter type fun(fun(Integer): Void): Void.
+            fun weakRunner(): fun(fun(Integer): Void): Void {
+                let f: fun(fun(Integer): Void): Void = runner
+                return f
+            }
+
+            // Recover the narrower nested-parameter type and invoke.
+            fun test(): Int {
+                let weak = weakRunner()
+                var observed = -1
+                if let strong = weak as? fun(fun(Int8): Void): Void {
+                    strong(fun(x: Int8): Void {
+                        observed = Int(x)
+                    })
+                }
+                return observed
+            }
+        `)
+
+		// The cast succeeds, and the callback receives
+		// the Int8 value 5 that runner genuinely passes.
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(5),
+			result,
+		)
+	})
 }
 
 func TestInterpretNestedStorageReferenceCasting(t *testing.T) {
@@ -6269,6 +6390,92 @@ func TestInterpretNestedEphemeralReferenceAsAnyStructCasting(t *testing.T) {
 			forceCastTypeMismatchError.ActualType.ID(),
 		)
 	})
+
+	t.Run("higher-order function with entitled callback parameter", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndPrepare(t, `
+            entitlement E
+
+            struct S {
+                access(all) var count: Int
+
+                init() {
+                    self.count = 0
+                }
+
+                access(E) fun bump() {
+                    self.count = self.count + 1
+                }
+            }
+
+            // Only accepts an entitled callback, and invokes it with an entitled reference.
+            fun runner(_ callback: fun(auth(E) &S): Void) {
+                let s = S()
+                callback(&s as auth(E) &S)
+            }
+
+            fun erasedWeakRunner(): AnyStruct {
+                // Publicly exposes 'runner' behind a weak callback boundary.
+                // The widening assignment does not rewrap the value, so it keeps its
+                // original type: fun(fun(auth(E) &S): Void): Void.
+                let f: fun(fun(&S): Void): Void = runner
+
+                return f
+            }
+
+            // Attempt to recover the strong higher-order function type via AnyStruct.
+            // This must fail: the entitlement on the nested callback parameter must
+            // not survive erasure to AnyStruct.
+            fun testCasting() {
+                let anyStruct: AnyStruct = erasedWeakRunner()
+                let strong = anyStruct as! fun(fun(auth(E) &S): Void): Void
+            }
+
+            // End-to-end escalation attempt: if the cast (incorrectly) succeeds,
+            // the recovered callback receives an auth(E) &S and can call bump().
+            fun testEscalation(): Int {
+                let anyStruct: AnyStruct = erasedWeakRunner()
+                var observed = -1
+                if let strong = anyStruct as? fun(fun(auth(E) &S): Void): Void {
+                    strong(fun(ref: auth(E) &S): Void {
+                        ref.bump()
+                        observed = ref.count
+                    })
+                }
+                return observed
+            }
+        `)
+
+		// Recovering the strong higher-order function type through AnyStruct must fail:
+		// the entitlement on the (nested) callback parameter must not survive erasure.
+		_, err := inter.Invoke("testCasting")
+		RequireError(t, err)
+
+		var forceCastTypeMismatchError *interpreter.ForceCastTypeMismatchError
+		assert.ErrorAs(t, err, &forceCastTypeMismatchError)
+		assert.Equal(
+			t,
+			common.TypeID("fun(fun(auth(S.test.E)&S.test.S):Void):Void"),
+			forceCastTypeMismatchError.ExpectedType.ID(),
+		)
+		assert.Equal(
+			t,
+			common.TypeID("fun(fun(&S.test.S):Void):Void"),
+			forceCastTypeMismatchError.ActualType.ID(),
+		)
+
+		// The optional-cast escalation path must not recover the entitled callback,
+		// so bump() must never be reachable and the state must stay unmutated.
+		result, err := inter.Invoke("testEscalation")
+		require.NoError(t, err)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(-1),
+			result,
+		)
+	})
 }
 
 func TestInterpretNestedStorageReferenceAsAnyStructCasting(t *testing.T) {
@@ -6927,5 +7134,180 @@ func TestInterpretReferenceCasting(t *testing.T) {
 
 		var typeMismatchError *interpreter.ForceCastTypeMismatchError
 		require.ErrorAs(t, err, &typeMismatchError)
+	})
+}
+
+func TestInterpretReferenceGetTypeStripsHiddenEntitlements(t *testing.T) {
+	t.Parallel()
+
+	// `getType()` invoked through a reference must report the type as seen through
+	// the reference's view: entitlements that the borrow type strips from nested
+	// references must not be leaked, while the concrete type structure is preserved.
+
+	check := func(t *testing.T, code, expected string) {
+		t.Helper()
+		inter := parseCheckAndPrepare(t, code)
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue(expected), res)
+	}
+
+	t.Run("array element entitlement is not leaked", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): String {
+                var s = 1
+                let array: [auth(E) &Int] = [&s as auth(E) &Int]
+                let arrayRef = &array as &[&Int]
+                return arrayRef.getType().identifier
+            }
+        `, "[&Int]")
+	})
+
+	t.Run("dictionary value entitlement is not leaked", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): String {
+                var s = 1
+                let d: {String: auth(E) &Int} = {"a": &s as auth(E) &Int}
+                let dRef = &d as &{String: &Int}
+                return dRef.getType().identifier
+            }
+        `, "{String:&Int}")
+	})
+
+	t.Run("nested array entitlement is not leaked", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): String {
+                let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let outerRef: auth(E) &[auth(E) &Int] = &inner as auth(E) &[auth(E) &Int]
+                let top: [auth(E) &[auth(E) &Int]] = [outerRef]
+                let ref = &top as &[&[&Int]]
+                return ref.getType().identifier
+            }
+        `, "[&[&Int]]")
+	})
+
+	t.Run("upcast to AnyStruct element strips entitlement, preserves structure", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): String {
+                var s = 1
+                let array: [auth(E) &Int] = [&s as auth(E) &Int]
+                let anyRef = &array as &[AnyStruct]
+                return anyRef.getType().identifier
+            }
+        `, "[&Int]")
+	})
+
+	t.Run("concrete referenced type is preserved through weak borrow", func(t *testing.T) {
+		t.Parallel()
+		// Regression guard: `getType` through a reference must still reveal the
+		// concrete referenced type; only entitlements are stripped.
+		check(t, `
+            fun test(): String {
+                let ref = &1 as &AnyStruct
+                return ref.getType().identifier
+            }
+        `, "Int")
+	})
+}
+
+func TestInterpretReferenceIsInstanceStripsHiddenEntitlements(t *testing.T) {
+	t.Parallel()
+
+	// `isInstance` invoked through a reference must use the type as seen through
+	// the reference's view, mirroring `getType`: entitlements that the borrow type
+	// strips from nested references must not be observable (otherwise `isInstance`
+	// is a boolean oracle for the hidden entitlements and disagrees with `getType`).
+
+	check := func(t *testing.T, code string, expected ...bool) {
+		t.Helper()
+		inter := parseCheckAndPrepare(t, code)
+		res, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		array, ok := res.(*interpreter.ArrayValue)
+		require.True(t, ok)
+
+		var actual []bool
+		array.Iterate(
+			inter,
+			func(element interpreter.Value) (resume bool) {
+				actual = append(actual, bool(element.(interpreter.BoolValue)))
+				return true
+			},
+			false,
+		)
+		require.Equal(t, expected, actual)
+	}
+
+	t.Run("array element entitlement is not observable", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): [Bool] {
+                var s = 1
+                let array: [auth(E) &Int] = [&s as auth(E) &Int]
+                let arrayRef = &array as &[&Int]
+                return [
+                    arrayRef.isInstance(Type<[auth(E) &Int]>()),
+                    arrayRef.isInstance(Type<[&Int]>())
+                ]
+            }
+        `, false, true)
+	})
+
+	t.Run("dictionary value entitlement is not observable", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): [Bool] {
+                var s = 1
+                let d: {String: auth(E) &Int} = {"a": &s as auth(E) &Int}
+                let dRef = &d as &{String: &Int}
+                return [
+                    dRef.isInstance(Type<{String: auth(E) &Int}>()),
+                    dRef.isInstance(Type<{String: &Int}>())
+                ]
+            }
+        `, false, true)
+	})
+
+	t.Run("nested array entitlement is not observable", func(t *testing.T) {
+		t.Parallel()
+		check(t, `
+            entitlement E
+            fun test(): [Bool] {
+                let inner: [auth(E) &Int] = [&1 as auth(E) &Int]
+                let outerRef: auth(E) &[auth(E) &Int] = &inner as auth(E) &[auth(E) &Int]
+                let top: [auth(E) &[auth(E) &Int]] = [outerRef]
+                let ref = &top as &[&[&Int]]
+                return [
+                    ref.isInstance(Type<[&[auth(E) &Int]]>()),
+                    ref.isInstance(Type<[&[&Int]]>())
+                ]
+            }
+        `, false, true)
+	})
+
+	t.Run("concrete referenced type is still matched through weak borrow", func(t *testing.T) {
+		t.Parallel()
+		// Regression guard: `isInstance` through a reference must still match the
+		// concrete referenced type; only entitlements are stripped.
+		check(t, `
+            fun test(): [Bool] {
+                let ref = &1 as &AnyStruct
+                return [
+                    ref.isInstance(Type<Int>()),
+                    ref.isInstance(Type<String>())
+                ]
+            }
+        `, true, false)
 	})
 }
