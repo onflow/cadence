@@ -114,6 +114,14 @@ func BLSAggregatePublicKeys(
 		false,
 	)
 
+	// a non-BLS public key is valid user input: return nil instead of
+	// calling the host function
+	for _, publicKey := range publicKeys {
+		if publicKey.SignAlgo != sema.SignatureAlgorithmBLS_BLS12_381 {
+			return interpreter.NilOptionalValue
+		}
+	}
+
 	aggregatedPublicKey, err := aggregator.BLSAggregatePublicKeys(publicKeys)
 
 	// If the crypto layer produces an error, we have invalid input, return nil
