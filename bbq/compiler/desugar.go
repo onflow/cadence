@@ -652,6 +652,11 @@ func (d *Desugar) desugarCondition(
 			panic(err)
 		}
 
+		// The inherited code may refer to globals declared in the program
+		// which declared the interface, not only to that program's imports.
+		// Import the declaring program itself so those globals can be linked.
+		d.addImport(inheritedFrom.Location)
+
 		allImports := elaboration.AllImportDeclarationsResolvedLocations()
 		transitiveImportLocations := make([]common.Location, 0, len(allImports))
 
@@ -1102,6 +1107,11 @@ func (d *Desugar) VisitCompositeDeclaration(declaration *ast.CompositeDeclaratio
 			)
 			enumLookupFuncType := sema.EnumLookupFunctionType(compositeType)
 			d.elaboration.SetFunctionDeclarationFunctionType(enumLookup, enumLookupFuncType)
+
+			// TODO: Instead of appending as a top level function,
+			// see if this can be added as a member of the enclosing container,
+			// similar to how struct constructors are placed.
+			// The caveat is that this needs to be marked as a static-function somehow.
 			d.modifiedDeclarations = append(d.modifiedDeclarations, enumLookup)
 		} else {
 			d.addEmptyInitializer(initializerFuncType, &desugaredMembers)
@@ -1628,9 +1638,13 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 	if transaction.ParameterList != nil {
 		varDeclarations = make([]ast.Declaration, 0, len(transaction.ParameterList.Parameters))
 
-		for _, parameter := range transaction.ParameterList.Parameters {
+		transactionType := d.elaboration.elaboration.TransactionDeclarationType(transaction)
+		parameters := transactionType.Parameters
+
+		for index, parameter := range transaction.ParameterList.Parameters {
 			// Create global variables
 			// i.e: `var a: Type`
+
 			variableDecl := ast.NewVariableDeclaration(
 				d.memoryGauge,
 				ast.AccessSelf,
@@ -1646,6 +1660,17 @@ func (d *Desugar) VisitTransactionDeclaration(transaction *ast.TransactionDeclar
 			)
 
 			varDeclarations = append(varDeclarations, variableDecl)
+
+			variableName := parameter.Identifier.Identifier
+			d.elaboration.SetGlobalValue(
+				variableName,
+				&sema.Variable{
+					Identifier:      variableName,
+					Access:          sema.PrimitiveAccess(ast.AccessSelf),
+					DeclarationKind: common.DeclarationKindVariable,
+					Type:            parameters[index].TypeAnnotation.Type,
+				},
+			)
 		}
 	}
 
@@ -1999,7 +2024,7 @@ func newEnumLookup(
 
 	typeIdentifier := ast.NewIdentifier(
 		gauge,
-		commons.TypeQualifier(enumType),
+		enumType.QualifiedIdentifier(),
 		ast.EmptyPosition,
 	)
 

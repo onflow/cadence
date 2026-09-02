@@ -45,6 +45,7 @@ type Context struct {
 	invokeFunction                func(function Value, arguments []Value, returnType sema.Type) (Value, error)
 	lookupFunction                func(location common.Location, name string) FunctionValue
 	recoverErrors                 func(onError func(error))
+	currentLocation               func() common.Location
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
 	containerValueIteration       map[atree.ValueID]int
@@ -321,8 +322,7 @@ func (c *Context) GetValueOfVariable(name string) interpreter.Value {
 }
 
 func (c *Context) GetLocation() common.Location {
-	//TODO
-	return nil
+	return c.currentLocation()
 }
 
 // InvokeFunction function invokes a given function value with the given arguments.
@@ -353,7 +353,7 @@ func functionAccess(
 	var unqualifiedName string
 	switch functionValue := method.(type) {
 	case *CompiledFunctionValue:
-		unqualifiedName = functionValue.Function.Name
+		unqualifiedName = functionValue.Function.SimpleName
 	case *NativeFunctionValue:
 		unqualifiedName = functionValue.Name
 	}

@@ -35,6 +35,7 @@ import (
 	. "github.com/onflow/cadence/test_utils/sema_utils"
 
 	"github.com/onflow/cadence/bbq/commons"
+	"github.com/onflow/cadence/bbq/compiler"
 	. "github.com/onflow/cadence/bbq/test_utils"
 	"github.com/onflow/cadence/bbq/vm"
 	"github.com/onflow/cadence/bbq/vm/test"
@@ -602,9 +603,7 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 
 		const methodName = "genericFunction"
 
-		// Use `nil`/built-in location, since the vm currently
-		// only allows injecting builtin values.
-		var location common.Location = nil
+		var location common.Location = TestLocation
 
 		typeParameter := &sema.TypeParameter{
 			Name: "T",
@@ -736,7 +735,7 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 		}
 
 		compositeTypeHandler := func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
-			if typeID == "S" {
+			if typeID == structType.ID() {
 				return structType
 			}
 
@@ -744,7 +743,7 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 		}
 
 		interfaceTypeHandler := func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
-			if typeID == "SI" {
+			if typeID == structInterfaceType.ID() {
 				return structInterfaceType
 			}
 
@@ -763,6 +762,21 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 
 		if *compile {
 			programs := CompiledPrograms{}
+
+			qualifiedMethodName := commons.TypeQualifiedName(structType, methodName)
+
+			compilerConfig := &compiler.Config{
+				BuiltinGlobalsProvider: func(_ common.Location) *activations.Activation[compiler.GlobalImport] {
+					baseActivation := compiler.DefaultBuiltinGlobals()
+					activation := activations.NewActivation(nil, baseActivation)
+					activation.Set(
+						qualifiedMethodName,
+						compiler.NewGlobalImport(qualifiedMethodName),
+					)
+					return activation
+				},
+			}
+
 			program := ParseCheckAndCompileCodeWithOptions(t,
 				code,
 				location,
@@ -774,24 +788,12 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 							},
 						},
 					},
+					CompilerConfig: compilerConfig,
 				},
 				programs,
 			)
 
 			vmConfig := test.PrepareVMConfig(t, nil, nil)
-
-			vmConfig.BuiltinGlobalsProvider = func(location common.Location) *activations.Activation[vm.Variable] {
-				activation := activations.NewActivation(nil, vm.DefaultBuiltinGlobals())
-
-				functionVariable := &interpreter.SimpleVariable{}
-				functionVariable.InitializeWithValue(functionValue)
-				activation.Set(
-					commons.TypeQualifiedName(structType, methodName),
-					functionVariable,
-				)
-
-				return activation
-			}
 
 			vmConfig.CompositeTypeHandler = compositeTypeHandler
 			vmConfig.InterfaceTypeHandler = interfaceTypeHandler
@@ -801,6 +803,10 @@ func TestInterpretFunctionParameterContravariance(t *testing.T) {
 				program,
 				vmConfig,
 			)
+
+			functionVariable := &interpreter.SimpleVariable{}
+			functionVariable.InitializeWithValue(functionValue)
+			programVM.SetGlobal(qualifiedMethodName, functionVariable)
 
 			invokable = test_utils.NewVMInvokable(programVM, programs[location].DesugaredElaboration)
 

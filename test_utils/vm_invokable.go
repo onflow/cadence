@@ -214,8 +214,8 @@ func (v *VMInvokable) GetGlobalType(name string) (*sema.Variable, bool) {
 	return v.elaboration.GetGlobalType(name)
 }
 
-func (v *VMInvokable) InitializeContract(contractName string, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
-	return v.vmInstance.InitializeContract(contractName, arguments...)
+func (v *VMInvokable) InitializeContract(typeID sema.TypeID, arguments ...interpreter.Value) (*interpreter.CompositeValue, error) {
+	return v.vmInstance.InitializeContract(typeID, arguments...)
 }
 
 func compareSlabs(a, b atree.Slab) int {

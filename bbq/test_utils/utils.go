@@ -122,7 +122,7 @@ func ParseCheckAndCompileCodeWithOptions(
 	}
 
 	programs[location] = &CompiledProgram{
-		DesugaredElaboration: compiler.NewDesugaredElaboration(checker.Elaboration),
+		DesugaredElaboration: compiler.NewDesugaredElaboration(checker.Elaboration, location),
 	}
 
 	program, desugaredElaboration := Compile(

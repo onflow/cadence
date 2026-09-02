@@ -764,7 +764,7 @@ func TestInterpretMemoryMeteringComposite(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindStringValue))
-		assert.Equal(t, ifTracing[uint64](27, 9), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing(ifCompile[uint64](39, 27), ifCompile[uint64](21, 9)), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -871,7 +871,7 @@ func TestInterpretMemoryMeteringCompositeField(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifTracing[uint64](9, 0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing(ifCompile[uint64](21, 9), ifCompile[uint64](12, 0)), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -902,7 +902,7 @@ func TestInterpretMemoryMeteringCompositeField(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifTracing[uint64](11, 2), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing(ifCompile[uint64](23, 11), ifCompile[uint64](14, 2)), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
@@ -936,7 +936,7 @@ func TestInterpretMemoryMeteringCompositeField(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, ifTracing[uint64](13, 4), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifTracing(ifCompile[uint64](25, 13), ifCompile[uint64](16, 4)), meter.getMemory(common.MemoryKindRawString))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapMetaDataSlab))
@@ -8833,7 +8833,7 @@ func TestInterpretMemoryMeteringToken(t *testing.T) {
 
 		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(23), meter.getMemory(common.MemoryKindSpaceToken))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifCompile[uint64](12, 0), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("syntax tokens", func(t *testing.T) {
@@ -8855,7 +8855,7 @@ func TestInterpretMemoryMeteringToken(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint64(35), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindSpaceToken))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifCompile[uint64](12, 0), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("comments", func(t *testing.T) {
@@ -8877,7 +8877,7 @@ func TestInterpretMemoryMeteringToken(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint64(10), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindSpaceToken))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifCompile[uint64](12, 0), meter.getMemory(common.MemoryKindRawString))
 	})
 
 	t.Run("numeric literals", func(t *testing.T) {
@@ -8900,7 +8900,7 @@ func TestInterpretMemoryMeteringToken(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint64(26), meter.getMemory(common.MemoryKindTypeToken))
 		assert.Equal(t, uint64(25), meter.getMemory(common.MemoryKindSpaceToken))
-		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindRawString))
+		assert.Equal(t, ifCompile[uint64](12, 0), meter.getMemory(common.MemoryKindRawString))
 	})
 }
 

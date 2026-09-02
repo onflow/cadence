@@ -96,6 +96,7 @@ func NewInstructionsProgramPrinter(resolve bool, colorize bool, showFlow bool) *
 
 func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	p.printImports(program.Imports)
+	p.printExports(program.Exports)
 	p.printConstantPool(program.Constants)
 	p.printTypePool(program.Types)
 
@@ -117,7 +118,7 @@ func (p *ProgramPrinter[E, T]) PrintProgram(program *Program[E, T]) string {
 	if len(program.Functions) > 0 {
 		functionNames = make([]string, 0, len(program.Functions))
 		for _, function := range program.Functions {
-			functionNames = append(functionNames, function.Name)
+			functionNames = append(functionNames, function.SimpleName)
 		}
 	}
 
@@ -140,7 +141,7 @@ func (p *ProgramPrinter[E, T]) printFunction(
 	types []T,
 	functionNames []string,
 ) {
-	p.printHeader(function.QualifiedName)
+	p.printHeader(function.CanonicalName)
 
 	// Decode types
 	staticTypes := make([]interpreter.StaticType, len(types))
@@ -222,9 +223,9 @@ func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
 
 	for index, impt := range imports {
 
-		name := impt.Name
+		name := impt.CanonicalName
 		if impt.Location != nil {
-			name = string(impt.Location.TypeID(nil, impt.Name))
+			name = string(impt.Location.TypeID(nil, impt.CanonicalName))
 		}
 
 		_, _ = fmt.Fprintf(
@@ -232,6 +233,25 @@ func (p *ProgramPrinter[_, _]) printImports(imports []Import) {
 			"%s |\t %s\n",
 			p.colorizeIndex(index),
 			name,
+		)
+	}
+
+	_ = tabWriter.Flush()
+	_, _ = fmt.Fprintln(&p.stringBuilder)
+}
+
+func (p *ProgramPrinter[_, _]) printExports(exports []Export) {
+	p.printHeader("Exports")
+
+	tabWriter := tabwriter.NewWriter(&p.stringBuilder, 0, 0, 1, ' ', tabwriter.AlignRight)
+
+	for index, export := range exports {
+		_, _ = fmt.Fprintf(
+			tabWriter,
+			"%s |\t %s\t %s\n",
+			p.colorizeIndex(index),
+			export.SimpleName,
+			export.CanonicalName,
 		)
 	}
 

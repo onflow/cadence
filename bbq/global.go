@@ -34,12 +34,8 @@ const (
 )
 
 type GlobalInfo struct {
-	Name string
-	// Need to maintain both "qualified" and "unqualified" names for a global,
-	// because when type-aliasing is used, imported global name becomes qualified.
-	// However, the same imported-global must use the unqualified name when linking.
-	// TODO: We can simplify this by always using qualified names for all imports.
-	QualifiedName string
+	// CanonicalName is the location-qualified canonical name
+	CanonicalName string
 	Location      common.Location
 	Index         uint16
 }
@@ -69,16 +65,14 @@ type ImportedGlobal struct {
 
 func NewFunctionGlobal[E any](
 	memoryGauge common.MemoryGauge,
-	name string,
+	canonicalName string,
 	location common.Location,
 	index uint16,
 ) *FunctionGlobal[E] {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &FunctionGlobal[E]{
 		GlobalInfo: GlobalInfo{
-			Name: name,
-			// For non-imported global, qualified-name is same the name
-			QualifiedName: name,
+			CanonicalName: canonicalName,
 			Location:      location,
 			Index:         index,
 		},
@@ -103,16 +97,14 @@ func (g ImportedGlobal) GetGlobalInfo() GlobalInfo {
 
 func NewVariableGlobal[E any](
 	memoryGauge common.MemoryGauge,
-	name string,
+	canonicalName string,
 	location common.Location,
 	index uint16,
 ) *VariableGlobal[E] {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &VariableGlobal[E]{
 		GlobalInfo: GlobalInfo{
-			Name: name,
-			// For non-imported global, qualified-name is same the name
-			QualifiedName: name,
+			CanonicalName: canonicalName,
 			Location:      location,
 			Index:         index,
 		},
@@ -121,16 +113,14 @@ func NewVariableGlobal[E any](
 
 func NewContractGlobal(
 	memoryGauge common.MemoryGauge,
-	name string,
+	canonicalName string,
 	location common.Location,
 	index uint16,
 ) *ContractGlobal {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &ContractGlobal{
 		GlobalInfo: GlobalInfo{
-			Name: name,
-			// For non-imported global, qualified-name is same the name
-			QualifiedName: name,
+			CanonicalName: canonicalName,
 			Location:      location,
 			Index:         index,
 		},
@@ -139,16 +129,14 @@ func NewContractGlobal(
 
 func NewImportedGlobal(
 	memoryGauge common.MemoryGauge,
-	name string,
-	qualifiedName string,
+	canonicalName string,
 	location common.Location,
 	index uint16,
 ) *ImportedGlobal {
 	common.UseMemory(memoryGauge, common.CompilerGlobalMemoryUsage)
 	return &ImportedGlobal{
 		GlobalInfo: GlobalInfo{
-			Name:          name,
-			QualifiedName: qualifiedName,
+			CanonicalName: canonicalName,
 			Location:      location,
 			Index:         index,
 		},

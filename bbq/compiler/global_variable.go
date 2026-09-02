@@ -19,6 +19,7 @@
 package compiler
 
 type globalVariable[E any] struct {
-	Name   string
-	Getter *function[E]
+	// CanonicalName is the location-qualified canonical name
+	CanonicalName string
+	Getter        *function[E]
 }
