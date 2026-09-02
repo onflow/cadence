@@ -88,6 +88,25 @@ func referencedGlobalCanonicalNames(
 	return names
 }
 
+func TestSetImportCanonicalName(t *testing.T) {
+	t.Parallel()
+
+	elaboration := compiler.NewDesugaredElaboration(
+		sema.NewElaboration(nil),
+		TestLocation,
+	)
+
+	elaboration.SetImportCanonicalName("Foo", "A.0000000000000001.Foo")
+
+	require.Panics(t, func() {
+		elaboration.SetImportCanonicalName("Foo", "A.0000000000000001.Foo")
+	})
+
+	require.Panics(t, func() {
+		elaboration.SetImportCanonicalName("Foo", "A.0000000000000002.Foo")
+	})
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
