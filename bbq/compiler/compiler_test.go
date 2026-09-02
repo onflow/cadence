@@ -96,14 +96,38 @@ func TestSetImportCanonicalName(t *testing.T) {
 		TestLocation,
 	)
 
-	elaboration.SetImportCanonicalName("Foo", "A.0000000000000001.Foo")
+	address1 := common.MustBytesToAddress([]byte{1})
+	fooLocation1 := common.NewAddressLocation(nil, address1, "Foo")
+
+	address2 := common.MustBytesToAddress([]byte{2})
+	fooLocation2 := common.NewAddressLocation(nil, address2, "Foo")
+
+	elaboration.SetImportCanonicalName(
+		"Foo",
+		bbq.NewCanonicalName(
+			fooLocation1,
+			"Foo",
+		),
+	)
 
 	require.Panics(t, func() {
-		elaboration.SetImportCanonicalName("Foo", "A.0000000000000001.Foo")
+		elaboration.SetImportCanonicalName(
+			"Foo",
+			bbq.NewCanonicalName(
+				fooLocation1,
+				"Foo",
+			),
+		)
 	})
 
 	require.Panics(t, func() {
-		elaboration.SetImportCanonicalName("Foo", "A.0000000000000002.Foo")
+		elaboration.SetImportCanonicalName(
+			"Foo",
+			bbq.NewCanonicalName(
+				fooLocation2,
+				"Foo",
+			),
+		)
 	})
 }
 
