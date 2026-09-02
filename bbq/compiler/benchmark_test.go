@@ -179,7 +179,7 @@ func BenchmarkCompileFungibleTokenTransferTransaction(b *testing.B) {
 	)
 
 	programs[transactionLocation] = &CompiledProgram{
-		DesugaredElaboration: compiler.NewDesugaredElaboration(checker.Elaboration),
+		DesugaredElaboration: compiler.NewDesugaredElaboration(checker.Elaboration, transactionLocation),
 	}
 
 	b.ReportAllocs()

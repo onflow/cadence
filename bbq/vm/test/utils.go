@@ -648,6 +648,14 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 		}
 	}
 
+	// recover panics (e.g. globals evaluation)
+	defer func() {
+		if r := recover(); r != nil {
+			internalErr := interpreter.AsCadenceError(r)
+			err = internalErr
+		}
+	}()
+
 	program := ParseCheckAndCompileCodeWithOptions(
 		t,
 		code,
@@ -663,17 +671,9 @@ func CompileAndPrepareToInvoke(t testing.TB, code string, options CompilerAndVMO
 	if vmConfig.ContractValueHandler == nil {
 		// TODO: generalize this
 		if len(program.Contracts) == 1 {
-			vmConfig.ContractValueHandler = ContractValueHandler(program.Contracts[0].Name)
+			vmConfig.ContractValueHandler = ContractValueHandler(program.Contracts[0].CanonicalName)
 		}
 	}
-
-	// recover panics from VM (e.g. globals evaluation)
-	defer func() {
-		if r := recover(); r != nil {
-			internalErr := interpreter.AsCadenceError(r)
-			err = internalErr
-		}
-	}()
 
 	programVM = vm.NewVM(
 		location,
@@ -689,7 +689,13 @@ func ContractValueHandler(contractName string, arguments ...vm.Value) vm.Contrac
 		contractInitializerName := commons.QualifiedName(contractName, commons.InitFunctionName)
 		contractInitializer := context.GetFunction(location, contractInitializerName)
 
-		compositeType, err := context.GetCompositeType(location, contractName, location.TypeID(context, contractName))
+		// contractName is already location-qualified (e.g. "S.test.C"),
+		// so use it directly as the typeID rather than re-qualifying with location.
+		compositeType, err := context.GetCompositeType(
+			location,
+			contractName,
+			common.TypeID(contractName),
+		)
 		if err != nil {
 			panic(err)
 		}

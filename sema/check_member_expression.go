@@ -139,49 +139,201 @@ func GetDescendantReferenceType(
 // intersectReferenceAuthorizationsInType recursively traverses a type and intersects
 // all inner reference type authorizations with outerAuthorization.
 // Returns the original type unchanged if no intersection was applied.
+//
+// Only references in covariant positions are intersected,
+// i.e. positions a reader obtains a value from.
+// A reference in a contravariant position is one the reader has to supply
+// rather than one it receives, so capping it grants the reader nothing,
+// and instead weakens what callers are required to pass.
+// See intersectReferenceAuthorizationsInTypeAtPosition.
 func intersectReferenceAuthorizationsInType(
 	memoryGauge common.MemoryGauge,
 	typ Type,
 	outerAuthorization Access,
 ) Type {
+	const covariant = true
+	return intersectReferenceAuthorizationsInTypeAtPosition(
+		memoryGauge,
+		typ,
+		outerAuthorization,
+		covariant,
+	)
+}
+
+// intersectReferenceAuthorizationsInTypeAtPosition implements
+// intersectReferenceAuthorizationsInType for a type occurring
+// in a covariant or a contravariant position.
+//
+// Variance only ever flips at function parameters,
+// so it has to be tracked rather than derived locally:
+// the parameter of a parameter is covariant again.
+// For example, when reading a member of type
+// `fun(callback: fun(reference: auth(E) &T): Void): Void`
+// through a weaker reference,
+// `callback` is supplied by the reader and must not be capped,
+// but `reference` is passed *to* the reader's callback,
+// and therefore must be.
+func intersectReferenceAuthorizationsInTypeAtPosition(
+	memoryGauge common.MemoryGauge,
+	typ Type,
+	outerAuthorization Access,
+	covariant bool,
+) Type {
 	switch t := typ.(type) {
 	case *ReferenceType:
+		if !covariant {
+			// The reader supplies this reference, rather than obtaining it,
+			// so its authorization is left as declared.
+			// Positions nested inside it are still traversed,
+			// as variance can flip back to covariant further in.
+			innerType := intersectReferenceAuthorizationsInTypeAtPosition(
+				memoryGauge,
+				t.Type,
+				outerAuthorization,
+				covariant,
+			)
+			if innerType == t.Type {
+				return t
+			}
+			return NewReferenceType(memoryGauge, t.Authorization, innerType)
+		}
+
 		intersected := IntersectAccess(outerAuthorization, t.Authorization)
 		// Cascade: use the effective (intersected) auth for inner recursion
-		innerType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, intersected)
+		innerType := intersectReferenceAuthorizationsInTypeAtPosition(
+			memoryGauge,
+			t.Type,
+			intersected,
+			covariant,
+		)
 		if intersected.Equal(t.Authorization) && innerType == t.Type {
 			return t
 		}
 		return NewReferenceType(memoryGauge, intersected, innerType)
 
 	case *OptionalType:
-		innerType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		innerType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.Type, outerAuthorization, covariant)
 		if innerType == t.Type {
 			return t
 		}
 		return NewOptionalType(memoryGauge, innerType)
 
 	case *VariableSizedType:
-		elementType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		elementType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.Type, outerAuthorization, covariant)
 		if elementType == t.Type {
 			return t
 		}
 		return NewVariableSizedType(memoryGauge, elementType)
 
 	case *ConstantSizedType:
-		elementType := intersectReferenceAuthorizationsInType(memoryGauge, t.Type, outerAuthorization)
+		elementType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.Type, outerAuthorization, covariant)
 		if elementType == t.Type {
 			return t
 		}
 		return NewConstantSizedType(memoryGauge, elementType, t.Size)
 
 	case *DictionaryType:
-		keyType := intersectReferenceAuthorizationsInType(memoryGauge, t.KeyType, outerAuthorization)
-		valueType := intersectReferenceAuthorizationsInType(memoryGauge, t.ValueType, outerAuthorization)
+		keyType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.KeyType, outerAuthorization, covariant)
+		valueType := intersectReferenceAuthorizationsInTypeAtPosition(memoryGauge, t.ValueType, outerAuthorization, covariant)
 		if keyType == t.KeyType && valueType == t.ValueType {
 			return t
 		}
 		return NewDictionaryType(memoryGauge, keyType, valueType)
+
+	case *CapabilityType:
+		borrowType := t.BorrowType
+		if borrowType == nil {
+			return t
+		}
+
+		newBorrowType := intersectReferenceAuthorizationsInTypeAtPosition(
+			memoryGauge,
+			borrowType,
+			outerAuthorization,
+			covariant,
+		)
+		if newBorrowType == borrowType {
+			return t
+		}
+		return NewCapabilityType(memoryGauge, newBorrowType)
+
+	case *FunctionType:
+		changed := false
+
+		newReturnType := intersectReferenceAuthorizationsInTypeAtPosition(
+			memoryGauge,
+			t.ReturnTypeAnnotation.Type,
+			outerAuthorization,
+			covariant,
+		)
+		if newReturnType != t.ReturnTypeAnnotation.Type {
+			changed = true
+		}
+
+		// The type parameters are preserved unchanged, rather than copied with
+		// intersected bounds. A type parameter bound constrains type arguments; it is
+		// not a value-bearing position and cannot hide a recoverable authorized
+		// reference. Preserving the original binders also keeps the `GenericType`
+		// references in the parameter and return types, and the `TypeArgumentsCheck`
+		// callback, consistent, since all identify the binders by pointer identity.
+
+		// Parameters, and the default arguments feeding them, flip the variance.
+		parameterCovariant := !covariant
+
+		newParameters := t.Parameters
+		parametersCopied := false
+		for i, parameter := range t.Parameters {
+			newParameterType := intersectReferenceAuthorizationsInTypeAtPosition(
+				memoryGauge,
+				parameter.TypeAnnotation.Type,
+				outerAuthorization,
+				parameterCovariant,
+			)
+
+			newDefaultArgument := parameter.DefaultArgument
+			if parameter.DefaultArgument != nil {
+				newDefaultArgument = intersectReferenceAuthorizationsInTypeAtPosition(
+					memoryGauge,
+					parameter.DefaultArgument,
+					outerAuthorization,
+					parameterCovariant,
+				)
+			}
+
+			if newParameterType == parameter.TypeAnnotation.Type &&
+				newDefaultArgument == parameter.DefaultArgument {
+				continue
+			}
+			if !parametersCopied {
+				newParameters = make([]Parameter, len(t.Parameters))
+				copy(newParameters, t.Parameters)
+				parametersCopied = true
+				changed = true
+			}
+			newParameters[i] = Parameter{
+				TypeAnnotation:  NewTypeAnnotation(newParameterType),
+				DefaultArgument: newDefaultArgument,
+				Label:           parameter.Label,
+				Identifier:      parameter.Identifier,
+			}
+		}
+
+		if !changed {
+			return t
+		}
+
+		return &FunctionType{
+			Purity:                   t.Purity,
+			ReturnTypeAnnotation:     NewTypeAnnotation(newReturnType),
+			Arity:                    t.Arity,
+			ArgumentExpressionsCheck: t.ArgumentExpressionsCheck,
+			TypeArgumentsCheck:       t.TypeArgumentsCheck,
+			Members:                  t.Members,
+			TypeParameters:           t.TypeParameters,
+			Parameters:               newParameters,
+			IsConstructor:            t.IsConstructor,
+			TypeFunctionType:         t.TypeFunctionType,
+		}
 
 	default:
 		return typ
@@ -212,14 +364,43 @@ func MaybeReferenceType(typ Type) (*ReferenceType, bool) {
 }
 
 // GetDescendantTypeForAccess returns the type that a descendant (member or element)
-// should have when read through `accessedType`, and whether the type was rewritten
-// (equivalent to ShouldReturnReference's result for the same inputs).
-// When `accessedType` is a reference, and the descendant warrants becoming a reference per ShouldReturnReference,
-// the descendant is wrapped via GetDescendantReferenceType with an unauthorized wrapping authorization,
-// intersecting any inner reference authorizations with the outer reference's authorization,
-// and the returned boolean is true.
-// Otherwise (for owned access, for primitive descendants, or in assignment contexts):
-// `descendantType` is returned unchanged and the returned boolean is false.
+// should have when read through `accessedType`, and whether the descendant was
+// wrapped in a reference (equivalent to ShouldReturnReference's result for the same inputs).
+//
+// Two independent decisions are made here, and must not be coupled:
+//
+//  1. Whether the descendant value must be wrapped in a reference.
+//     This is ShouldReturnReference's decision, and it drives the returned boolean.
+//     Only fielded/element-containing descendants (or descendants that are already
+//     references) are wrapped, and only when read through a reference.
+//
+//  2. Whether references nested inside the descendant's type must be
+//     authorization-intersected with the outer reference's authorization.
+//     This applies whenever the container is read through a reference, regardless
+//     of decision (1), so that a weak reference to a container caps every
+//     authorization exported through the descendant.
+//
+// Coupling the second decision to the first is unsound for descendants that carry
+// references but report no fields or elements — notably capability and function
+// values (`CapabilityType` and `FunctionType` both return false from
+// ContainFieldsOrElements). Those take ShouldReturnReference's early exit even
+// when they nest authorized references (e.g. `fun(): auth(E) &S`), so without a
+// separate intersection step their nested authorizations would leak through
+// unchanged.
+//
+// When the descendant warrants becoming a reference per ShouldReturnReference,
+// it is wrapped via GetDescendantReferenceType with an unauthorized wrapping
+// authorization, intersecting any inner reference authorizations with the outer
+// reference's authorization, and the returned boolean is true.
+//
+// When the descendant is not wrapped but is read through a reference, its nested
+// reference authorizations are still intersected via intersectContainerElementReferences,
+// and the returned boolean is false.
+//
+// Otherwise (for owned access, or in assignment contexts, where the descendant is
+// written rather than read out): `descendantType` is returned unchanged and the
+// returned boolean is false.
+//
 // This encapsulates the cascading rule that applies uniformly when reading element/member data
 // out of a referenced container or composite.
 // Call sites that need a custom wrapping authorization (e.g. mapped field access)
@@ -236,7 +417,19 @@ func GetDescendantTypeForAccess(
 	isAssignment bool,
 ) (Type, bool) {
 	if !ShouldReturnReference(accessedType, descendantType, isAssignment) {
-		return descendantType, false
+		// The descendant is not wrapped in a reference.
+		// In assignment contexts the descendant is being written, not read out,
+		// so no intersection applies and the type is returned unchanged.
+		if isAssignment {
+			return descendantType, false
+		}
+		// When the container is read through a reference, references nested inside
+		// the descendant's type must still be intersected with the outer reference's
+		// authorization, even though the descendant itself is not wrapped.
+		// This handles descendants that carry references but
+		// report no fields or elements (capability and function values).
+		// For owned access, or descendants without nested references, this is a no-op.
+		return intersectContainerElementReferences(memoryGauge, accessedType, descendantType), false
 	}
 	outerRef, isRef := MaybeReferenceType(accessedType)
 	if !isRef {
@@ -262,16 +455,18 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	}
 
 	returnReference := false
+	cappedNestedReferences := false
 
 	defer func() {
 		checker.Elaboration.SetMemberExpressionMemberAccessInfo(
 			expression,
 			MemberAccessInfo{
-				AccessedType:    accessedType,
-				ResultingType:   resultingType,
-				Member:          member,
-				IsOptional:      isOptional,
-				ReturnReference: returnReference,
+				AccessedType:           accessedType,
+				ResultingType:          resultingType,
+				Member:                 member,
+				IsOptional:             isOptional,
+				ReturnReference:        returnReference,
+				CappedNestedReferences: cappedNestedReferences,
 			},
 		)
 	}()
@@ -489,31 +684,71 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		member.DeclarationKind == common.DeclarationKindField &&
-		ShouldReturnReference(accessedType, resultingType, isAssignment) {
+		member.DeclarationKind == common.DeclarationKindField {
 
-		var pos ast.HasPosition = expression
+		switch {
+		case ShouldReturnReference(accessedType, resultingType, isAssignment):
+			// ShouldReturnReference only holds when the member is accessed
+			// through a reference, which grantedMemberAuthorization requires.
+			grantedAuthorization := checker.grantedMemberAuthorization(
+				member,
+				accessedType,
+				expression,
+			)
 
-		authorization := UnauthorizedAccess
-		if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
-			authorization = checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
+			// For non-reference members, the granted authorization is also
+			// the authorization of the reference the member gets wrapped in,
+			// but only for a field with mapping access:
+			// any other field is wrapped in an unauthorized reference.
+			// For reference members, the granted authorization is intersected
+			// with the member's own authorization instead, and it is not wrapped again.
+			wrappingAuthorization := UnauthorizedAccess
+			if _, isMappedAccess := member.Access.(*EntitlementMapAccess); isMappedAccess {
+				wrappingAuthorization = grantedAuthorization
+			}
+
+			resultingType = GetDescendantReferenceType(
+				checker.memoryGauge,
+				resultingType,
+				wrappingAuthorization,
+				grantedAuthorization,
+			)
+			returnReference = true
+
+		case !isAssignment:
+			// The member is not wrapped in a reference,
+			// but references nested inside its type must still be intersected
+			// with the authorization reading the member grants,
+			// so that a weak reference to the container caps every authorization
+			// exported through the member.
+			//
+			// This handles members that carry references
+			// but report no fields or elements,
+			// namely capability and function values:
+			// both `CapabilityType` and `FunctionType` return false
+			// from `ContainFieldsOrElements`, so they take
+			// `ShouldReturnReference`'s early exit
+			// even when they nest authorized references
+			// (e.g. `Capability<auth(E) &S>` or `fun(): auth(E) &S`).
+			//
+			// In assignment contexts the member is being written, not read out,
+			// so no intersection applies.
+			// For owned access, or members without nested references, this is a no-op.
+			_, isRef := MaybeReferenceType(accessedType)
+			if isRef && memberAuthorizationGatesReads(member) {
+				cappedType := intersectReferencesWithAuthorization(
+					checker.memoryGauge,
+					resultingType,
+					checker.grantedMemberAuthorization(member, accessedType, expression),
+				)
+				// Only record the cap when it actually narrowed the type,
+				// so that the runtime converts the value exactly when needed.
+				if cappedType != resultingType {
+					resultingType = cappedType
+					cappedNestedReferences = true
+				}
+			}
 		}
-
-		// For non-reference elements, `authorization` is used as the wrapping authorization.
-		// For reference elements, the outer reference's raw authorization is intersected
-		// with the inner reference's authorization (note: mapped access fields cannot have
-		// reference types, so `authorization` and outer auth differ only for non-mapped fields).
-		outerRef, isRef := MaybeReferenceType(accessedType)
-		if !isRef {
-			panic(errors.NewUnreachableError())
-		}
-		resultingType = GetDescendantReferenceType(
-			checker.memoryGauge,
-			resultingType,
-			authorization,
-			outerRef.Authorization,
-		)
-		returnReference = true
 	}
 
 	return accessedType, resultingType, member, isOptional
@@ -660,6 +895,79 @@ func (checker *Checker) mapAccessToAuthorization(
 
 	default:
 		return UnauthorizedAccess
+	}
+}
+
+// grantedMemberAuthorization returns the authorization
+// that reading the given member through accessedType grants.
+//
+// For a field with mapping access it is the image
+// of the accessed reference's authorization through the map,
+// and for any other member it is the accessed reference's authorization itself.
+//
+// This is what caps the authorizations of the references nested in the member's type.
+// A field with mapping access has to be capped with the mapped authorization,
+// rather than with the accessed reference's raw authorization:
+// given `entitlement mapping M { G -> E }`,
+// reading an `access(mapping M)` field through an `auth(G)` reference grants `E`,
+// so a nested `auth(E)` reference has to survive,
+// even though `G` and `E` are disjoint.
+//
+// accessedType must be a reference type, or an optional reference type.
+// An owned value's members are read as values rather than as references,
+// so there is no authorization to grant,
+// and in particular the result must not be used as a cap:
+// it would strip every nested authorization
+// from a member read from an owned value.
+//
+// NOTE: For a mapping whose image is not representable, an error is reported,
+// so this must be called at most once per member access.
+func (checker *Checker) grantedMemberAuthorization(
+	member *Member,
+	accessedType Type,
+	pos ast.HasPosition,
+) Access {
+	outerRef, isRef := MaybeReferenceType(accessedType)
+	if !isRef {
+		panic(errors.NewUnreachableError())
+	}
+
+	if mappedAccess, ok := member.Access.(*EntitlementMapAccess); ok {
+		return checker.mapAccessToAuthorization(mappedAccess, accessedType, pos)
+	}
+
+	return outerRef.Authorization
+}
+
+// memberAuthorizationGatesReads returns whether the authorization
+// of the reference a member is read through is what gates reading it,
+// and therefore also has to cap the references nested in the member's type.
+//
+// It does for entitlement-based and publicly readable members,
+// which code anywhere may read.
+//
+// It does not for `access(self)`, `access(contract)` and `access(account)` members,
+// which are gated by where the reading code is instead.
+// Capping those would only restrict the declaring code itself,
+// as no other code can read them through a reference of any authorization.
+//
+// An unspecified access modifier counts as publicly readable:
+// that is what it means outside a restricted access check mode,
+// and it is the conservative answer, because it caps rather than not.
+func memberAuthorizationGatesReads(member *Member) bool {
+	primitiveAccess, isPrimitiveAccess := member.Access.(PrimitiveAccess)
+	if !isPrimitiveAccess {
+		return true
+	}
+
+	switch ast.PrimitiveAccess(primitiveAccess) {
+	case ast.AccessSelf,
+		ast.AccessContract,
+		ast.AccessAccount:
+		return false
+
+	default:
+		return true
 	}
 }
 

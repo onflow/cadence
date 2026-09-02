@@ -19,8 +19,14 @@
 package bbq
 
 type Function[E any] struct {
-	Name               string
-	QualifiedName      string
+	// SimpleName is the unqualified identifier as it appears in source code.
+	// It is how a function is identified independently of where it is declared:
+	// the linker resolves native functions by it, and member access resolution
+	// looks up a method's declared access by it.
+	SimpleName string
+	// CanonicalName is the location-qualified canonical name
+	CanonicalName string
+
 	Code               []E
 	ParameterCount     uint16
 	TypeParameterCount uint16
@@ -30,7 +36,7 @@ type Function[E any] struct {
 }
 
 func (f Function[E]) IsAnonymous() bool {
-	return f.QualifiedName == ""
+	return f.CanonicalName == ""
 }
 
 func (f Function[E]) IsNative() bool {

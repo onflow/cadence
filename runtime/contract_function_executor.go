@@ -357,6 +357,7 @@ func (executor *contractFunctionExecutor) executeWithVM(
 
 type ArgumentConversionContext interface {
 	interpreter.AccountCreationContext
+	ValidatedArgumentImportContext
 }
 
 // convertArguments converts the given arguments to interpreter values,
@@ -414,13 +415,23 @@ func convertArgument(
 		)
 	}
 
-	return ImportValue(
+	value, err := ImportValue(
 		context,
 		environment,
 		environment.ResolveLocation,
 		argument,
 		argumentType,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	err = validateImportedArgument(context, value, argumentType)
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
 }
 
 // convertAccountReferenceArgument converts an `Address` argument to an account reference value (`&Account`)

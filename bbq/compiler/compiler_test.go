@@ -72,6 +72,41 @@ func prettyInstructions(
 	return pretty
 }
 
+func referencedGlobalCanonicalNames(
+	code []opcode.Instruction,
+	program *bbq.InstructionProgram,
+) []string {
+	var names []string
+	for _, instr := range code {
+		switch i := instr.(type) {
+		case opcode.InstructionGetGlobal:
+			names = append(names, program.Globals[i.Global].GetGlobalInfo().CanonicalName)
+		case opcode.InstructionGetMethod:
+			names = append(names, program.Globals[i.Method].GetGlobalInfo().CanonicalName)
+		}
+	}
+	return names
+}
+
+func TestSetImportCanonicalName(t *testing.T) {
+	t.Parallel()
+
+	elaboration := compiler.NewDesugaredElaboration(
+		sema.NewElaboration(nil),
+		TestLocation,
+	)
+
+	elaboration.SetImportCanonicalName("Foo", "A.0000000000000001.Foo")
+
+	require.Panics(t, func() {
+		elaboration.SetImportCanonicalName("Foo", "A.0000000000000001.Foo")
+	})
+
+	require.Panics(t, func() {
+		elaboration.SetImportCanonicalName("Foo", "A.0000000000000002.Foo")
+	})
+}
+
 func TestCompileRecursionFib(t *testing.T) {
 
 	t.Parallel()
@@ -4243,7 +4278,7 @@ func TestCompileDefaultFunction(t *testing.T) {
 		&compiler.Config{
 			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				if location == checker.Location {
-					return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+					return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 				}
 
 				return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -4272,18 +4307,18 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// 	`Test` type's constructor
 	// Not interested in the content of the constructor.
-	const concreteTypeConstructorName = "Test"
+	concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 	constructor := program.Functions[concreteTypeConstructorIndex]
-	require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
+	require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
 
 	// `Test` type's `test` function.
 
-	const concreteTypeTestFuncName = "Test.test"
+	concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 	concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+	require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
@@ -4338,9 +4373,9 @@ func TestCompileDefaultFunction(t *testing.T) {
 
 	// 	`IA` type's `test` function
 
-	const interfaceTypeTestFuncName = "IA.test"
+	interfaceTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "IA.test")
 	interfaceTypeTestFunc := program.Functions[interfaceFunctionIndex]
-	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.QualifiedName)
+	require.Equal(t, interfaceTypeTestFuncName, interfaceTypeTestFunc.CanonicalName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t, interfaceFunctionIndex, comp.Globals[interfaceTypeTestFuncName].GetGlobalInfo().Index)
@@ -4733,7 +4768,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
-						return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+						return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 					}
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -4763,9 +4798,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// 	`Test` type's constructor
 		// Not interested in the content of the constructor.
-		const concreteTypeConstructorName = "Test"
+		concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
+		require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
@@ -4780,9 +4815,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 			resultIndex
 		)
 
-		const concreteTypeTestFuncName = "Test.test"
+		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
@@ -4955,7 +4990,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
-						return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+						return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 					}
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -4984,9 +5019,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 
 		// 	`Test` type's constructor
 		// Not interested in the content of the constructor.
-		const concreteTypeConstructorName = "Test"
+		concreteTypeConstructorName := commons.LocationQualifiedName(nil, TestLocation, "Test")
 		constructor := program.Functions[concreteTypeConstructorIndex]
-		require.Equal(t, concreteTypeConstructorName, constructor.QualifiedName)
+		require.Equal(t, concreteTypeConstructorName, constructor.CanonicalName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeConstructorIndex, comp.Globals[concreteTypeConstructorName].GetGlobalInfo().Index)
@@ -5002,9 +5037,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 			resultIndex
 		)
 
-		const concreteTypeTestFuncName = "Test.test"
+		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, TestLocation, "Test.test")
 		concreteTypeTestFunc := program.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
 
 		// Also check if the globals are linked properly.
 		assert.Equal(t, concreteTypeFunctionIndex, comp.Globals[concreteTypeTestFuncName].GetGlobalInfo().Index)
@@ -5275,9 +5310,9 @@ func TestCompileFunctionConditions(t *testing.T) {
 			selfIndex = iota
 		)
 
-		const concreteTypeTestFuncName = "D.Vault.getBalance"
+		concreteTypeTestFuncName := commons.LocationQualifiedName(nil, dLocation, "D.Vault.getBalance")
 		concreteTypeTestFunc := dProgram.Functions[concreteTypeFunctionIndex]
-		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.QualifiedName)
+		require.Equal(t, concreteTypeTestFuncName, concreteTypeTestFunc.CanonicalName)
 
 		// Would be equivalent to:
 		// ```
@@ -5373,16 +5408,16 @@ func TestCompileFunctionConditions(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: aLocation,
-					Name:     "A.TestStruct",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.TestStruct",
 				},
 				{
-					Location: aLocation,
-					Name:     "A.TestStruct.test",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.TestStruct.test",
 				},
 				{
-					Location: nil,
-					Name:     "$failPreCondition",
+					Location:      nil,
+					CanonicalName: "$failPreCondition",
 				},
 			},
 			dProgram.Imports,
@@ -5408,7 +5443,7 @@ func TestCompileFunctionConditions(t *testing.T) {
 			&compiler.Config{
 				ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 					if location == checker.Location {
-						return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+						return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 					}
 
 					return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -6368,7 +6403,7 @@ func TestCompileTransaction(t *testing.T) {
 		&compiler.Config{
 			ElaborationResolver: func(location common.Location) (*compiler.DesugaredElaboration, error) {
 				if location == checker.Location {
-					return compiler.NewDesugaredElaboration(checker.Elaboration), nil
+					return compiler.NewDesugaredElaboration(checker.Elaboration, location), nil
 				}
 
 				return nil, fmt.Errorf("cannot find elaboration for: %s", location)
@@ -6444,16 +6479,21 @@ func TestCompileTransaction(t *testing.T) {
 
 	// Transaction constructor
 	// Not interested in the content of the constructor.
+	txLocation := common.TransactionLocation{}
+	qualifiedTransactionName := commons.LocationQualifiedName(nil, txLocation, commons.TransactionWrapperCompositeName)
+	qualifiedPrepareName := commons.LocationQualifiedName(nil, txLocation, commons.TransactionPrepareFunctionName)
+	qualifiedExecuteName := commons.LocationQualifiedName(nil, txLocation, commons.TransactionExecuteFunctionName)
+
 	constructor := program.Functions[transactionInitFunctionIndex]
 	require.Equal(t,
-		commons.TransactionWrapperCompositeName,
-		constructor.QualifiedName,
+		qualifiedTransactionName,
+		constructor.CanonicalName,
 	)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+transactionInitFunctionIndex,
-		comp.Globals[commons.TransactionWrapperCompositeName].GetGlobalInfo().Index,
+		comp.Globals[qualifiedTransactionName].GetGlobalInfo().Index,
 	)
 
 	transactionType := &interpreter.CompositeStaticType{
@@ -6481,14 +6521,14 @@ func TestCompileTransaction(t *testing.T) {
 
 	prepareFunction := program.Functions[prepareFunctionIndex]
 	require.Equal(t,
-		commons.TransactionPrepareFunctionName,
-		prepareFunction.QualifiedName,
+		qualifiedPrepareName,
+		prepareFunction.CanonicalName,
 	)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+prepareFunctionIndex,
-		comp.Globals[commons.TransactionPrepareFunctionName].GetGlobalInfo().Index,
+		comp.Globals[qualifiedPrepareName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -6540,12 +6580,12 @@ func TestCompileTransaction(t *testing.T) {
 	//    }
 
 	executeFunction := program.Functions[executeFunctionIndex]
-	require.Equal(t, commons.TransactionExecuteFunctionName, executeFunction.QualifiedName)
+	require.Equal(t, qualifiedExecuteName, executeFunction.CanonicalName)
 
 	// Also check if the globals are linked properly.
 	assert.Equal(t,
 		transactionParameterCount+executeFunctionIndex,
-		comp.Globals[commons.TransactionExecuteFunctionName].GetGlobalInfo().Index,
+		comp.Globals[qualifiedExecuteName].GetGlobalInfo().Index,
 	)
 
 	assert.Equal(t,
@@ -6684,10 +6724,11 @@ func TestCompileTransaction(t *testing.T) {
 	)
 
 	// Program init function
+	qualifiedInitName := commons.LocationQualifiedName(nil, txLocation, commons.ProgramInitFunctionName)
 	initFunction := program.Functions[programInitFunctionIndex]
 	require.Equal(t,
-		commons.ProgramInitFunctionName,
-		initFunction.QualifiedName,
+		qualifiedInitName,
+		initFunction.CanonicalName,
 	)
 
 	assert.Equal(t,
@@ -8771,6 +8812,131 @@ func TestCompileLineNumberInfo(t *testing.T) {
 	)
 }
 
+func TestCompileExports(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("contract", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            contract Foo {
+                fun foo() {}
+
+                struct Bar {
+                    fun bar() {}
+                }
+            }
+        `
+
+		contractsAddress := common.MustBytesToAddress([]byte{1})
+		location := common.NewAddressLocation(nil, contractsAddress, "Foo")
+
+		program := ParseCheckAndCompile(t, code, location, CompiledPrograms{})
+
+		// Only the contract itself is importable.
+		// Its members, and the members of its nested types, are not.
+		assert.Equal(
+			t,
+			[]bbq.Export{
+				{
+					SimpleName:    "Foo",
+					CanonicalName: "A.0000000000000001.Foo",
+				},
+			},
+			program.Exports,
+		)
+	})
+
+	t.Run("top-level declarations", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            let x = 1
+
+            fun foo() {}
+
+            struct Bar {
+                fun bar() {}
+            }
+        `
+
+		program := ParseCheckAndCompile(t, code, TestLocation, CompiledPrograms{})
+
+		// All top-level declarations are importable, but `Bar.bar` is not.
+		assert.Equal(
+			t,
+			[]bbq.Export{
+				{
+					SimpleName:    "x",
+					CanonicalName: "S.test.x",
+				},
+				{
+					SimpleName:    "foo",
+					CanonicalName: "S.test.foo",
+				},
+				{
+					SimpleName:    "Bar",
+					CanonicalName: "S.test.Bar",
+				},
+			},
+			program.Exports,
+		)
+	})
+
+	t.Run("imports are not re-exported", func(t *testing.T) {
+		t.Parallel()
+
+		programs := CompiledPrograms{}
+
+		contractsAddress := common.MustBytesToAddress([]byte{1})
+
+		fooLocation := common.NewAddressLocation(nil, contractsAddress, "Foo")
+		barLocation := common.NewAddressLocation(nil, contractsAddress, "Bar")
+
+		ParseCheckAndCompile(
+			t,
+			`
+              contract Foo {
+                  fun foo() {}
+              }
+            `,
+			fooLocation,
+			programs,
+		)
+
+		barProgram := ParseCheckAndCompile(
+			t,
+			fmt.Sprintf(
+				`
+                  import Foo from %[1]s
+
+                  contract Bar {
+                      fun bar() {
+                          Foo.foo()
+                      }
+                  }
+                `,
+				contractsAddress.HexWithPrefix(),
+			),
+			barLocation,
+			programs,
+		)
+
+		// `Bar` imports `Foo`, but importing `Bar` must not bring `Foo` into scope.
+		assert.Equal(
+			t,
+			[]bbq.Export{
+				{
+					SimpleName:    "Bar",
+					CanonicalName: "A.0000000000000001.Bar",
+				},
+			},
+			barProgram.Exports,
+		)
+	})
+}
+
 func TestCompileImports(t *testing.T) {
 
 	t.Parallel()
@@ -8828,12 +8994,12 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: aLocation,
-					Name:     "A",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A",
 				},
 				{
-					Location: aLocation,
-					Name:     "A.test",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.test",
 				},
 			},
 			bProgram.Imports,
@@ -8899,8 +9065,8 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: aLocation,
-					Name:     "A.Foo",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.Foo",
 				},
 			},
 			bProgram.Imports,
@@ -8933,19 +9099,450 @@ func TestCompileImports(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: bLocation,
-					Name:     "B.Bar",
+					Location:      bLocation,
+					CanonicalName: "A.0000000000000001.B.Bar",
 				},
 				{
-					Location: bLocation,
-					Name:     "B.Bar.getFoo",
+					Location:      bLocation,
+					CanonicalName: "A.0000000000000001.B.Bar.getFoo",
 				},
 				{
-					Location: aLocation,
-					Name:     "A.Foo.test",
+					Location:      aLocation,
+					CanonicalName: "A.0000000000000001.A.Foo.test",
 				},
 			},
 			cProgram.Imports,
+		)
+	})
+
+	t.Run("transitive import with conflicting names", func(t *testing.T) {
+		t.Parallel()
+
+		// Two different contracts share the name `Foo` at different addresses.
+		// Two interfaces each import a different `Foo` and define a struct interface
+		// with an inherited precondition that calls Foo.check().
+		// A contract conforms to both interfaces (via two structs S1 and S2).
+		// The compiler must resolve `Foo` in each inherited precondition to the
+		// correct Foo based on the interface that defines it.
+
+		programs := CompiledPrograms{}
+
+		fooAAddress := common.MustBytesToAddress([]byte{1})
+		fooBAddress := common.MustBytesToAddress([]byte{2})
+		definitionsAAddress := common.MustBytesToAddress([]byte{3})
+		definitionsBAddress := common.MustBytesToAddress([]byte{4})
+		consumerAddress := common.MustBytesToAddress([]byte{5})
+
+		fooALocation := common.NewAddressLocation(nil, fooAAddress, "Foo")
+		fooBLocation := common.NewAddressLocation(nil, fooBAddress, "Foo")
+		definitionsALocation := common.NewAddressLocation(nil, definitionsAAddress, "DefinitionsA")
+		definitionsBLocation := common.NewAddressLocation(nil, definitionsBAddress, "DefinitionsB")
+		consumerLocation := common.NewAddressLocation(nil, consumerAddress, "Consumer")
+
+		// 0x1.Foo
+		_ = ParseCheckAndCompile(t,
+			`
+            contract Foo {
+                view fun check(): Bool {
+                    return true
+                }
+            }
+        `,
+			fooALocation,
+			programs,
+		)
+
+		// 0x2.Foo (same name, different contract)
+		_ = ParseCheckAndCompile(t,
+			`
+            contract Foo {
+                view fun check(): Bool {
+                    return false
+                }
+            }
+        `,
+			fooBLocation,
+			programs,
+		)
+
+		// 0x3.DefinitionsA: imports Foo from 0x1, defines an interface with an inherited precondition.
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Foo from %[1]s
+
+            contract interface DefinitionsA {
+                struct interface I {
+                    fun test() {
+                        pre {
+                            Foo.check()
+                        }
+                    }
+                }
+            }
+        `, fooAAddress.HexWithPrefix()),
+			definitionsALocation,
+			programs,
+		)
+
+		// 0x6.DefinitionsB: imports Foo from 0x2, defines an interface with an inherited precondition.
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Foo from %[1]s
+
+            contract interface DefinitionsB {
+                struct interface I {
+                    fun test() {
+                        pre {
+                            Foo.check()
+                        }
+                    }
+                }
+            }
+        `, fooBAddress.HexWithPrefix()),
+			definitionsBLocation,
+			programs,
+		)
+
+		// 0x4.Consumer: conforms to both interfaces.
+		// S1's inherited precondition must resolve Foo to 0x1's Foo.
+		// S2's inherited precondition must resolve Foo to 0x2's Foo.
+		consumerProgram := ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import DefinitionsA from %[1]s
+            import DefinitionsB from %[2]s
+
+            contract Consumer {
+                struct S1: DefinitionsA.I {
+                    fun test() {}
+                }
+
+                struct S2: DefinitionsB.I {
+                    fun test() {}
+                }
+            }
+        `, definitionsAAddress.HexWithPrefix(), definitionsBAddress.HexWithPrefix()),
+			consumerLocation,
+			programs,
+		)
+
+		// S1's inherited precondition resolves Foo to 0x1's Foo (via DefinitionsA).
+		// S2's inherited precondition resolves Foo to 0x2's Foo (via DefinitionsB).
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				// S1's inherited precondition -> 0x1's Foo
+				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo"},
+				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo.check"},
+				// Synthetic precondition-fail function (emitted after S1's precondition)
+				{Location: nil, CanonicalName: "$failPreCondition"},
+				// S2's inherited precondition -> 0x2's Foo
+				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo"},
+				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo.check"},
+			},
+			consumerProgram.Imports,
+		)
+
+		// Assert the bytecode of S1.test and S2.test references the correct Foo.
+		// S1.test's inherited precondition must reference 0x1's Foo;
+		// S2.test's inherited precondition must reference 0x2's Foo.
+		s1Test := consumerProgram.Functions[7]
+		assert.Equal(t, "A.0000000000000005.Consumer.S1.test", s1Test.CanonicalName)
+		assert.Equal(t,
+			[]string{
+				"A.0000000000000001.Foo",       // GetGlobal: load 0x1's Foo contract value
+				"A.0000000000000001.Foo.check", // GetMethod: get 0x1's Foo.check
+				"$failPreCondition",            // GetGlobal: load $failPreCondition
+			},
+			referencedGlobalCanonicalNames(s1Test.Code, consumerProgram),
+		)
+
+		s2Test := consumerProgram.Functions[12]
+		assert.Equal(t, "A.0000000000000005.Consumer.S2.test", s2Test.CanonicalName)
+		assert.Equal(t,
+			[]string{
+				"A.0000000000000002.Foo",       // GetGlobal: load 0x2's Foo contract value
+				"A.0000000000000002.Foo.check", // GetMethod: get 0x2's Foo.check
+				"$failPreCondition",            // GetGlobal: load $failPreCondition
+			},
+			referencedGlobalCanonicalNames(s2Test.Code, consumerProgram),
+		)
+	})
+	t.Run("deeply nested transitive import with conflicting names", func(t *testing.T) {
+		t.Parallel()
+
+		// Same as above, but one of the interfaces is reached through an extra hop:
+		// Consumer -> Wrapper (0x5) -> DefinitionsA (0x3) -> Foo@0x1.
+		// The other interface is reached directly: Consumer -> DefinitionsB (0x6) -> Foo@0x2.
+		// The compiler must resolve `Foo` in each inherited precondition to the
+		// correct Foo across the (possibly deeper) transitive chain.
+
+		programs := CompiledPrograms{}
+
+		fooAAddress := common.MustBytesToAddress([]byte{1})
+		fooBAddress := common.MustBytesToAddress([]byte{2})
+		definitionsAAddress := common.MustBytesToAddress([]byte{3})
+		definitionsBAddress := common.MustBytesToAddress([]byte{4})
+		consumerAddress := common.MustBytesToAddress([]byte{5})
+		wrapperAddress := common.MustBytesToAddress([]byte{6})
+
+		fooALocation := common.NewAddressLocation(nil, fooAAddress, "Foo")
+		fooBLocation := common.NewAddressLocation(nil, fooBAddress, "Foo")
+		definitionsALocation := common.NewAddressLocation(nil, definitionsAAddress, "DefinitionsA")
+		definitionsBLocation := common.NewAddressLocation(nil, definitionsBAddress, "DefinitionsB")
+		consumerLocation := common.NewAddressLocation(nil, consumerAddress, "Consumer")
+		wrapperLocation := common.NewAddressLocation(nil, wrapperAddress, "Wrapper")
+
+		// 0x1.Foo
+		_ = ParseCheckAndCompile(t,
+			`
+            contract Foo {
+                view fun check(): Bool {
+                    return true
+                }
+            }
+        `,
+			fooALocation,
+			programs,
+		)
+
+		// 0x2.Foo (same name, different contract)
+		_ = ParseCheckAndCompile(t,
+			`
+            contract Foo {
+                view fun check(): Bool {
+                    return false
+                }
+            }
+        `,
+			fooBLocation,
+			programs,
+		)
+
+		// 0x3.DefinitionsA
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Foo from %[1]s
+
+            contract interface DefinitionsA {
+                struct interface I {
+                    fun test() {
+                        pre {
+                            Foo.check()
+                        }
+                    }
+                }
+            }
+        `, fooAAddress.HexWithPrefix()),
+			definitionsALocation,
+			programs,
+		)
+
+		// 0x5.Wrapper: re-exports DefinitionsA.I as Wrapper.K
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import DefinitionsA from %[1]s
+
+            contract interface Wrapper {
+                struct interface K: DefinitionsA.I {
+                    fun test()
+                }
+            }
+        `, definitionsAAddress.HexWithPrefix()),
+			wrapperLocation,
+			programs,
+		)
+
+		// 0x6.DefinitionsB
+		_ = ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Foo from %[1]s
+
+            contract interface DefinitionsB {
+                struct interface I {
+                    fun test() {
+                        pre {
+                            Foo.check()
+                        }
+                    }
+                }
+            }
+        `, fooBAddress.HexWithPrefix()),
+			definitionsBLocation,
+			programs,
+		)
+
+		// 0x4.Consumer: S1 conforms to Wrapper.K (deep hop), S2 conforms to DefinitionsB.I (direct).
+		consumerProgram := ParseCheckAndCompile(t,
+			fmt.Sprintf(`
+            import Wrapper from %[1]s
+            import DefinitionsB from %[2]s
+
+            contract Consumer {
+                struct S1: Wrapper.K {
+                    fun test() {}
+                }
+
+                struct S2: DefinitionsB.I {
+                    fun test() {}
+                }
+            }
+        `, wrapperAddress.HexWithPrefix(), definitionsBAddress.HexWithPrefix()),
+			consumerLocation,
+			programs,
+		)
+
+		// S1's inherited precondition resolves Foo to 0x1's Foo
+		// across Wrapper -> DefinitionsA.
+		// S2's inherited precondition resolves Foo to 0x2's Foo via DefinitionsB.
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				// S1's inherited precondition -> 0x1's Foo (deep)
+				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo"},
+				{Location: fooALocation, CanonicalName: "A.0000000000000001.Foo.check"},
+				// Synthetic precondition-fail function (emitted after S1's precondition)
+				{Location: nil, CanonicalName: "$failPreCondition"},
+				// S2's inherited precondition -> 0x2's Foo
+				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo"},
+				{Location: fooBLocation, CanonicalName: "A.0000000000000002.Foo.check"},
+			},
+			consumerProgram.Imports,
+		)
+
+		// Assert the bytecode of S1.test and S2.test references the correct Foo.
+		// S1.test's inherited precondition must reference 0x1's Foo (across the
+		// Wrapper -> DefinitionsA hop); S2.test's must reference 0x2's Foo.
+		s1Test := consumerProgram.Functions[7]
+		assert.Equal(t, "A.0000000000000005.Consumer.S1.test", s1Test.CanonicalName)
+		assert.Equal(t,
+			[]string{
+				"A.0000000000000001.Foo",       // GetGlobal: load 0x1's Foo contract value
+				"A.0000000000000001.Foo.check", // GetMethod: get 0x1's Foo.check
+				"$failPreCondition",            // GetGlobal: load $failPreCondition
+			},
+			referencedGlobalCanonicalNames(s1Test.Code, consumerProgram),
+		)
+
+		s2Test := consumerProgram.Functions[12]
+		assert.Equal(t, "A.0000000000000005.Consumer.S2.test", s2Test.CanonicalName)
+		assert.Equal(t,
+			[]string{
+				"A.0000000000000002.Foo",       // GetGlobal: load 0x2's Foo contract value
+				"A.0000000000000002.Foo.check", // GetMethod: get 0x2's Foo.check
+				"$failPreCondition",            // GetGlobal: load $failPreCondition
+			},
+			referencedGlobalCanonicalNames(s2Test.Code, consumerProgram),
+		)
+	})
+
+	t.Run("deeply inherited condition referencing declaring program global", func(t *testing.T) {
+		t.Parallel()
+
+		programs := CompiledPrograms{}
+
+		definitionsAddress := common.MustBytesToAddress([]byte{1})
+		wrapperAddress := common.MustBytesToAddress([]byte{2})
+		consumerAddress := common.MustBytesToAddress([]byte{3})
+
+		definitionsLocation := common.NewAddressLocation(nil, definitionsAddress, "Definitions")
+		wrapperLocation := common.NewAddressLocation(nil, wrapperAddress, "Wrapper")
+		consumerLocation := common.NewAddressLocation(nil, consumerAddress, "Consumer")
+
+		// The inherited condition calls a global declared in the same program
+		// as the interface, rather than an imported global.
+		_ = ParseCheckAndCompile(
+			t,
+			`
+              view fun check(): Bool {
+                  return true
+              }
+
+              contract interface Definitions {
+                  struct interface I {
+                      fun test() {
+                          pre {
+                              check()
+                          }
+                      }
+                  }
+              }
+            `,
+			definitionsLocation,
+			programs,
+		)
+
+		// Wrapper only imports the interface type. Its bytecode does not need the
+		// `Definitions.check` global itself.
+		_ = ParseCheckAndCompile(
+			t,
+			fmt.Sprintf(
+				`
+                  import Definitions from %[1]s
+
+                  contract interface Wrapper {
+                      struct interface K: Definitions.I {
+                          fun test()
+                      }
+                  }
+                `,
+				definitionsAddress.HexWithPrefix(),
+			),
+			wrapperLocation,
+			programs,
+		)
+
+		// Consumer reaches the inherited condition through Wrapper, without
+		// directly importing Definitions.
+		consumerProgram := ParseCheckAndCompile(
+			t,
+			fmt.Sprintf(
+				`
+                  import Wrapper from %[1]s
+
+                  contract Consumer {
+                      struct S: Wrapper.K {
+                          fun test() {}
+                      }
+                  }
+                `,
+				wrapperAddress.HexWithPrefix(),
+			),
+			consumerLocation,
+			programs,
+		)
+
+		assert.Equal(
+			t,
+			[]bbq.Import{
+				{
+					Location:      definitionsLocation,
+					CanonicalName: "A.0000000000000001.check",
+				},
+				{
+					Location:      nil,
+					CanonicalName: "$failPreCondition",
+				},
+			},
+			consumerProgram.Imports,
+		)
+
+		var testFunction *bbq.Function[opcode.Instruction]
+		for index := range consumerProgram.Functions {
+			function := &consumerProgram.Functions[index]
+			if function.CanonicalName == "A.0000000000000003.Consumer.S.test" {
+				testFunction = function
+				break
+			}
+		}
+		require.NotNil(t, testFunction)
+
+		assert.Equal(
+			t,
+			[]string{
+				"A.0000000000000001.check",
+				"$failPreCondition",
+			},
+			referencedGlobalCanonicalNames(testFunction.Code, consumerProgram),
 		)
 	})
 }
@@ -12546,8 +13143,8 @@ func TestCompileImportEnumCase(t *testing.T) {
 		t,
 		[]bbq.Import{
 			{
-				Location: aLocation,
-				Name:     "A.E.X",
+				Location:      aLocation,
+				CanonicalName: "A.0000000000000001.A.E.X",
 			},
 		},
 		bProgram.Imports,
@@ -12804,7 +13401,7 @@ func TestCompileInjectedContract(t *testing.T) {
 
 	aTestFunction := functions[3]
 
-	require.Equal(t, aTestFunction.QualifiedName, "A.test")
+	require.Equal(t, aTestFunction.CanonicalName, "S.test.A.test")
 
 	bStaticType = &interpreter.CompositeStaticType{
 		QualifiedIdentifier: "B",
@@ -12863,10 +13460,10 @@ func TestCompileInjectedContract(t *testing.T) {
 	assert.Equal(t,
 		[]bbq.Import{
 			{
-				Name: "B",
+				CanonicalName: "B",
 			},
 			{
-				Name: "B.c",
+				CanonicalName: "B.c",
 			},
 		},
 		program.Imports,
@@ -13027,7 +13624,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 8)
 
 	defaultDestroyEventConstructor := functions[5]
-	require.Equal(t, "Bar.XYZ.ResourceDestroyed", defaultDestroyEventConstructor.Name)
+	require.Equal(t, "ResourceDestroyed", defaultDestroyEventConstructor.SimpleName)
 
 	const (
 		xIndex = iota
@@ -13105,7 +13702,7 @@ func TestCompileInheritedDefaultDestroyEvent(t *testing.T) {
 	require.Len(t, functions, 12)
 
 	defaultDestroyEventEmittingFunction := functions[8]
-	require.Equal(t, "Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.QualifiedName)
+	require.Equal(t, "A.0000000000000001.Foo.ABC.$ResourceDestroyed", defaultDestroyEventEmittingFunction.CanonicalName)
 
 	const inheritedEventConstructorIndex = 10
 	const selfDefinedABCEventConstructorIndex = 13
@@ -13255,12 +13852,12 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: importLocation,
-					Name:     "Foo",
+					Location:      importLocation,
+					CanonicalName: "A.0000000000000001.Foo",
 				},
 				{
-					Location: importLocation,
-					Name:     "Foo.hello",
+					Location:      importLocation,
+					CanonicalName: "A.0000000000000001.Foo.hello",
 				},
 			},
 			program.Imports,
@@ -13272,20 +13869,17 @@ func TestCompileImportAlias(t *testing.T) {
 			[]bbq.GlobalInfo{
 				{
 					Location:      nil,
-					Name:          "test",
-					QualifiedName: "test",
+					CanonicalName: "S.test.test",
 					Index:         0,
 				},
 				{
 					Location:      importLocation,
-					Name:          "Foo",
-					QualifiedName: "A.0000000000000001.Foo",
+					CanonicalName: "A.0000000000000001.Foo",
 					Index:         1,
 				},
 				{
 					Location:      importLocation,
-					Name:          "Foo.hello",
-					QualifiedName: "A.0000000000000001.Foo.hello",
+					CanonicalName: "A.0000000000000001.Foo.hello",
 					Index:         2,
 				},
 			},
@@ -13342,8 +13936,8 @@ func TestCompileImportAlias(t *testing.T) {
 			t,
 			[]bbq.Import{
 				{
-					Location: importLocation,
-					Name:     "FooInterface.defaultHello",
+					Location:      importLocation,
+					CanonicalName: "A.0000000000000001.FooInterface.defaultHello",
 				},
 			},
 			program.Imports,
@@ -13355,44 +13949,37 @@ func TestCompileImportAlias(t *testing.T) {
 			[]bbq.GlobalInfo{
 				{
 					Location:      nil,
-					Name:          "Bar",
-					QualifiedName: "Bar",
+					CanonicalName: "A.0000000000000001.Bar",
 					Index:         0,
 				},
 				{
 					Location:      nil,
-					Name:          "Bar.getType",
-					QualifiedName: "Bar.getType",
+					CanonicalName: "A.0000000000000001.Bar.getType",
 					Index:         1,
 				},
 				{
 					Location:      nil,
-					Name:          "Bar.isInstance",
-					QualifiedName: "Bar.isInstance",
+					CanonicalName: "A.0000000000000001.Bar.isInstance",
 					Index:         2,
 				},
 				{
 					Location:      nil,
-					Name:          "Bar.forEachAttachment",
-					QualifiedName: "Bar.forEachAttachment",
+					CanonicalName: "A.0000000000000001.Bar.forEachAttachment",
 					Index:         3,
 				},
 				{
 					Location:      nil,
-					Name:          "Bar.hello",
-					QualifiedName: "Bar.hello",
+					CanonicalName: "A.0000000000000001.Bar.hello",
 					Index:         4,
 				},
 				{
 					Location:      nil,
-					Name:          "Bar.defaultHello",
-					QualifiedName: "Bar.defaultHello",
+					CanonicalName: "A.0000000000000001.Bar.defaultHello",
 					Index:         5,
 				},
 				{
 					Location:      importLocation,
-					Name:          "FooInterface.defaultHello",
-					QualifiedName: "A.0000000000000001.FooInterface.defaultHello",
+					CanonicalName: "A.0000000000000001.FooInterface.defaultHello",
 					Index:         6,
 				},
 			},
@@ -14040,7 +14627,7 @@ func TestConstructorAsFunction(t *testing.T) {
 
 	testFunction := functions[0]
 
-	assert.Equal(t, "test", testFunction.Name)
+	assert.Equal(t, "test", testFunction.SimpleName)
 
 	assert.Equal(t,
 		[]opcode.Instruction{
@@ -14188,8 +14775,7 @@ func TestCompileReferenceMethod(t *testing.T) {
 				GlobalInfo: bbq.GlobalInfo{
 					Index:         0,
 					Location:      nil,
-					Name:          "test",
-					QualifiedName: "test",
+					CanonicalName: "S.test.test",
 				},
 				Function: &functions[0],
 			},
@@ -14197,8 +14783,7 @@ func TestCompileReferenceMethod(t *testing.T) {
 				GlobalInfo: bbq.GlobalInfo{
 					Index:         1,
 					Location:      nil,
-					Name:          "$ArrayVariableSized.map",
-					QualifiedName: "$ArrayVariableSized.map",
+					CanonicalName: "$ArrayVariableSized.map",
 				},
 			},
 		},
@@ -14399,10 +14984,10 @@ func TestCompileInheritedStatementEndingControlFlow(t *testing.T) {
 
 	program := ParseCheckAndCompile(t, bContract, bLocation, programs)
 
-	const testFunctionQualifiedName = "B.Test.test"
+	testFunctionQualifiedName := commons.LocationQualifiedName(nil, bLocation, "B.Test.test")
 	var testFunction *bbq.Function[opcode.Instruction]
 	for i, function := range program.Functions {
-		if function.QualifiedName == testFunctionQualifiedName {
+		if function.CanonicalName == testFunctionQualifiedName {
 			testFunction = &program.Functions[i]
 			break
 		}

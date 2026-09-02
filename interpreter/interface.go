@@ -660,6 +660,10 @@ func (NoOpStringContext) GetCompositeType(_ common.Location, _ string, _ TypeID)
 	panic(errors.NewUnreachableError())
 }
 
+func (NoOpStringContext) GetEnumCaseCount(_ *sema.CompositeType) (int, error) {
+	panic(errors.NewUnreachableError())
+}
+
 func (NoOpStringContext) IsTypeInfoRecovered(_ common.Location) bool {
 	panic(errors.NewUnreachableError())
 }

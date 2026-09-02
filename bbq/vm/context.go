@@ -45,6 +45,7 @@ type Context struct {
 	invokeFunction                func(function Value, arguments []Value, returnType sema.Type) (Value, error)
 	lookupFunction                func(location common.Location, name string) FunctionValue
 	recoverErrors                 func(onError func(error))
+	currentLocation               func() common.Location
 	inStorageIteration            bool
 	storageMutatedDuringIteration bool
 	containerValueIteration       map[atree.ValueID]int
@@ -321,8 +322,7 @@ func (c *Context) GetValueOfVariable(name string) interpreter.Value {
 }
 
 func (c *Context) GetLocation() common.Location {
-	//TODO
-	return nil
+	return c.currentLocation()
 }
 
 // InvokeFunction function invokes a given function value with the given arguments.
@@ -353,7 +353,7 @@ func functionAccess(
 	var unqualifiedName string
 	switch functionValue := method.(type) {
 	case *CompiledFunctionValue:
-		unqualifiedName = functionValue.Function.Name
+		unqualifiedName = functionValue.Function.SimpleName
 	case *NativeFunctionValue:
 		unqualifiedName = functionValue.Name
 	}
@@ -611,6 +611,30 @@ func (c *Context) GetCompositeType(
 ) (*sema.CompositeType, error) {
 	c.ensureProgramInitialized(location)
 	return c.Config.GetCompositeType(location, qualifiedIdentifier, typeID)
+}
+
+// GetEnumCaseCount returns the number of declared cases of the given enum type.
+// It returns an error if the case count cannot be determined,
+// e.g. because the enum's elaboration is not available.
+func (c *Context) GetEnumCaseCount(enumType *sema.CompositeType) (int, error) {
+	location := enumType.Location
+
+	elaborationResolver := c.Config.ElaborationResolver
+	if elaborationResolver == nil {
+		return 0, errors.NewUnexpectedError(
+			"cannot determine cases of enum %s: no elaboration resolver",
+			enumType.QualifiedIdentifier(),
+		)
+	}
+
+	c.ensureProgramInitialized(location)
+
+	elaboration, err := elaborationResolver(location)
+	if err != nil {
+		return 0, err
+	}
+
+	return interpreter.EnumCaseCount(enumType, elaboration)
 }
 
 func (c *Context) GetInterfaceType(

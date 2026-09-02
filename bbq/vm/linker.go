@@ -65,7 +65,7 @@ func LinkGlobals(
 
 			if function.IsNative() {
 				// Look-up using the unqualified name, in the common-builtin functions.
-				value = IndexedCommonBuiltinTypeBoundFunctions[function.Name]
+				value = IndexedCommonBuiltinTypeBoundFunctions[function.SimpleName]
 			} else {
 				value = functionValueFromBBQFunction(executable, function)
 			}
@@ -74,7 +74,7 @@ func LinkGlobals(
 			variable.InitializeWithValue(value)
 			// Linker matches the compiled function index with the linked function index
 			globals[index] = variable
-			indexedGlobals.Set(function.QualifiedName, variable)
+			indexedGlobals.Set(function.CanonicalName, variable)
 		case *bbq.VariableGlobal[opcode.Instruction]:
 			variable := typedGlobal.Variable
 			simpleVariable := &interpreter.SimpleVariable{}
@@ -94,7 +94,7 @@ func LinkGlobals(
 			}
 			// Linker matches the compiled variable index with the linked variable index
 			globals[index] = simpleVariable
-			indexedGlobals.Set(variable.Name, simpleVariable)
+			indexedGlobals.Set(variable.CanonicalName, simpleVariable)
 		case *bbq.ContractGlobal:
 			contract := typedGlobal.Contract
 			contractVariable := interpreter.NewContractVariableWithGetter(
@@ -105,7 +105,7 @@ func LinkGlobals(
 			)
 			// Linker matches the compiled contract index with the linked contract index
 			globals[index] = contractVariable
-			indexedGlobals.Set(contract.Name, contractVariable)
+			indexedGlobals.Set(contract.CanonicalName, contractVariable)
 		case *bbq.ImportedGlobal:
 			importedGlobal := linkImportedGlobal(
 				memoryGauge,
@@ -183,10 +183,10 @@ func linkImportedGlobal(
 	// When linking/finding the global in the imported program,
 	// use the unqualified-name.
 	// Because
-	global := indexedGlobals.Find(importedGlobal.Name)
+	global := indexedGlobals.Find(importedGlobal.CanonicalName)
 	if global == nil {
 		panic(LinkerError{
-			Message: fmt.Sprintf("cannot find import '%s'", importedGlobal.Name),
+			Message: fmt.Sprintf("cannot find import '%s'", importedGlobal.CanonicalName),
 		})
 	}
 

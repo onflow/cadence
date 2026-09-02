@@ -462,8 +462,9 @@ var NativeStorageCapabilityControllerRetargetFunction = NativeFunction(
 			panic(errors.NewUnreachableError())
 		}
 
+		// SetTarget updates the controller's target path and persists the
+		// updated controller record.
 		controller.SetTarget(context, newTargetPathValue)
-		controller.TargetPath = newTargetPathValue
 
 		return Void
 	},

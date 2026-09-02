@@ -19,6 +19,7 @@
 package bbq
 
 type Variable[E any] struct {
-	Name   string
-	Getter *Function[E]
+	// CanonicalName is the location-qualified canonical name
+	CanonicalName string
+	Getter        *Function[E]
 }
