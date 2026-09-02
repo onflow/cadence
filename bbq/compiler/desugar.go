@@ -57,8 +57,9 @@ type Desugar struct {
 	inheritedConditionParamBinding map[ast.Statement]map[string]int
 	isInheritedFunction            bool
 
-	importedLocationsSet map[common.Location]struct{}
-	newImports           []ast.Declaration
+	importedLocationsSet   map[common.Location]struct{}
+	dependencyLocationsSet map[common.Location]struct{}
+	dependencyLocations    []common.Location
 }
 
 type inheritedFunction struct {
@@ -91,6 +92,7 @@ func NewDesugar(
 		program:                        program,
 		location:                       location,
 		importedLocationsSet:           map[common.Location]struct{}{},
+		dependencyLocationsSet:         map[common.Location]struct{}{},
 		inheritedFuncsWithConditions:   map[string][]*inheritedFunction{},
 		postConditionIndices:           map[*ast.FunctionBlock]int{},
 		inheritedConditionParamBinding: map[ast.Statement]map[string]int{},
@@ -101,6 +103,7 @@ type DesugaredProgram struct {
 	program                        *ast.Program
 	postConditionIndices           map[*ast.FunctionBlock]int
 	inheritedConditionParamBinding map[ast.Statement]map[string]int
+	dependencyLocations            []common.Location
 }
 
 // Run desugars and rewrites the top-level declarations.
@@ -114,8 +117,6 @@ func (d *Desugar) Run() DesugaredProgram {
 		}
 	}
 
-	d.modifiedDeclarations = append(d.newImports, d.modifiedDeclarations...)
-
 	program := ast.NewProgram(d.memoryGauge, d.modifiedDeclarations)
 
 	//fmt.Println(ast.Prettier(program))
@@ -124,6 +125,7 @@ func (d *Desugar) Run() DesugaredProgram {
 		program:                        program,
 		postConditionIndices:           d.postConditionIndices,
 		inheritedConditionParamBinding: d.inheritedConditionParamBinding,
+		dependencyLocations:            d.dependencyLocations,
 	}
 }
 
@@ -705,8 +707,8 @@ func (d *Desugar) desugarCondition(
 
 		// The inherited code may refer to globals declared in the program
 		// which declared the interface, not only to that program's imports.
-		// Import the declaring program itself so those globals can be linked.
-		d.addImport(inheritedFrom.Location)
+		// Register the declaring program itself so those globals can be linked.
+		d.addDependency(inheritedFrom.Location)
 
 		allImports := elaboration.AllImportDeclarationsResolvedLocations()
 		transitiveImportLocations := make([]common.Location, 0, len(allImports))
@@ -721,9 +723,9 @@ func (d *Desugar) desugarCondition(
 			return strings.Compare(a.ID(), b.ID())
 		})
 
-		// Add new imports for all the transitive imports.
+		// Register all transitive imports as linker dependencies.
 		for _, location := range transitiveImportLocations {
-			d.addImport(location)
+			d.addDependency(location)
 		}
 	}
 
@@ -888,8 +890,8 @@ func (d *Desugar) desugarCondition(
 			emitStmt.StartPos,
 		)
 
-		//Inject a static import so the compiler can link the functions.
-		d.addImport(eventType.Location)
+		// Register a static dependency so the compiler can link the functions.
+		d.addDependency(eventType.Location)
 
 		// TODO: Is there a way to get the type for the constructor
 		//  from the elaboration, rather than manually constructing it here?
@@ -1564,49 +1566,28 @@ func (d *Desugar) interfaceDelegationMethodCall(
 	d.elaboration.SetMemberExpressionMemberAccessInfo(invokedExpr, memberAccessInfo)
 	d.elaboration.SetInterfaceMethodStaticCall(invocation)
 
-	// Given these invocations are treated as static calls,
-	// we need to inject a static import as well, so the
-	// compiler can link these functions.
-	d.addImport(interfaceType.Location)
+	// Given these invocations are treated as static calls, register the
+	// interface's program as a dependency so the compiler can link them.
+	d.addDependency(interfaceType.Location)
 
 	return invocation
 }
 
-func (d *Desugar) addImport(location common.Location) {
-	// If the import is for the same program, then do not add any new imports.
+func (d *Desugar) addDependency(location common.Location) {
+	// Globals from the program being compiled are already available.
 	if location == d.location {
 		return
 	}
 
 	switch location := location.(type) {
 	case common.AddressLocation:
-		_, exists := d.importedLocationsSet[location]
+		_, exists := d.dependencyLocationsSet[location]
 		if exists {
 			return
 		}
 
-		importDeclaration := ast.NewImportDeclaration(
-			d.memoryGauge,
-			[]ast.Import{
-				{
-					Identifier: ast.NewIdentifier(
-						d.memoryGauge,
-						location.Name,
-						ast.EmptyPosition,
-					),
-				},
-			},
-			location,
-			ast.EmptyRange,
-			ast.EmptyPosition,
-		)
-
-		d.newImports = append(
-			d.newImports,
-			importDeclaration,
-		)
-
-		d.importedLocationsSet[location] = struct{}{}
+		d.dependencyLocationsSet[location] = struct{}{}
+		d.dependencyLocations = append(d.dependencyLocations, location)
 	default:
 		panic(errors.NewUnreachableError())
 	}
