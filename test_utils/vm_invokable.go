@@ -24,12 +24,12 @@ import (
 	"slices"
 
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/common"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence/bbq/compiler"
 	"github.com/onflow/cadence/bbq/vm"
+	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"

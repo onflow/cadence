@@ -472,17 +472,6 @@ func attachmentBaseForMethod(
 	return
 }
 
-func typeLocation(semaType sema.Type) common.Location {
-	switch semaType := semaType.(type) {
-	case sema.LocatedType:
-		return semaType.GetLocation()
-	case *sema.ReferenceType:
-		return typeLocation(semaType.Type)
-	default:
-		return nil
-	}
-}
-
 func (c *Context) GetFunction(name bbq.CanonicalName) FunctionValue {
 	return c.lookupFunction(name)
 }
