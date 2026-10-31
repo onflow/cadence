@@ -571,6 +571,16 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 
 	case *cadence.ReferenceType:
 		// When static type is a reference type, encoded value is its deferenced type.
+		// A cyclic reference is exported as nil.
+		if _, ok := t.Type.(*cadence.OptionalType); !ok {
+			nt, err := d.dec.NextType()
+			if err != nil {
+				return nil, err
+			}
+			if nt == cbor.NilType {
+				return nil, d.dec.DecodeNil()
+			}
+		}
 		return d.decodeValue(t.Type, types)
 
 	case *cadence.InclusiveRangeType:

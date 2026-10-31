@@ -16057,6 +16057,36 @@ func TestCyclicReferenceValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("recursive reference to struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			access(all) struct Recursive {
+				access(all) var children: [&Recursive]
+
+				init() {
+					self.children = []
+				}
+			}
+
+			access(all) fun main(): Recursive {
+				let recursive = Recursive()
+				recursive.children.append(&recursive as &Recursive)
+				return recursive
+			}
+        `
+
+		actual := exportFromScript(t, script)
+
+		encoded, err := ccf.Encode(actual)
+		require.NoError(t, err)
+
+		decoded, err := ccf.Decode(nil, encoded)
+		require.NoError(t, err)
+		assert.Equal(t, actual, decoded)
+	})
 }
 
 func TestSortEntitlementSet(t *testing.T) {
