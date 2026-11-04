@@ -16809,6 +16809,193 @@ func TestCyclicReferenceValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("recursive reference to struct in mainnet event", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Payload of event 4 of mainnet transaction f6dfeb871ff649eb37a5e19e4cfa1c2737da5e63f1a02f5684ba5bd978d57011.
+		// Access nodes failed to decode it (https://github.com/onflow/flow-go/issues/8701).
+		// Contract RecursiveEventReceiver at 0xe291d9e45266db1e emits it:
+		//
+		//   access(all) event Poison(recursive: Recursive)
+		//
+		//   access(all) struct Recursive {
+		//       access(all) var children: [&Recursive]
+		//       ...
+		//   }
+		//
+		//   let recursive = Recursive()
+		//   recursive.children.append(&recursive as &Recursive)
+		//   emit Poison(recursive: recursive)
+
+		location := common.NewAddressLocation(
+			nil,
+			common.Address{0xe2, 0x91, 0xd9, 0xe4, 0x52, 0x66, 0xdb, 0x1e},
+			"RecursiveEventReceiver",
+		)
+
+		fields := []cadence.Field{
+			{
+				Identifier: "children",
+			},
+		}
+		recursiveType := cadence.NewStructType(
+			location,
+			"RecursiveEventReceiver.Recursive",
+			fields,
+			nil,
+		)
+		childrenType := cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, recursiveType),
+		)
+		fields[0].Type = childrenType
+
+		poisonType := cadence.NewEventType(
+			location,
+			"RecursiveEventReceiver.Poison",
+			[]cadence.Field{
+				{
+					Identifier: "recursive",
+					Type:       recursiveType,
+				},
+			},
+			nil,
+		)
+
+		expected := cadence.NewEvent([]cadence.Value{
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.NewStruct([]cadence.Value{
+						cadence.NewArray([]cadence.Value{
+							nil,
+						}).WithType(childrenType),
+					}).WithType(recursiveType),
+				}).WithType(childrenType),
+			}).WithType(recursiveType),
+		}).WithType(poisonType)
+
+		testEncodeAndDecode(
+			t,
+			expected,
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":{"id":"A.e291d9e45266db1e.RecursiveEventReceiver.Poison","fields":[{"value":{"value":{"id":"A.e291d9e45266db1e.RecursiveEventReceiver.Recursive","fields":[{"value":{"value":[{"value":{"id":"A.e291d9e45266db1e.RecursiveEventReceiver.Recursive","fields":[{"value":{"value":[null],"type":"Array"},"name":"children"}]},"type":"Struct"}],"type":"Array"},"name":"children"}]},"type":"Struct"},"name":"recursive"}]},"type":"Event"}
+				//
+				// language=edn, format=ccf
+				// 129([[162([h'', "A.e291d9e45266db1e.RecursiveEventReceiver.Poison", [["recursive", 136(h'01')]]]), 160([h'01', "A.e291d9e45266db1e.RecursiveEventReceiver.Recursive", [["children", 139(142([null, 136(h'01')]))]]])], [136(h''), [[[[[null]]]]]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 2 items follow
+				0x82,
+				// event type:
+				// id: []byte{}
+				// cadence-type-id: "A.e291d9e45266db1e.RecursiveEventReceiver.Poison"
+				// 1 field: [["recursive", type(Recursive)]]
+				// tag
+				0xd8, byte(ccf.CBORTagEventType),
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 48 bytes follow
+				0x78, 0x30,
+				// A.e291d9e45266db1e.RecursiveEventReceiver.Poison
+				0x41, 0x2e, 0x65, 0x32, 0x39, 0x31, 0x64, 0x39, 0x65, 0x34, 0x35, 0x32, 0x36, 0x36, 0x64, 0x62, 0x31, 0x65, 0x2e, 0x52, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x50, 0x6f, 0x69, 0x73, 0x6f, 0x6e,
+				// fields
+				// array, 1 items follow
+				0x81,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 9 bytes follow
+				0x69,
+				// recursive
+				0x72, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+
+				// struct type:
+				// id: []byte{0x01}
+				// cadence-type-id: "A.e291d9e45266db1e.RecursiveEventReceiver.Recursive"
+				// 1 field: [["children", type([]&Recursive)]]
+				// tag
+				0xd8, byte(ccf.CBORTagStructType),
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+				// cadence-type-id
+				// string, 51 bytes follow
+				0x78, 0x33,
+				// A.e291d9e45266db1e.RecursiveEventReceiver.Recursive
+				0x41, 0x2e, 0x65, 0x32, 0x39, 0x31, 0x64, 0x39, 0x65, 0x34, 0x35, 0x32, 0x36, 0x36, 0x64, 0x62, 0x31, 0x65, 0x2e, 0x52, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x52, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65,
+				// fields
+				// array, 1 items follow
+				0x81,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 8 bytes follow
+				0x68,
+				// children
+				0x63, 0x68, 0x69, 0x6c, 0x64, 0x72, 0x65, 0x6e,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagReferenceType),
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 0 bytes follow
+				0x40,
+				// fields of Poison
+				// array, 1 items follow
+				0x81,
+				// recursive: fields of Recursive
+				// array, 1 items follow
+				0x81,
+				// children
+				// array, 1 items follow
+				0x81,
+				// fields of Recursive
+				// array, 1 items follow
+				0x81,
+				// children
+				// array, 1 items follow
+				0x81,
+				// nil
+				0xf6,
+			},
+		)
+	})
 }
 
 func TestSortEntitlementSet(t *testing.T) {
