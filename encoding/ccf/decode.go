@@ -570,6 +570,18 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		return d.decodeAttachment(t, types)
 
 	case *cadence.ReferenceType:
+		// Decode nil value (such as cyclic reference value),
+		// unless nil is a valid encoding of the referenced type's values.
+		if !canEncodeValueOfTypeAsNil(t.Type) {
+			nt, err := d.dec.NextType()
+			if err != nil {
+				return nil, err
+			}
+			if nt == cbor.NilType {
+				return nil, d.dec.DecodeNil()
+			}
+		}
+
 		// When static type is a reference type, encoded value is its deferenced type.
 		return d.decodeValue(t.Type, types)
 
@@ -598,6 +610,17 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 			return d.decodeTypeAndValue(types)
 		}
 	}
+}
+
+// canEncodeValueOfTypeAsNil returns true if the encoder encodes some values of type t as CBOR nil:
+// Void values, nil optional values, and nil type values.
+func canEncodeValueOfTypeAsNil(t cadence.Type) bool {
+	switch t {
+	case cadence.VoidType, cadence.MetaType:
+		return true
+	}
+	_, ok := t.(*cadence.OptionalType)
+	return ok
 }
 
 // decodeVoid decodes encoded void-value as

@@ -8629,8 +8629,50 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 		},
 	}
 
+	// [()] with static type []&Void
+	referenceToVoidType := encodeTest{
+		name: "array of reference to Void",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewVoid(),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.VoidType),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"type":"Void"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([nil, 137(50)])), [null]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type []&Void
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagReferenceType),
+			// array, 2 items follow
+			0x82,
+			// nil
+			0xf6,
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// Void type ID (50)
+			0x18, 0x32,
+			// array data without inlined type
+			// array, 1 items follow
+			0x81,
+			// nil (Void value): the decoder must decode it as Void value, not as nil value
+			0xf6,
+		},
+	}
+
 	testAllEncodeAndDecode(t,
 		referenceToSimpleType,
+		referenceToVoidType,
 		referenceToOptionalSimpleType,
 		entitlementConjunctionSetReferenceToSimpleType,
 		entitlementDisjunctionSetReferenceToSimpleType,
@@ -16050,6 +16092,136 @@ func TestCyclicReferenceValue(t *testing.T) {
 				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
+				// array, 1 items follow
+				0x81,
+				// nil
+				0xf6,
+			},
+		)
+	})
+
+	t.Run("recursive reference to struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) struct Recursive {
+                access(all) var children: [&Recursive]
+                init() {
+                    self.children = []
+                }
+            }
+            access(all) fun main(): Recursive {
+                let recursive = Recursive()
+                recursive.children.append(&recursive as &Recursive)
+                return recursive
+            }
+        `
+
+		actual := exportFromScript(t, script)
+
+		fields := []cadence.Field{
+			{
+				Identifier: "children",
+			},
+		}
+		recursiveType := cadence.NewStructType(
+			TestLocation,
+			"Recursive",
+			fields,
+			nil,
+		)
+		childrenType := cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, recursiveType),
+		)
+		fields[0].Type = childrenType
+
+		expected := cadence.NewStruct([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.NewStruct([]cadence.Value{
+					cadence.NewArray([]cadence.Value{
+						nil,
+					}).WithType(childrenType),
+				}).WithType(recursiveType),
+			}).WithType(childrenType),
+		}).WithType(recursiveType)
+
+		assert.Equal(t, expected, actual)
+
+		testEncodeAndDecode(
+			t,
+			expected,
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":{"id":"S.test.Recursive","fields":[{"value":{"value":[{"value":{"id":"S.test.Recursive","fields":[{"value":{"value":[null],"type":"Array"},"name":"children"}]},"type":"Struct"}],"type":"Array"},"name":"children"}]},"type":"Struct"}
+				//
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.Recursive", [["children", 139(142([null, 136(h'')]))]]])], [136(h''), [[[[null]]]]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 1 items follow
+				0x81,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.Recursive"
+				// 1 field: [["children", type([]&Recursive)]]
+				// tag
+				0xd8, byte(ccf.CBORTagStructType),
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 16 bytes follow
+				0x70,
+				// S.test.Recursive
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x52, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65,
+				// fields
+				// array, 1 items follow
+				0x81,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 8 bytes follow
+				0x68,
+				// children
+				0x63, 0x68, 0x69, 0x6c, 0x64, 0x72, 0x65, 0x6e,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagReferenceType),
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 0 bytes follow
+				0x40,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 0 bytes follow
+				0x40,
+				// fields of Recursive
+				// array, 1 items follow
+				0x81,
+				// children
+				// array, 1 items follow
+				0x81,
+				// fields of Recursive
+				// array, 1 items follow
+				0x81,
+				// children
 				// array, 1 items follow
 				0x81,
 				// nil
