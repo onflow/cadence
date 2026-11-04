@@ -64,6 +64,9 @@ type Decoder struct {
 	// allowUnstructuredStaticTypes controls if the decoding
 	// of a static type as a type ID (cadence.TypeID) is allowed
 	allowUnstructuredStaticTypes bool
+	// allowNilValues controls if the decoding of JSON null
+	// as a nil array element, dictionary value, or composite field value is allowed
+	allowNilValues bool
 	// backwardsCompatible controls if the decoder can decode old versions of the JSON encoding
 	backwardsCompatible bool
 	pathContext         []pathElement
@@ -77,6 +80,18 @@ type Option func(*Decoder)
 func WithAllowUnstructuredStaticTypes(allow bool) Option {
 	return func(decoder *Decoder) {
 		decoder.allowUnstructuredStaticTypes = allow
+	}
+}
+
+// WithAllowNilValues returns a new Decoder Option
+// which enables or disables if the decoding of JSON null
+// as a nil array element, dictionary value, or composite field value is allowed.
+// The encoder encodes nil values, such as cyclic reference values, as JSON null.
+// Do not enable it for the decoding of transaction and script arguments:
+// nil values are not valid arguments.
+func WithAllowNilValues(allow bool) Option {
+	return func(decoder *Decoder) {
+		decoder.allowNilValues = allow
 	}
 }
 
@@ -320,6 +335,15 @@ func (d *Decoder) decodeValue(v any) cadence.Value {
 
 		panic(errors.NewDefaultUserError("invalid type: %s", typeStr))
 	})
+}
+
+// decodeNullableValue decodes v, or returns nil if v is JSON null and nil values are allowed.
+// The encoder encodes nil values, such as cyclic reference values, as JSON null.
+func (d *Decoder) decodeNullableValue(v any) cadence.Value {
+	if v == nil && d.allowNilValues {
+		return nil
+	}
+	return d.decodeValue(v)
 }
 
 func (d *Decoder) decodeVoid(m map[string]any) cadence.Void {
@@ -751,7 +775,7 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 			values := make([]cadence.Value, len(v))
 
 			for i := range v {
-				values[i] = getIndex(d, v, i, d.decodeValue)
+				values[i] = getIndex(d, v, i, d.decodeNullableValue)
 			}
 
 			return values, nil
@@ -792,7 +816,7 @@ func (d *Decoder) decodeKeyValuePair(valueJSON any) cadence.KeyValuePair {
 	obj := toObject(valueJSON)
 
 	key := getKey(d, obj, keyKey, d.decodeValue)
-	value := getKey(d, obj, valueKey, d.decodeValue)
+	value := getKey(d, obj, valueKey, d.decodeNullableValue)
 
 	return cadence.NewMeteredKeyValuePair(
 		d.gauge,
@@ -879,11 +903,19 @@ func (d *Decoder) decodeCompositeField(valueJSON any) compositeField {
 	obj := toObject(valueJSON)
 
 	name := getKey(d, obj, nameKey, toString)
-	value := getKey(d, obj, valueKey, d.decodeValue)
+	value := getKey(d, obj, valueKey, d.decodeNullableValue)
+
+	// A nil value, such as a cyclic reference value, has no type.
+	// Use AnyStruct as its field type: export produces nil values for truncated reference values,
+	// and all reference types are subtypes of AnyStruct.
+	var fieldType cadence.Type = cadence.AnyStructType
+	if value != nil {
+		fieldType = value.MeteredType(d.gauge)
+	}
 
 	// Unmetered because decodeCompositeField is metered in decodeComposite and called nowhere else
 	// Type is still metered.
-	field := cadence.NewField(name, value.MeteredType(d.gauge))
+	field := cadence.NewField(name, fieldType)
 
 	return compositeField{
 		value: value,
