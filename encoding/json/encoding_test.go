@@ -3843,6 +3843,141 @@ func TestNonUTF8StringEncoding(t *testing.T) {
 	assert.True(t, utf8.ValidString(decodedValue.String()))
 }
 
+func TestCyclicReferenceValue(t *testing.T) {
+
+	t.Parallel()
+
+	// Export truncates a cyclic reference value to nil, and the encoder encodes nil as JSON null.
+
+	t.Run("array element", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewArray([]cadence.Value{
+				nil,
+			}),
+			// language=json
+			`
+              {
+                "type": "Array",
+                "value": [
+                  null
+                ]
+              }
+            `,
+		)
+	})
+
+	t.Run("dictionary value", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("a"),
+					Value: nil,
+				},
+			}),
+			// language=json
+			`
+              {
+                "type": "Dictionary",
+                "value": [
+                  {
+                    "key": {
+                      "type": "String",
+                      "value": "a"
+                    },
+                    "value": null
+                  }
+                ]
+              }
+            `,
+		)
+	})
+
+	t.Run("struct field", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewStruct([]cadence.Value{
+				nil,
+			}).WithType(cadence.NewStructType(
+				TestLocation,
+				"Foo",
+				[]cadence.Field{
+					{
+						Identifier: "a",
+						// The decoder uses AnyStruct as the type of a nil field value
+						Type: cadence.AnyStructType,
+					},
+				},
+				nil,
+			)),
+			// language=json
+			`
+              {
+                "type": "Struct",
+                "value": {
+                  "id": "S.test.Foo",
+                  "fields": [
+                    {
+                      "name": "a",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            `,
+		)
+	})
+
+	t.Run("recursive reference to struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual := exportFromScript(t, `
+            access(all) struct Recursive {
+                access(all) var children: [&Recursive]
+                init() {
+                    self.children = []
+                }
+            }
+            access(all) fun main(): Recursive {
+                let recursive = Recursive()
+                recursive.children.append(&recursive as &Recursive)
+                return recursive
+            }
+        `)
+
+		encoded, err := Encode(actual)
+		require.NoError(t, err)
+
+		decoded, err := Decode(nil, encoded)
+		require.NoError(t, err)
+
+		// JSON-Cadence omits static types, so compare encodings, not values
+		reencoded, err := Encode(decoded)
+		require.NoError(t, err)
+
+		assert.JSONEq(t, string(encoded), string(reencoded))
+	})
+
+	t.Run("top-level null", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := Decode(nil, []byte("null"))
+		require.Error(t, err)
+	})
+}
+
 func TestDecodeBackwardsCompatibilityTypeID(t *testing.T) {
 
 	t.Parallel()

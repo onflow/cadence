@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/errors"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/sema"
 	. "github.com/onflow/cadence/test_utils/common_utils"
@@ -620,6 +621,30 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type Account.Keys")
+	})
+
+	t.Run("Invalid nil in array", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+          access(all)
+          fun main(arg: [Int]) {}
+        `
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewArray([]cadence.Value{
+				nil,
+			}),
+		)
+		RequireError(t, err)
+
+		var entryPointErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &entryPointErr)
+
+		var unexpectedErr errors.UnexpectedError
+		require.ErrorAs(t, err, &unexpectedErr)
 	})
 
 	t.Run("invalid HashAlgorithm", func(t *testing.T) {

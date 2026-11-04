@@ -322,6 +322,15 @@ func (d *Decoder) decodeValue(v any) cadence.Value {
 	})
 }
 
+// decodeNullableValue decodes v, or returns nil if v is JSON null.
+// The encoder encodes nil values, such as cyclic reference values, as JSON null.
+func (d *Decoder) decodeNullableValue(v any) cadence.Value {
+	if v == nil {
+		return nil
+	}
+	return d.decodeValue(v)
+}
+
 func (d *Decoder) decodeVoid(m map[string]any) cadence.Void {
 	// object should not contain fields other than "type"
 	if len(m) != 1 {
@@ -751,7 +760,7 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 			values := make([]cadence.Value, len(v))
 
 			for i := range v {
-				values[i] = getIndex(d, v, i, d.decodeValue)
+				values[i] = getIndex(d, v, i, d.decodeNullableValue)
 			}
 
 			return values, nil
@@ -792,7 +801,7 @@ func (d *Decoder) decodeKeyValuePair(valueJSON any) cadence.KeyValuePair {
 	obj := toObject(valueJSON)
 
 	key := getKey(d, obj, keyKey, d.decodeValue)
-	value := getKey(d, obj, valueKey, d.decodeValue)
+	value := getKey(d, obj, valueKey, d.decodeNullableValue)
 
 	return cadence.NewMeteredKeyValuePair(
 		d.gauge,
@@ -879,11 +888,19 @@ func (d *Decoder) decodeCompositeField(valueJSON any) compositeField {
 	obj := toObject(valueJSON)
 
 	name := getKey(d, obj, nameKey, toString)
-	value := getKey(d, obj, valueKey, d.decodeValue)
+	value := getKey(d, obj, valueKey, d.decodeNullableValue)
+
+	// A nil value, such as a cyclic reference value, has no type.
+	// Use AnyStruct as its field type: export produces nil values for truncated reference values,
+	// and all reference types are subtypes of AnyStruct.
+	var fieldType cadence.Type = cadence.AnyStructType
+	if value != nil {
+		fieldType = value.MeteredType(d.gauge)
+	}
 
 	// Unmetered because decodeCompositeField is metered in decodeComposite and called nowhere else
 	// Type is still metered.
-	field := cadence.NewField(name, value.MeteredType(d.gauge))
+	field := cadence.NewField(name, fieldType)
 
 	return compositeField{
 		value: value,
