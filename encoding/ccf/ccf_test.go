@@ -8629,8 +8629,50 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 		},
 	}
 
+	// [()] with static type []&Void
+	referenceToVoidType := encodeTest{
+		name: "array of reference to Void",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewVoid(),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.VoidType),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"type":"Void"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([nil, 137(50)])), [null]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type []&Void
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagReferenceType),
+			// array, 2 items follow
+			0x82,
+			// nil
+			0xf6,
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// Void type ID (50)
+			0x18, 0x32,
+			// array data without inlined type
+			// array, 1 items follow
+			0x81,
+			// nil (Void value): the decoder must decode it as Void value, not as nil value
+			0xf6,
+		},
+	}
+
 	testAllEncodeAndDecode(t,
 		referenceToSimpleType,
+		referenceToVoidType,
 		referenceToOptionalSimpleType,
 		entitlementConjunctionSetReferenceToSimpleType,
 		entitlementDisjunctionSetReferenceToSimpleType,
@@ -8642,6 +8684,278 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 		optionalReferenceToSimpleType,
 		optionalReferenceToAnyStructType,
 		optionalReferenceToOptionalAnyStructType,
+	)
+}
+
+func TestEncodeValueOfCovariantContainerType(t *testing.T) {
+	t.Parallel()
+
+	// Array and dictionary types are covariant, so a value's runtime type can differ from its static type,
+	// e.g. an [Int] value with static type [AnyStruct].
+	// The encoder then encodes the runtime type as inline type.
+
+	// [[1]] with static type [][AnyStruct]
+	variableSizedArrayType := encodeTest{
+		name: "array of variable-sized array of AnyStruct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.NewInt(1),
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.IntType)),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewVariableSizedArrayType(cadence.AnyStructType),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":[{"value":"1","type":"Int"}],"type":"Array"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(139(137(39))), [130([139(137(4)), [1]])]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type [][AnyStruct]
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// array data
+			// array, 1 items follow
+			0x81,
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type []Int
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// Int type ID (4)
+			0x04,
+			// array, 1 items follow
+			0x81,
+			// tag (big number)
+			0xc2,
+			// bytes, 1 byte follow
+			0x41,
+			// 1
+			0x01,
+		},
+	}
+
+	// [[1]] with static type [][AnyStruct; 1]
+	constantSizedArrayType := encodeTest{
+		name: "array of constant-sized array of AnyStruct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.NewInt(1),
+			}).WithType(cadence.NewConstantSizedArrayType(1, cadence.IntType)),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewConstantSizedArrayType(1, cadence.AnyStructType),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":[{"value":"1","type":"Int"}],"type":"Array"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(140([1, 137(39)])), [130([140([1, 137(4)]), [1]])]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type [][AnyStruct; 1]
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagConstsizedArrayType),
+			// array, 2 items follow
+			0x82,
+			// number of elements
+			0x01,
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// array data
+			// array, 1 items follow
+			0x81,
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type [Int; 1]
+			// tag
+			0xd8, byte(ccf.CBORTagConstsizedArrayType),
+			// array, 2 items follow
+			0x82,
+			// number of elements
+			0x01,
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// Int type ID (4)
+			0x04,
+			// array, 1 items follow
+			0x81,
+			// tag (big number)
+			0xc2,
+			// bytes, 1 byte follow
+			0x41,
+			// 1
+			0x01,
+		},
+	}
+
+	// [{"a": 1}] with static type []{String: AnyStruct}
+	dictionaryType := encodeTest{
+		name: "array of dictionary of AnyStruct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("a"),
+					Value: cadence.NewInt(1),
+				},
+			}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.IntType)),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewDictionaryType(cadence.StringType, cadence.AnyStructType),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":[{"key":{"value":"a","type":"String"},"value":{"value":"1","type":"Int"}}],"type":"Dictionary"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(141([137(1), 137(39)])), [130([141([137(1), 137(4)]), ["a", 1]])]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type []{String: AnyStruct}
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagDictType),
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// String type ID (1)
+			0x01,
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// array data
+			// array, 1 items follow
+			0x81,
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type {String: Int}
+			// tag
+			0xd8, byte(ccf.CBORTagDictType),
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// String type ID (1)
+			0x01,
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// Int type ID (4)
+			0x04,
+			// array, 2 items follow
+			0x82,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// tag (big number)
+			0xc2,
+			// bytes, 1 byte follow
+			0x41,
+			// 1
+			0x01,
+		},
+	}
+
+	// [[1]] with static type [][AnyStruct]?
+	optionalVariableSizedArrayType := encodeTest{
+		name: "array of optional variable-sized array of AnyStruct",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.NewOptional(
+				cadence.NewArray([]cadence.Value{
+					cadence.NewInt(1),
+				}).WithType(cadence.NewVariableSizedArrayType(cadence.IntType)),
+			),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewOptionalType(
+				cadence.NewVariableSizedArrayType(cadence.AnyStructType),
+			),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":{"value":[{"value":"1","type":"Int"}],"type":"Array"},"type":"Optional"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(138(139(137(39)))), [130([139(137(4)), [1]])]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type [][AnyStruct]?
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagOptionalType),
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// AnyStruct type ID (39)
+			0x18, 0x27,
+			// array data
+			// array, 1 items follow
+			0x81,
+			// tag
+			0xd8, byte(ccf.CBORTagTypeAndValue),
+			// array, 2 items follow
+			0x82,
+			// type []Int
+			// tag
+			0xd8, byte(ccf.CBORTagVarsizedArrayType),
+			// tag
+			0xd8, byte(ccf.CBORTagSimpleType),
+			// Int type ID (4)
+			0x04,
+			// array, 1 items follow
+			0x81,
+			// tag (big number)
+			0xc2,
+			// bytes, 1 byte follow
+			0x41,
+			// 1
+			0x01,
+		},
+	}
+
+	testAllEncodeAndDecode(t,
+		variableSizedArrayType,
+		constantSizedArrayType,
+		dictionaryType,
+		optionalVariableSizedArrayType,
 	)
 }
 
@@ -15760,6 +16074,223 @@ func TestDecodeInvalidData(t *testing.T) {
 	}
 }
 
+func TestDecodeInvalidInlineType(t *testing.T) {
+	t.Parallel()
+
+	// The encoder encodes the runtime type as inline type
+	// if it differs from the static type,
+	// e.g. for values of covariant array and dictionary types.
+	// An array or dictionary static type requires an inline type of the same kind.
+	// Any other static type, e.g. a capability type, accepts any inline type,
+	// for backward compatibility.
+
+	type testCase struct {
+		name string
+		data []byte
+	}
+
+	testCases := []testCase{
+		{
+			name: "String element in array with static type [[Int]]",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([139(139(137(4))), [130([137(1), "x"])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [[Int]]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type String
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// String type ID (1)
+				0x01,
+				// text, 1 byte follow
+				0x61,
+				// x
+				0x78,
+			},
+		},
+		{
+			name: "[Int] element in array with static type [[Int; 2]]",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([139(140([2, 137(4)])), [130([139(137(4)), [1]])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [[Int; 2]]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagConstsizedArrayType),
+				// array, 2 items follow
+				0x82,
+				// number of elements
+				0x02,
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [Int]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array, 1 items follow
+				0x81,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "[Int; 1] element in array with static type [[Int; 2]]",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([139(140([2, 137(4)])), [130([140([1, 137(4)]), [1]])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [[Int; 2]]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagConstsizedArrayType),
+				// array, 2 items follow
+				0x82,
+				// number of elements
+				0x02,
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [Int; 1]
+				// tag
+				0xd8, byte(ccf.CBORTagConstsizedArrayType),
+				// array, 2 items follow
+				0x82,
+				// number of elements
+				0x01,
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array, 1 items follow
+				0x81,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "String value in dictionary with static type {String: [Int]}",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([141([137(1), 139(137(4))]), ["k", 130([137(1), "x"])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type {String: [Int]}
+				// tag
+				0xd8, byte(ccf.CBORTagDictType),
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// String type ID (1)
+				0x01,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// dictionary data
+				// array, 2 items follow
+				0x82,
+				// text, 1 byte follow
+				0x61,
+				// k
+				0x6b,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type String
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// String type ID (1)
+				0x01,
+				// text, 1 byte follow
+				0x61,
+				// x
+				0x78,
+			},
+		},
+	}
+
+	test := func(tc testCase) {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			decodedVal, err := deterministicDecMode.Decode(nil, tc.data)
+			require.Nil(t, decodedVal)
+			require.ErrorContains(t, err, "unexpected inline type")
+		})
+	}
+	for _, tc := range testCases {
+		test(tc)
+	}
+}
+
 func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 
 	t.Parallel()
@@ -16050,6 +16581,414 @@ func TestCyclicReferenceValue(t *testing.T) {
 				0xd8, byte(ccf.CBORTagSimpleType),
 				// AnyStruct type ID (39)
 				0x18, 0x27,
+				// array, 1 items follow
+				0x81,
+				// nil
+				0xf6,
+			},
+		)
+	})
+
+	t.Run("recursive reference to struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) struct Recursive {
+                access(all) var children: [&Recursive]
+                init() {
+                    self.children = []
+                }
+            }
+            access(all) fun main(): Recursive {
+                let recursive = Recursive()
+                recursive.children.append(&recursive as &Recursive)
+                return recursive
+            }
+        `
+
+		actual := exportFromScript(t, script)
+
+		fields := []cadence.Field{
+			{
+				Identifier: "children",
+			},
+		}
+		recursiveType := cadence.NewStructType(
+			TestLocation,
+			"Recursive",
+			fields,
+			nil,
+		)
+		childrenType := cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, recursiveType),
+		)
+		fields[0].Type = childrenType
+
+		expected := cadence.NewStruct([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.NewStruct([]cadence.Value{
+					cadence.NewArray([]cadence.Value{
+						nil,
+					}).WithType(childrenType),
+				}).WithType(recursiveType),
+			}).WithType(childrenType),
+		}).WithType(recursiveType)
+
+		assert.Equal(t, expected, actual)
+
+		testEncodeAndDecode(
+			t,
+			expected,
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":{"id":"S.test.Recursive","fields":[{"value":{"value":[{"value":{"id":"S.test.Recursive","fields":[{"value":{"value":[null],"type":"Array"},"name":"children"}]},"type":"Struct"}],"type":"Array"},"name":"children"}]},"type":"Struct"}
+				//
+				// language=edn, format=ccf
+				// 129([[160([h'', "S.test.Recursive", [["children", 139(142([null, 136(h'')]))]]])], [136(h''), [[[[null]]]]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 1 items follow
+				0x81,
+				// struct type:
+				// id: []byte{}
+				// cadence-type-id: "S.test.Recursive"
+				// 1 field: [["children", type([]&Recursive)]]
+				// tag
+				0xd8, byte(ccf.CBORTagStructType),
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 16 bytes follow
+				0x70,
+				// S.test.Recursive
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x52, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65,
+				// fields
+				// array, 1 items follow
+				0x81,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 8 bytes follow
+				0x68,
+				// children
+				0x63, 0x68, 0x69, 0x6c, 0x64, 0x72, 0x65, 0x6e,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagReferenceType),
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 0 bytes follow
+				0x40,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 0 bytes follow
+				0x40,
+				// fields of Recursive
+				// array, 1 items follow
+				0x81,
+				// children
+				// array, 1 items follow
+				0x81,
+				// fields of Recursive
+				// array, 1 items follow
+				0x81,
+				// children
+				// array, 1 items follow
+				0x81,
+				// nil
+				0xf6,
+			},
+		)
+	})
+
+	t.Run("recursive reference to array", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(): AnyStruct {
+                let refs: [&[AnyStruct]] = []
+                refs.append(&refs as &[AnyStruct])
+                return refs
+            }
+        `
+
+		actual := exportFromScript(t, script)
+
+		refsType := cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.UnauthorizedAccess,
+				cadence.NewVariableSizedArrayType(cadence.AnyStructType),
+			),
+		)
+
+		expected := cadence.NewArray([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				nil,
+			}).WithType(refsType),
+		}).WithType(refsType)
+
+		assert.Equal(t, expected, actual)
+
+		testEncodeAndDecode(
+			t,
+			expected,
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":[{"value":[null],"type":"Array"}],"type":"Array"}
+				//
+				// language=edn, format=ccf
+				// 130([139(142([null, 139(137(39))])), [130([139(142([null, 139(137(39))])), [null]])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// static type []&[AnyStruct]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagReferenceType),
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+
+				// data
+				// array, 1 items follow
+				0x81,
+				// runtime type []&[AnyStruct] differs from static type &[AnyStruct],
+				// so the value has an inlined type
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagReferenceType),
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// AnyStruct type ID (39)
+				0x18, 0x27,
+				// array, 1 items follow
+				0x81,
+				// nil
+				0xf6,
+			},
+		)
+	})
+
+	t.Run("recursive reference to struct in mainnet event", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Payload of event 4 of mainnet transaction f6dfeb871ff649eb37a5e19e4cfa1c2737da5e63f1a02f5684ba5bd978d57011.
+		// Access nodes failed to decode it (https://github.com/onflow/flow-go/issues/8701).
+		// Contract RecursiveEventReceiver at 0xe291d9e45266db1e emits it:
+		//
+		//   access(all) event Poison(recursive: Recursive)
+		//
+		//   access(all) struct Recursive {
+		//       access(all) var children: [&Recursive]
+		//       ...
+		//   }
+		//
+		//   let recursive = Recursive()
+		//   recursive.children.append(&recursive as &Recursive)
+		//   emit Poison(recursive: recursive)
+
+		location := common.NewAddressLocation(
+			nil,
+			common.Address{0xe2, 0x91, 0xd9, 0xe4, 0x52, 0x66, 0xdb, 0x1e},
+			"RecursiveEventReceiver",
+		)
+
+		fields := []cadence.Field{
+			{
+				Identifier: "children",
+			},
+		}
+		recursiveType := cadence.NewStructType(
+			location,
+			"RecursiveEventReceiver.Recursive",
+			fields,
+			nil,
+		)
+		childrenType := cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(cadence.UnauthorizedAccess, recursiveType),
+		)
+		fields[0].Type = childrenType
+
+		poisonType := cadence.NewEventType(
+			location,
+			"RecursiveEventReceiver.Poison",
+			[]cadence.Field{
+				{
+					Identifier: "recursive",
+					Type:       recursiveType,
+				},
+			},
+			nil,
+		)
+
+		expected := cadence.NewEvent([]cadence.Value{
+			cadence.NewStruct([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					cadence.NewStruct([]cadence.Value{
+						cadence.NewArray([]cadence.Value{
+							nil,
+						}).WithType(childrenType),
+					}).WithType(recursiveType),
+				}).WithType(childrenType),
+			}).WithType(recursiveType),
+		}).WithType(poisonType)
+
+		testEncodeAndDecode(
+			t,
+			expected,
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":{"id":"A.e291d9e45266db1e.RecursiveEventReceiver.Poison","fields":[{"value":{"value":{"id":"A.e291d9e45266db1e.RecursiveEventReceiver.Recursive","fields":[{"value":{"value":[{"value":{"id":"A.e291d9e45266db1e.RecursiveEventReceiver.Recursive","fields":[{"value":{"value":[null],"type":"Array"},"name":"children"}]},"type":"Struct"}],"type":"Array"},"name":"children"}]},"type":"Struct"},"name":"recursive"}]},"type":"Event"}
+				//
+				// language=edn, format=ccf
+				// 129([[162([h'', "A.e291d9e45266db1e.RecursiveEventReceiver.Poison", [["recursive", 136(h'01')]]]), 160([h'01', "A.e291d9e45266db1e.RecursiveEventReceiver.Recursive", [["children", 139(142([null, 136(h'01')]))]]])], [136(h''), [[[[[null]]]]]]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeDefAndValue),
+				// array, 2 items follow
+				0x82,
+				// element 0: type definitions
+				// array, 2 items follow
+				0x82,
+				// event type:
+				// id: []byte{}
+				// cadence-type-id: "A.e291d9e45266db1e.RecursiveEventReceiver.Poison"
+				// 1 field: [["recursive", type(Recursive)]]
+				// tag
+				0xd8, byte(ccf.CBORTagEventType),
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 0 bytes follow
+				0x40,
+				// cadence-type-id
+				// string, 48 bytes follow
+				0x78, 0x30,
+				// A.e291d9e45266db1e.RecursiveEventReceiver.Poison
+				0x41, 0x2e, 0x65, 0x32, 0x39, 0x31, 0x64, 0x39, 0x65, 0x34, 0x35, 0x32, 0x36, 0x36, 0x64, 0x62, 0x31, 0x65, 0x2e, 0x52, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x50, 0x6f, 0x69, 0x73, 0x6f, 0x6e,
+				// fields
+				// array, 1 items follow
+				0x81,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 9 bytes follow
+				0x69,
+				// recursive
+				0x72, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+
+				// struct type:
+				// id: []byte{0x01}
+				// cadence-type-id: "A.e291d9e45266db1e.RecursiveEventReceiver.Recursive"
+				// 1 field: [["children", type([]&Recursive)]]
+				// tag
+				0xd8, byte(ccf.CBORTagStructType),
+				// array, 3 items follow
+				0x83,
+				// id
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+				// cadence-type-id
+				// string, 51 bytes follow
+				0x78, 0x33,
+				// A.e291d9e45266db1e.RecursiveEventReceiver.Recursive
+				0x41, 0x2e, 0x65, 0x32, 0x39, 0x31, 0x64, 0x39, 0x65, 0x34, 0x35, 0x32, 0x36, 0x36, 0x64, 0x62, 0x31, 0x65, 0x2e, 0x52, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x52, 0x65, 0x63, 0x75, 0x72, 0x73, 0x69, 0x76, 0x65,
+				// fields
+				// array, 1 items follow
+				0x81,
+				// field 0
+				// array, 2 items follow
+				0x82,
+				// text, 8 bytes follow
+				0x68,
+				// children
+				0x63, 0x68, 0x69, 0x6c, 0x64, 0x72, 0x65, 0x6e,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagReferenceType),
+				// array, 2 items follow
+				0x82,
+				// nil
+				0xf6,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+
+				// element 1: type and value
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeRef),
+				// bytes, 0 bytes follow
+				0x40,
+				// fields of Poison
+				// array, 1 items follow
+				0x81,
+				// recursive: fields of Recursive
+				// array, 1 items follow
+				0x81,
+				// children
+				// array, 1 items follow
+				0x81,
+				// fields of Recursive
+				// array, 1 items follow
+				0x81,
+				// children
 				// array, 1 items follow
 				0x81,
 				// nil

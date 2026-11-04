@@ -133,10 +133,16 @@ func (o Optional) MeteredType(gauge common.MemoryGauge) Type {
 }
 
 func (o Optional) String() string {
-	if o.Value == nil {
+	return valueString(o.Value)
+}
+
+// valueString returns the string representation of value, or format.Nil if value is nil,
+// e.g. for a nil optional or an exported cyclic reference value.
+func valueString(value Value) string {
+	if value == nil {
 		return format.Nil
 	}
-	return o.Value.String()
+	return value.String()
 }
 
 // Bool
@@ -1622,7 +1628,7 @@ func (v Array) WithType(arrayType ArrayType) Array {
 func (v Array) String() string {
 	values := make([]string, len(v.Values))
 	for i, value := range v.Values {
-		values[i] = value.String()
+		values[i] = valueString(value)
 	}
 	return format.Array(values)
 }
@@ -1685,8 +1691,8 @@ func (v Dictionary) String() string {
 			Key   string
 			Value string
 		}{
-			Key:   pair.Key.String(),
-			Value: pair.Value.String(),
+			Key:   valueString(pair.Key),
+			Value: valueString(pair.Value),
 		}
 	}
 
@@ -1870,7 +1876,7 @@ func formatComposite(typeID string, fields []Field, values []Value) string {
 				Value string
 			}{
 				Name:  field.Identifier,
-				Value: value.String(),
+				Value: valueString(value),
 			},
 		)
 	}
