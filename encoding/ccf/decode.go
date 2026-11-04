@@ -650,11 +650,63 @@ func (d *Decoder) decodeTypeAndValueIfTagged(
 	}
 
 	// Decode ccf-type-and-value-message.
-	value, err := d.decodeTypeAndValue(types)
+
+	// Decode array head of length 2.
+	err = decodeCBORArrayWithKnownSize(d.dec, 2)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// element 0: inline-type
+	inlineType, err := d.decodeInlineType(types)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// The encoder encodes only a subtype of the static type as inline type,
+	// so an array or dictionary static type requires an inline type of the same kind.
+	// Reject other inline types:
+	// the value would contradict its static type.
+	if !isValidInlineType(typ, inlineType) {
+		return nil, false, fmt.Errorf(
+			"unexpected inline type %s (%T) for encoded value of Cadence type %s (%T)",
+			inlineType.ID(),
+			inlineType,
+			typ.ID(),
+			typ,
+		)
+	}
+
+	// element 1: value
+	value, err := d.decodeValue(inlineType, types)
 	if err != nil {
 		return nil, false, err
 	}
 	return value, true, nil
+}
+
+// isValidInlineType returns true if inlineType is valid for staticType.
+// An array or dictionary static type requires an inline type of the same kind,
+// and a constant-sized array type also requires the same size.
+// Any other static type, e.g. a capability type, accepts any inline type,
+// for backward compatibility.
+func isValidInlineType(staticType cadence.Type, inlineType cadence.Type) bool {
+	switch staticType := staticType.(type) {
+	case *cadence.VariableSizedArrayType:
+		_, ok := inlineType.(*cadence.VariableSizedArrayType)
+		return ok
+
+	case *cadence.ConstantSizedArrayType:
+		inlineType, ok := inlineType.(*cadence.ConstantSizedArrayType)
+		return ok && inlineType.Size == staticType.Size
+
+	case *cadence.DictionaryType:
+		_, ok := inlineType.(*cadence.DictionaryType)
+		return ok
+
+	default:
+		return true
+	}
 }
 
 // decodeVoid decodes encoded void-value as

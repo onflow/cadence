@@ -16074,6 +16074,223 @@ func TestDecodeInvalidData(t *testing.T) {
 	}
 }
 
+func TestDecodeInvalidInlineType(t *testing.T) {
+	t.Parallel()
+
+	// The encoder encodes the runtime type as inline type
+	// if it differs from the static type,
+	// e.g. for values of covariant array and dictionary types.
+	// An array or dictionary static type requires an inline type of the same kind.
+	// Any other static type, e.g. a capability type, accepts any inline type,
+	// for backward compatibility.
+
+	type testCase struct {
+		name string
+		data []byte
+	}
+
+	testCases := []testCase{
+		{
+			name: "String element in array with static type [[Int]]",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([139(139(137(4))), [130([137(1), "x"])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [[Int]]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type String
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// String type ID (1)
+				0x01,
+				// text, 1 byte follow
+				0x61,
+				// x
+				0x78,
+			},
+		},
+		{
+			name: "[Int] element in array with static type [[Int; 2]]",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([139(140([2, 137(4)])), [130([139(137(4)), [1]])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [[Int; 2]]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagConstsizedArrayType),
+				// array, 2 items follow
+				0x82,
+				// number of elements
+				0x02,
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [Int]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array, 1 items follow
+				0x81,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "[Int; 1] element in array with static type [[Int; 2]]",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([139(140([2, 137(4)])), [130([140([1, 137(4)]), [1]])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [[Int; 2]]
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagConstsizedArrayType),
+				// array, 2 items follow
+				0x82,
+				// number of elements
+				0x02,
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array data
+				// array, 1 items follow
+				0x81,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type [Int; 1]
+				// tag
+				0xd8, byte(ccf.CBORTagConstsizedArrayType),
+				// array, 2 items follow
+				0x82,
+				// number of elements
+				0x01,
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// array, 1 items follow
+				0x81,
+				// tag (big number)
+				0xc2,
+				// bytes, 1 byte follow
+				0x41,
+				// 1
+				0x01,
+			},
+		},
+		{
+			name: "String value in dictionary with static type {String: [Int]}",
+			data: []byte{
+				// language=edn, format=ccf
+				// 130([141([137(1), 139(137(4))]), ["k", 130([137(1), "x"])]])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type {String: [Int]}
+				// tag
+				0xd8, byte(ccf.CBORTagDictType),
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// String type ID (1)
+				0x01,
+				// tag
+				0xd8, byte(ccf.CBORTagVarsizedArrayType),
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// Int type ID (4)
+				0x04,
+				// dictionary data
+				// array, 2 items follow
+				0x82,
+				// text, 1 byte follow
+				0x61,
+				// k
+				0x6b,
+				// tag
+				0xd8, byte(ccf.CBORTagTypeAndValue),
+				// array, 2 items follow
+				0x82,
+				// type String
+				// tag
+				0xd8, byte(ccf.CBORTagSimpleType),
+				// String type ID (1)
+				0x01,
+				// text, 1 byte follow
+				0x61,
+				// x
+				0x78,
+			},
+		},
+	}
+
+	test := func(tc testCase) {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			decodedVal, err := deterministicDecMode.Decode(nil, tc.data)
+			require.Nil(t, decodedVal)
+			require.ErrorContains(t, err, "unexpected inline type")
+		})
+	}
+	for _, tc := range testCases {
+		test(tc)
+	}
+}
+
 func TestEncodeValueOfIntersectedInterface(t *testing.T) {
 
 	t.Parallel()
