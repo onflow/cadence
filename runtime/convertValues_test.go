@@ -947,6 +947,52 @@ func assertUserError(t *testing.T, err error) {
 	)
 }
 
+func TestRuntimeImportNilValue(t *testing.T) {
+
+	t.Parallel()
+
+	// Decoders decode encoded nil values (such as cyclic reference values) to nil values
+
+	test := func(t *testing.T, value cadence.Value, expectedType sema.Type) {
+
+		inter := NewTestInterpreter(t)
+
+		_, err := ImportValue(
+			inter,
+			nil,
+			nil,
+			value,
+			expectedType,
+		)
+		RequireError(t, err)
+
+		var unexpectedErr errors.UnexpectedError
+		require.ErrorAs(t, err, &unexpectedErr)
+	}
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(t, nil, nil)
+	})
+
+	t.Run("array with nil element", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			t,
+			cadence.NewArray([]cadence.Value{
+				nil,
+			}),
+			&sema.VariableSizedType{
+				Type: sema.IntType,
+			},
+		)
+	})
+}
+
 func TestRuntimeImportRuntimeType(t *testing.T) {
 	t.Parallel()
 

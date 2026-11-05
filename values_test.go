@@ -470,6 +470,60 @@ func TestValue_String(t *testing.T) {
 	}
 }
 
+func TestValue_StringWithNilValue(t *testing.T) {
+
+	t.Parallel()
+
+	// Export truncates a cyclic reference value to nil
+
+	t.Run("Array", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := NewArray([]Value{
+			NewInt(1),
+			nil,
+		})
+
+		assert.Equal(t, "[1, nil]", value.String())
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := NewDictionary([]KeyValuePair{
+			{
+				Key:   String("a"),
+				Value: nil,
+			},
+		})
+
+		assert.Equal(t, "{\"a\": nil}", value.String())
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := NewStruct([]Value{
+			nil,
+		}).WithType(NewStructType(
+			TestLocation,
+			"FooStruct",
+			[]Field{
+				{
+					Identifier: "y",
+					Type:       AnyStructType,
+				},
+			},
+			nil,
+		))
+
+		assert.Equal(t, "S.test.FooStruct(y: nil)", value.String())
+	})
+}
+
 func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 
 	t.Parallel()

@@ -570,6 +570,18 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 		return d.decodeAttachment(t, types)
 
 	case *cadence.ReferenceType:
+		// Decode nil value (such as cyclic reference value),
+		// unless nil is a valid encoding of the referenced type's values.
+		if !canEncodeValueOfTypeAsNil(t.Type) {
+			nt, err := d.dec.NextType()
+			if err != nil {
+				return nil, err
+			}
+			if nt == cbor.NilType {
+				return nil, d.dec.DecodeNil()
+			}
+		}
+
 		// When static type is a reference type, encoded value is its deferenced type.
 		return d.decodeValue(t.Type, types)
 
@@ -597,6 +609,103 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 			// Decode ccf-type-and-value-message.
 			return d.decodeTypeAndValue(types)
 		}
+	}
+}
+
+// canEncodeValueOfTypeAsNil returns true if the encoder encodes some values of type t as CBOR nil:
+// Void values, nil optional values, and nil type values.
+func canEncodeValueOfTypeAsNil(t cadence.Type) bool {
+	switch t {
+	case cadence.VoidType, cadence.MetaType:
+		return true
+	}
+	_, ok := t.(*cadence.OptionalType)
+	return ok
+}
+
+// decodeTypeAndValueIfTagged decodes encoded ccf-type-and-value-message
+// if the next encoded CBOR data item is a tag.
+// The returned bool is true if it decoded the message.
+func (d *Decoder) decodeTypeAndValueIfTagged(
+	typ cadence.Type,
+	types *cadenceTypeByCCFTypeID,
+) (
+	cadence.Value,
+	bool,
+	error,
+) {
+	// Check next encoded CBOR type.
+	nextType, err := d.dec.NextType()
+	if err != nil {
+		return nil, false, err
+	}
+
+	if nextType != cbor.TagType {
+		return nil, false, nil
+	}
+
+	err = decodeCBORTagWithKnownNumber(d.dec, uint64(CBORTagTypeAndValue))
+	if err != nil {
+		return nil, false, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %w", typ.ID(), typ, err)
+	}
+
+	// Decode ccf-type-and-value-message.
+
+	// Decode array head of length 2.
+	err = decodeCBORArrayWithKnownSize(d.dec, 2)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// element 0: inline-type
+	inlineType, err := d.decodeInlineType(types)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// The encoder encodes only a subtype of the static type as inline type,
+	// so an array or dictionary static type requires an inline type of the same kind.
+	// Reject other inline types:
+	// the value would contradict its static type.
+	if !isValidInlineType(typ, inlineType) {
+		return nil, false, fmt.Errorf(
+			"unexpected inline type %s (%T) for encoded value of Cadence type %s (%T)",
+			inlineType.ID(),
+			inlineType,
+			typ.ID(),
+			typ,
+		)
+	}
+
+	// element 1: value
+	value, err := d.decodeValue(inlineType, types)
+	if err != nil {
+		return nil, false, err
+	}
+	return value, true, nil
+}
+
+// isValidInlineType returns true if inlineType is valid for staticType.
+// An array or dictionary static type requires an inline type of the same kind,
+// and a constant-sized array type also requires the same size.
+// Any other static type, e.g. a capability type, accepts any inline type,
+// for backward compatibility.
+func isValidInlineType(staticType cadence.Type, inlineType cadence.Type) bool {
+	switch staticType := staticType.(type) {
+	case *cadence.VariableSizedArrayType:
+		_, ok := inlineType.(*cadence.VariableSizedArrayType)
+		return ok
+
+	case *cadence.ConstantSizedArrayType:
+		inlineType, ok := inlineType.(*cadence.ConstantSizedArrayType)
+		return ok && inlineType.Size == staticType.Size
+
+	case *cadence.DictionaryType:
+		_, ok := inlineType.(*cadence.DictionaryType)
+		return ok
+
+	default:
+		return true
 	}
 }
 
@@ -1132,6 +1241,16 @@ func (d *Decoder) decodeOptional(typ *cadence.OptionalType, types *cadenceTypeBy
 // language=CDDL
 // array-value = [* value]
 func (d *Decoder) decodeArray(typ cadence.ArrayType, hasKnownSize bool, knownSize uint64, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
+	// typ can differ from runtime array type because array types are covariant,
+	// e.g. static type [AnyStruct] and runtime type [Int].
+	// In this case, the encoder encodes runtime type with the value (as tag content for tag CBORTagTypeAndValue).
+
+	// Decode ccf-type-and-value-message, if the next encoded CBOR data item is a tag.
+	value, ok, err := d.decodeTypeAndValueIfTagged(typ, types)
+	if ok || err != nil {
+		return value, err
+	}
+
 	// Decode array length.
 	n, err := d.dec.DecodeArrayHead()
 	if err != nil {
@@ -1176,6 +1295,16 @@ func (d *Decoder) decodeArray(typ cadence.ArrayType, hasKnownSize bool, knownSiz
 // language=CDDL
 // dict-value = [* (key: value, value: value)]
 func (d *Decoder) decodeDictionary(typ *cadence.DictionaryType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
+	// typ can differ from runtime dictionary type because dictionary types are covariant,
+	// e.g. static type {String: AnyStruct} and runtime type {String: Int}.
+	// In this case, the encoder encodes runtime type with the value (as tag content for tag CBORTagTypeAndValue).
+
+	// Decode ccf-type-and-value-message, if the next encoded CBOR data item is a tag.
+	typeAndValue, ok, err := d.decodeTypeAndValueIfTagged(typ, types)
+	if ok || err != nil {
+		return typeAndValue, err
+	}
+
 	// Decode array length.
 	n, err := d.dec.DecodeArrayHead()
 	if err != nil {
@@ -1529,20 +1658,10 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 	// typ can be different from runtime CapabilityType because borrow type can be nil.
 	// In this case, runtime type is encoded with the value (as tag content for tag CBORTagTypeAndValue).
 
-	// Check next encoded CBOR type.
-	nextType, err := d.dec.NextType()
-	if err != nil {
-		return nil, err
-	}
-
-	if nextType == cbor.TagType {
-		err := decodeCBORTagWithKnownNumber(d.dec, uint64(CBORTagTypeAndValue))
-		if err != nil {
-			return nil, fmt.Errorf("unexpected encoded value of Cadence type %s (%T): %w", typ.ID(), typ, err)
-		}
-
-		// Decode ccf-type-and-value-message.
-		return d.decodeTypeAndValue(types)
+	// Decode ccf-type-and-value-message, if the next encoded CBOR data item is a tag.
+	value, ok, err := d.decodeTypeAndValueIfTagged(typ, types)
+	if ok || err != nil {
+		return value, err
 	}
 
 	// Decode array head of length 2.
