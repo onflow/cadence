@@ -5582,11 +5582,11 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		OnGetAccountBalance: func(_ Address) (uint64, error) {
+		OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			// return a dummy value
 			return 12300000000, nil
 		},
-		OnGetAccountAvailableBalance: func(_ Address) (uint64, error) {
+		OnGetAccountAvailableBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			// return a dummy value
 			return 152300000000, nil
 		},
@@ -5594,7 +5594,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 			// return a dummy value
 			return 120, nil
 		},
-		OnGetStorageCapacity: func(_ Address) (uint64, error) {
+		OnGetStorageCapacity: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			// return a dummy value
 			return 1245, nil
 		},
@@ -8903,10 +8903,10 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
     `)
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAccountBalance:          noopRuntimeUInt64Getter,
-		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
+		OnGetAccountBalance:          noopRuntimeContextUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeContextUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
-		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeContextUInt64Getter,
 		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
@@ -8961,10 +8961,10 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
     `)
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAccountBalance:          noopRuntimeUInt64Getter,
-		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
+		OnGetAccountBalance:          noopRuntimeContextUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeContextUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
-		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeContextUInt64Getter,
 		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
@@ -13788,7 +13788,7 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-		OnGetAccountBalance: func(_ Address) (uint64, error) {
+		OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			return 0, nil
 		},
 		OnGenerateUUID: func() (uint64, error) {
@@ -14288,7 +14288,7 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			OnGetAccountBalance: func(_ Address) (uint64, error) {
+			OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				return 0, nil
 			},
 			OnGenerateUUID: func() (uint64, error) {
@@ -14386,7 +14386,7 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			OnGetAccountBalance: func(_ Address) (uint64, error) {
+			OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				return 0, nil
 			},
 			OnGenerateUUID: func() (uint64, error) {
@@ -14488,7 +14488,7 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			OnGetAccountBalance: func(_ Address) (uint64, error) {
+			OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				return 0, nil
 			},
 			OnGenerateUUID: func() (uint64, error) {

@@ -84,6 +84,10 @@ func noopRuntimeUInt64Getter(_ common.Address) (uint64, error) {
 	return 0, nil
 }
 
+func noopRuntimeContextUInt64Getter(_ interpreter.InvocationContext, _ common.Address) (uint64, error) {
+	return 0, nil
+}
+
 func noopRuntimeUInt32Getter(_ common.Address) (uint32, error) {
 	return 0, nil
 }
@@ -101,10 +105,10 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
     `)
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAccountBalance:          noopRuntimeUInt64Getter,
-		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
+		OnGetAccountBalance:          noopRuntimeContextUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeContextUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
-		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeContextUInt64Getter,
 		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
@@ -137,10 +141,10 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
     `)
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAccountBalance:          noopRuntimeUInt64Getter,
-		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
+		OnGetAccountBalance:          noopRuntimeContextUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeContextUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
-		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeContextUInt64Getter,
 		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
@@ -154,6 +158,144 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextScriptLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestRuntimeAccountFieldsOnContext(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+        access(all) contract Test {
+
+            access(all) fun balance(_ account: auth(CopyValue) &Account): UFix64 {
+                return account.storage.copy<UFix64>(from: /storage/balance)!
+            }
+
+            access(all) fun availableBalance(_ account: auth(CopyValue) &Account): UFix64 {
+                return account.storage.copy<UFix64>(from: /storage/availableBalance)!
+            }
+
+            access(all) fun capacity(_ account: auth(CopyValue) &Account): UInt64 {
+                return account.storage.copy<UInt64>(from: /storage/capacity)!
+            }
+        }
+    `)
+
+	transaction := []byte(`
+        import Test from 0x1
+
+        transaction {
+            prepare(signer: auth(Storage) &Account) {
+                signer.storage.save(1.0, to: /storage/balance)
+                signer.storage.save(2.0, to: /storage/availableBalance)
+                signer.storage.save(UInt64(3), to: /storage/capacity)
+
+                assert(signer.balance == 1.0)
+                assert(signer.availableBalance == 2.0)
+                assert(signer.storage.capacity == 3)
+            }
+        }
+    `)
+
+	accountReferenceType := sema.NewReferenceType(
+		nil,
+		sema.NewEntitlementSetAccess(
+			[]*sema.EntitlementType{sema.CopyValueType},
+			sema.Conjunction,
+		),
+		sema.AccountType,
+	)
+
+	testLocation := common.AddressLocation{
+		Address: contractAddress,
+		Name:    "Test",
+	}
+
+	rt := NewTestRuntime()
+
+	var accountCode []byte
+
+	// The host computes the account fields with contract functions,
+	// on the context of the running transaction.
+	// The helper converts the Address argument into an `auth(CopyValue) &Account`.
+	invoke := func(
+		context interpreter.InvocationContext,
+		functionName string,
+		address common.Address,
+	) cadence.Value {
+		result, err := InvokeContractFunctionOnContext(
+			context,
+			testLocation,
+			functionName,
+			[]cadence.Value{
+				cadence.Address(address),
+			},
+			[]sema.Type{
+				accountReferenceType,
+			},
+		)
+		require.NoError(t, err)
+		return result
+	}
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetCode: func(_ Location) ([]byte, error) {
+			return accountCode, nil
+		},
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{contractAddress}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) ([]byte, error) {
+			return accountCode, nil
+		},
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		OnEmitEvent: func(_ cadence.Event) error {
+			return nil
+		},
+		OnGetAccountBalance: func(context interpreter.InvocationContext, address Address) (uint64, error) {
+			balance := invoke(context, "balance", address).(cadence.UFix64)
+			return uint64(balance), nil
+		},
+		OnGetAccountAvailableBalance: func(context interpreter.InvocationContext, address Address) (uint64, error) {
+			balance := invoke(context, "availableBalance", address).(cadence.UFix64)
+			return uint64(balance), nil
+		},
+		OnGetStorageCapacity: func(context interpreter.InvocationContext, address Address) (uint64, error) {
+			capacity := invoke(context, "capacity", address).(cadence.UInt64)
+			return uint64(capacity), nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy the Test contract.
+	err := rt.ExecuteTransaction(
+		Script{Source: DeploymentTransaction("Test", contract)},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+			UseVM:     *compile,
+		},
+	)
+	require.NoError(t, err)
+
+	// Run the transaction that writes the values and then reads the fields computed from them.
+	err = rt.ExecuteTransaction(
+		Script{Source: transaction},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 			UseVM:     *compile,
 		},
 	)

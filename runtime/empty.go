@@ -149,11 +149,17 @@ func (EmptyRuntimeInterface) Hash(_ []byte, _ string, _ HashAlgorithm) ([]byte, 
 	panic("unexpected call to Hash")
 }
 
-func (EmptyRuntimeInterface) GetAccountBalance(_ common.Address) (value uint64, err error) {
+func (EmptyRuntimeInterface) GetAccountBalance(
+	_ interpreter.InvocationContext,
+	_ common.Address,
+) (value uint64, err error) {
 	panic("unexpected call to GetAccountBalance")
 }
 
-func (EmptyRuntimeInterface) GetAccountAvailableBalance(_ common.Address) (value uint64, err error) {
+func (EmptyRuntimeInterface) GetAccountAvailableBalance(
+	_ interpreter.InvocationContext,
+	_ common.Address,
+) (value uint64, err error) {
 	panic("unexpected call to GetAccountAvailableBalance")
 }
 
@@ -161,7 +167,10 @@ func (EmptyRuntimeInterface) GetStorageUsed(_ Address) (value uint64, err error)
 	panic("unexpected call to GetStorageUsed")
 }
 
-func (EmptyRuntimeInterface) GetStorageCapacity(_ Address) (value uint64, err error) {
+func (EmptyRuntimeInterface) GetStorageCapacity(
+	_ interpreter.InvocationContext,
+	_ Address,
+) (value uint64, err error) {
 	panic("unexpected call to GetStorageCapacity")
 }
 

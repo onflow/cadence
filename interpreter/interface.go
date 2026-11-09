@@ -231,22 +231,12 @@ type AccountHandlerContext interface {
 
 var _ AccountHandlerContext = &Interpreter{}
 
-type MemberAccessibleContext interface {
-	FunctionCreationContext
-	ArrayCreationContext
-	ResourceDestructionHandler
-	AccountHandlerContext
-	CapabilityControllerIterationContext
-	AccountContractBorrowContext
-	AttachmentContext
-
-	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
-	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
-
-	GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue
-}
-
-var _ MemberAccessibleContext = &Interpreter{}
+// MemberAccessibleContext is the context of a member access.
+//
+// Member access may need to invoke functions,
+// e.g. to compute a field,
+// so it requires the full invocation context.
+type MemberAccessibleContext = InvocationContext
 
 type FunctionCreationContext interface {
 	StaticTypeAndReferenceContext
@@ -452,20 +442,32 @@ var _ StoredValueCheckContext = &Interpreter{}
 
 // InvocationContext is a composite of all contexts, since function invocations
 // can perform various operations, and hence need to provide all possible contexts to it.
+//
+// MemberAccessibleContext is an alias of InvocationContext.
+// The contexts which embed MemberAccessibleContext,
+// e.g. AccountCreationContext, BorrowCapabilityControllerContext, and StoredValueCheckContext,
+// can therefore not be embedded here,
+// as that would be an embedding cycle.
+// Their members are provided by the embedded contexts and the methods listed below instead,
+// and the assertions after the declaration check that InvocationContext covers them.
 type InvocationContext interface {
-	StorageContext
-	ValueStringContext
-	MemberAccessibleContext
+	ResourceDestructionHandler
 	AttachmentContext
 	ErrorHandler
-	ArrayCreationContext
-	AccountCreationContext
-	BorrowCapabilityControllerContext
+	AccountHandlerContext
+	AccountContractBorrowContext
 	AccountCapabilityGetValidationContext
+	CapabilityControllerIterationContext
 	CapabilityHandlers
-	StoredValueCheckContext
 	VariableResolver
 	LocationRangeProvider
+
+	GetInjectedCompositeFieldsHandler() InjectedCompositeFieldsHandlerFunc
+	GetMemberAccessContextForLocation(location common.Location) MemberAccessibleContext
+
+	GetMethod(value MemberAccessibleValue, name string, accessedReference ReferenceValue) FunctionValue
+
+	GetCapabilityCheckHandler() CapabilityCheckHandlerFunc
 
 	GetLocation() common.Location
 
@@ -477,6 +479,12 @@ type InvocationContext interface {
 }
 
 var _ InvocationContext = &Interpreter{}
+
+// InvocationContext cannot embed these contexts, as they embed MemberAccessibleContext.
+// Check that it provides all of their members.
+var _ AccountCreationContext = InvocationContext(nil)
+var _ BorrowCapabilityControllerContext = InvocationContext(nil)
+var _ StoredValueCheckContext = InvocationContext(nil)
 
 type ValueExportContext interface {
 	ContainerMutationContext // needed for container iteration

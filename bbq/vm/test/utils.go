@@ -45,11 +45,11 @@ import (
 type testAccountHandler struct {
 	accountIDs                 map[common.Address]uint64
 	generateAccountID          func(address common.Address) (uint64, error)
-	getAccountBalance          func(address common.Address) (uint64, error)
-	getAccountAvailableBalance func(address common.Address) (uint64, error)
+	getAccountBalance          func(context interpreter.InvocationContext, address common.Address) (uint64, error)
+	getAccountAvailableBalance func(context interpreter.InvocationContext, address common.Address) (uint64, error)
 	commitStorageTemporarily   func(context interpreter.ValueTransferContext) error
 	getStorageUsed             func(address common.Address) (uint64, error)
-	getStorageCapacity         func(address common.Address) (uint64, error)
+	getStorageCapacity         func(context interpreter.InvocationContext, address common.Address) (uint64, error)
 	validatePublicKey          func(key *stdlib.PublicKey) error
 	verifySignature            func(
 		signature []byte,
@@ -121,18 +121,24 @@ func (t *testAccountHandler) GenerateAccountID(address common.Address) (uint64, 
 	return t.generateAccountID(address)
 }
 
-func (t *testAccountHandler) GetAccountBalance(address common.Address) (uint64, error) {
+func (t *testAccountHandler) GetAccountBalance(
+	context interpreter.InvocationContext,
+	address common.Address,
+) (uint64, error) {
 	if t.getAccountBalance == nil {
 		panic(errors.NewUnexpectedError("unexpected call to GetAccountBalance"))
 	}
-	return t.getAccountBalance(address)
+	return t.getAccountBalance(context, address)
 }
 
-func (t *testAccountHandler) GetAccountAvailableBalance(address common.Address) (uint64, error) {
+func (t *testAccountHandler) GetAccountAvailableBalance(
+	context interpreter.InvocationContext,
+	address common.Address,
+) (uint64, error) {
 	if t.getAccountAvailableBalance == nil {
 		panic(errors.NewUnexpectedError("unexpected call to GetAccountAvailableBalance"))
 	}
-	return t.getAccountAvailableBalance(address)
+	return t.getAccountAvailableBalance(context, address)
 }
 
 func (t *testAccountHandler) CommitStorageTemporarily(context interpreter.ValueTransferContext) error {
@@ -149,11 +155,14 @@ func (t *testAccountHandler) GetStorageUsed(address common.Address) (uint64, err
 	return t.getStorageUsed(address)
 }
 
-func (t *testAccountHandler) GetStorageCapacity(address common.Address) (uint64, error) {
+func (t *testAccountHandler) GetStorageCapacity(
+	context interpreter.InvocationContext,
+	address common.Address,
+) (uint64, error) {
 	if t.getStorageCapacity == nil {
 		panic(errors.NewUnexpectedError("unexpected call to GetStorageCapacity"))
 	}
-	return t.getStorageCapacity(address)
+	return t.getStorageCapacity(context, address)
 }
 
 func (t *testAccountHandler) ValidatePublicKey(key *stdlib.PublicKey) error {

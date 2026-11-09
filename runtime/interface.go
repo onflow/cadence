@@ -115,13 +115,13 @@ type Interface interface {
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
 	Hash(data []byte, tag string, hashAlgorithm HashAlgorithm) ([]byte, error)
 	// GetAccountBalance gets accounts default flow token balance.
-	GetAccountBalance(address common.Address) (value uint64, err error)
+	GetAccountBalance(context interpreter.InvocationContext, address common.Address) (value uint64, err error)
 	// GetAccountAvailableBalance gets accounts default flow token balance - balance that is reserved for storage.
-	GetAccountAvailableBalance(address common.Address) (value uint64, err error)
+	GetAccountAvailableBalance(context interpreter.InvocationContext, address common.Address) (value uint64, err error)
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
 	GetStorageUsed(address Address) (value uint64, err error)
 	// GetStorageCapacity gets storage capacity in bytes on the address.
-	GetStorageCapacity(address Address) (value uint64, err error)
+	GetStorageCapacity(context interpreter.InvocationContext, address Address) (value uint64, err error)
 	// ImplementationDebugLog logs implementation log statements on a debug-level
 	ImplementationDebugLog(message string) error
 	// ValidatePublicKey verifies the validity of a public key.
