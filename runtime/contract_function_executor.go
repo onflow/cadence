@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/interpreter"
 	"github.com/onflow/cadence/sema"
+	"github.com/onflow/cadence/stdlib"
 )
 
 type contractFunctionExecutor struct {
@@ -363,8 +364,11 @@ type ArgumentConversionContext interface {
 // convertArguments converts the given arguments to interpreter values,
 // using `context` for value construction and `environment` for importing values.
 //
-// `environment` may be nil. In that case, only arguments whose conversion
-// does not require an environment are supported; any other argument type returns an error.
+// `environment` may be nil.
+// In that case, values are imported without a standard library handler
+// and without a location resolver.
+// Arguments that need the handler (e.g. `PublicKey` and `HashAlgorithm` values)
+// result in an error.
 func convertArguments(
 	environment Environment,
 	context ArgumentConversionContext,
@@ -391,8 +395,11 @@ func convertArguments(
 
 // convertArgument converts a single argument to an interpreter value.
 //
-// `environment` may be nil. In that case, only arguments whose conversion
-// does not require an environment are supported; any other argument type returns an error.
+// `environment` may be nil.
+// In that case, values are imported without a standard library handler
+// and without a location resolver.
+// Arguments that need the handler (e.g. `PublicKey` and `HashAlgorithm` values)
+// result in an error.
 func convertArgument(
 	environment Environment,
 	context ArgumentConversionContext,
@@ -407,18 +414,22 @@ func convertArgument(
 		return accountReferenceValue, nil
 	}
 
-	// Importing any other argument type requires an environment.
-	if environment == nil {
-		return nil, errors.NewDefaultUserError(
-			"cannot convert argument of type %s without an environment",
-			argumentType.QualifiedString(),
-		)
+	// Import any other argument type.
+	// Without an environment there is neither a standard library handler
+	// nor a location resolver.
+	// The import rejects values that need the handler
+	// (e.g. `PublicKey` and `HashAlgorithm` values).
+	var standardLibraryHandler stdlib.StandardLibraryHandler
+	var resolveLocation sema.LocationHandlerFunc
+	if environment != nil {
+		standardLibraryHandler = environment
+		resolveLocation = environment.ResolveLocation
 	}
 
 	value, err := ImportValue(
 		context,
-		environment,
-		environment.ResolveLocation,
+		standardLibraryHandler,
+		resolveLocation,
 		argument,
 		argumentType,
 	)
@@ -471,8 +482,11 @@ func convertAccountReferenceArgument(
 // so the writes are not lost to a separate, independently-committed storage instance.
 //
 // Arguments are converted using the same conversion as a regular contract-function invocation,
-// but WITHOUT an environment. Therefore, only arguments whose conversion does not require an environment are supported:
-// Any argument that requires an environment for ImportValue results in an error.
+// but WITHOUT an environment.
+// Therefore, values are imported without a standard library handler
+// and without a location resolver:
+// Arguments that need the handler (e.g. `PublicKey` and `HashAlgorithm` values)
+// result in an error.
 func InvokeContractFunctionOnContext(
 	context interpreter.InvocationContext,
 	contractLocation common.AddressLocation,

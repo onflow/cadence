@@ -1723,6 +1723,14 @@ func (i valueImporter) importPublicKey(
 
 	ty := sema.PublicKeyType
 
+	// The public key is validated through the standard library handler
+	if i.standardLibraryHandler == nil {
+		return nil, errors.NewDefaultUserError(
+			"cannot import value of type '%s' without a standard library handler",
+			ty,
+		)
+	}
+
 	for _, field := range fields {
 		switch field.Name {
 		case sema.PublicKeyTypePublicKeyFieldName:
@@ -1796,6 +1804,14 @@ func (i valueImporter) importHashAlgorithm(
 	var rawValue interpreter.UInt8Value
 
 	ty := sema.HashAlgorithmType
+
+	// The hash algorithm's functions hash through the standard library handler
+	if i.standardLibraryHandler == nil {
+		return nil, errors.NewDefaultUserError(
+			"cannot import value of type '%s' without a standard library handler",
+			ty,
+		)
+	}
 
 	for _, field := range fields {
 		switch field.Name {
