@@ -44,8 +44,8 @@ var accountFieldNames = []string{
 func NewAccountValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	accountBalanceGet func() UFix64Value,
-	accountAvailableBalanceGet func() UFix64Value,
+	accountBalanceGet func(context MemberAccessibleContext) UFix64Value,
+	accountAvailableBalanceGet func(context MemberAccessibleContext) UFix64Value,
 	storageConstructor func() Value,
 	contractsConstructor func() Value,
 	keysConstructor func() Value,
@@ -78,13 +78,13 @@ func NewAccountValue(
 		return nil
 	}
 
-	computeField := func(name string, _ MemberAccessibleContext) Value {
+	computeField := func(name string, context MemberAccessibleContext) Value {
 		switch name {
 		case sema.AccountTypeBalanceFieldName:
-			return accountBalanceGet()
+			return accountBalanceGet(context)
 
 		case sema.AccountTypeAvailableBalanceFieldName:
-			return accountAvailableBalanceGet()
+			return accountAvailableBalanceGet(context)
 		}
 
 		field := computeLazyStoredField(name)

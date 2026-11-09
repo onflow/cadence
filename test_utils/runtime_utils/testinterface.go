@@ -93,10 +93,10 @@ type TestRuntimeInterface struct {
 		hashAlgorithm runtime.HashAlgorithm,
 	) ([]byte, error)
 	OnSetCadenceValue            func(owner runtime.Address, key string, value cadence.Value) (err error)
-	OnGetAccountBalance          func(_ runtime.Address) (uint64, error)
-	OnGetAccountAvailableBalance func(_ runtime.Address) (uint64, error)
-	OnGetStorageUsed             func(_ runtime.Address) (uint64, error)
-	OnGetStorageCapacity         func(_ runtime.Address) (uint64, error)
+	OnGetAccountBalance          func(_ interpreter.InvocationContext, _ runtime.Address) (uint64, error)
+	OnGetAccountAvailableBalance func(_ interpreter.InvocationContext, _ runtime.Address) (uint64, error)
+	OnGetStorageUsed             func(_ interpreter.InvocationContext, _ runtime.Address) (uint64, error)
+	OnGetStorageCapacity         func(_ interpreter.InvocationContext, _ runtime.Address) (uint64, error)
 	Programs                     map[runtime.Location]*runtime.Program
 	OnImplementationDebugLog     func(message string) error
 	OnValidatePublicKey          func(publicKey *stdlib.PublicKey) error
@@ -439,32 +439,44 @@ func (i *TestRuntimeInterface) SetCadenceValue(owner common.Address, key string,
 	return i.OnSetCadenceValue(owner, key, value)
 }
 
-func (i *TestRuntimeInterface) GetAccountBalance(address runtime.Address) (uint64, error) {
+func (i *TestRuntimeInterface) GetAccountBalance(
+	context interpreter.InvocationContext,
+	address runtime.Address,
+) (uint64, error) {
 	if i.OnGetAccountBalance == nil {
 		panic("must specify TestRuntimeInterface.OnGetAccountBalance")
 	}
-	return i.OnGetAccountBalance(address)
+	return i.OnGetAccountBalance(context, address)
 }
 
-func (i *TestRuntimeInterface) GetAccountAvailableBalance(address runtime.Address) (uint64, error) {
+func (i *TestRuntimeInterface) GetAccountAvailableBalance(
+	context interpreter.InvocationContext,
+	address runtime.Address,
+) (uint64, error) {
 	if i.OnGetAccountAvailableBalance == nil {
 		panic("must specify TestRuntimeInterface.OnGetAccountAvailableBalance")
 	}
-	return i.OnGetAccountAvailableBalance(address)
+	return i.OnGetAccountAvailableBalance(context, address)
 }
 
-func (i *TestRuntimeInterface) GetStorageUsed(address runtime.Address) (uint64, error) {
+func (i *TestRuntimeInterface) GetStorageUsed(
+	context interpreter.InvocationContext,
+	address runtime.Address,
+) (uint64, error) {
 	if i.OnGetStorageUsed == nil {
 		panic("must specify TestRuntimeInterface.OnGetStorageUsed")
 	}
-	return i.OnGetStorageUsed(address)
+	return i.OnGetStorageUsed(context, address)
 }
 
-func (i *TestRuntimeInterface) GetStorageCapacity(address runtime.Address) (uint64, error) {
+func (i *TestRuntimeInterface) GetStorageCapacity(
+	context interpreter.InvocationContext,
+	address runtime.Address,
+) (uint64, error) {
 	if i.OnGetStorageCapacity == nil {
 		panic("must specify TestRuntimeInterface.OnGetStorageCapacity")
 	}
-	return i.OnGetStorageCapacity(address)
+	return i.OnGetStorageCapacity(context, address)
 }
 
 func (i *TestRuntimeInterface) ImplementationDebugLog(message string) error {

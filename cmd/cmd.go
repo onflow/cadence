@@ -252,11 +252,17 @@ func (*StandardLibraryHandler) GetCurrentBlockHeight() (uint64, error) {
 	return 0, goerrors.New("blocks are not supported in this environment")
 }
 
-func (*StandardLibraryHandler) GetAccountBalance(_ common.Address) (uint64, error) {
+func (*StandardLibraryHandler) GetAccountBalance(
+	_ interpreter.InvocationContext,
+	_ common.Address,
+) (uint64, error) {
 	return 0, goerrors.New("accounts are not supported in this environment")
 }
 
-func (*StandardLibraryHandler) GetAccountAvailableBalance(_ common.Address) (uint64, error) {
+func (*StandardLibraryHandler) GetAccountAvailableBalance(
+	_ interpreter.InvocationContext,
+	_ common.Address,
+) (uint64, error) {
 	return 0, goerrors.New("accounts are not supported in this environment")
 }
 
@@ -265,11 +271,17 @@ func (*StandardLibraryHandler) CommitStorageTemporarily(_ interpreter.ValueTrans
 	return nil
 }
 
-func (*StandardLibraryHandler) GetStorageUsed(_ common.Address) (uint64, error) {
+func (*StandardLibraryHandler) GetStorageUsed(
+	_ interpreter.InvocationContext,
+	_ common.Address,
+) (uint64, error) {
 	return 0, goerrors.New("accounts are not supported in this environment")
 }
 
-func (*StandardLibraryHandler) GetStorageCapacity(_ common.Address) (uint64, error) {
+func (*StandardLibraryHandler) GetStorageCapacity(
+	_ interpreter.InvocationContext,
+	_ common.Address,
+) (uint64, error) {
 	return 0, goerrors.New("accounts are not supported in this environment")
 }
 

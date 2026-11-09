@@ -333,9 +333,12 @@ func (e ExternalInterface) Hash(data []byte, tag string, hashAlgorithm HashAlgor
 	return
 }
 
-func (e ExternalInterface) GetAccountBalance(address common.Address) (value uint64, err error) {
+func (e ExternalInterface) GetAccountBalance(
+	context interpreter.InvocationContext,
+	address common.Address,
+) (value uint64, err error) {
 	errors.WrapPanic(func() {
-		value, err = e.Interface.GetAccountBalance(address)
+		value, err = e.Interface.GetAccountBalance(context, address)
 	})
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)
@@ -343,9 +346,12 @@ func (e ExternalInterface) GetAccountBalance(address common.Address) (value uint
 	return
 }
 
-func (e ExternalInterface) GetAccountAvailableBalance(address common.Address) (value uint64, err error) {
+func (e ExternalInterface) GetAccountAvailableBalance(
+	context interpreter.InvocationContext,
+	address common.Address,
+) (value uint64, err error) {
 	errors.WrapPanic(func() {
-		value, err = e.Interface.GetAccountAvailableBalance(address)
+		value, err = e.Interface.GetAccountAvailableBalance(context, address)
 	})
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)
@@ -353,9 +359,12 @@ func (e ExternalInterface) GetAccountAvailableBalance(address common.Address) (v
 	return
 }
 
-func (e ExternalInterface) GetStorageUsed(address Address) (usage uint64, err error) {
+func (e ExternalInterface) GetStorageUsed(
+	context interpreter.InvocationContext,
+	address Address,
+) (usage uint64, err error) {
 	errors.WrapPanic(func() {
-		usage, err = e.Interface.GetStorageUsed(address)
+		usage, err = e.Interface.GetStorageUsed(context, address)
 	})
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)
@@ -363,9 +372,12 @@ func (e ExternalInterface) GetStorageUsed(address Address) (usage uint64, err er
 	return
 }
 
-func (e ExternalInterface) GetStorageCapacity(address Address) (capacity uint64, err error) {
+func (e ExternalInterface) GetStorageCapacity(
+	context interpreter.InvocationContext,
+	address Address,
+) (capacity uint64, err error) {
 	errors.WrapPanic(func() {
-		capacity, err = e.Interface.GetStorageCapacity(address)
+		capacity, err = e.Interface.GetStorageCapacity(context, address)
 	})
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)

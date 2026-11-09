@@ -247,7 +247,7 @@ func TestRuntimeAccountStorage(t *testing.T) {
 		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
-		OnGetStorageUsed: func(_ Address) (uint64, error) {
+		OnGetStorageUsed: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			var amount uint64 = 0
 
 			for _, data := range storage.StoredValues {
@@ -1877,7 +1877,7 @@ func TestRuntimeStorageUsed(t *testing.T) {
 
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: ledger,
-		OnGetStorageUsed: func(_ Address) (uint64, error) {
+		OnGetStorageUsed: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			return 1, nil
 		},
 	}
