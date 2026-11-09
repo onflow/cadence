@@ -95,7 +95,7 @@ type TestRuntimeInterface struct {
 	OnSetCadenceValue            func(owner runtime.Address, key string, value cadence.Value) (err error)
 	OnGetAccountBalance          func(_ interpreter.InvocationContext, _ runtime.Address) (uint64, error)
 	OnGetAccountAvailableBalance func(_ interpreter.InvocationContext, _ runtime.Address) (uint64, error)
-	OnGetStorageUsed             func(_ runtime.Address) (uint64, error)
+	OnGetStorageUsed             func(_ interpreter.InvocationContext, _ runtime.Address) (uint64, error)
 	OnGetStorageCapacity         func(_ interpreter.InvocationContext, _ runtime.Address) (uint64, error)
 	Programs                     map[runtime.Location]*runtime.Program
 	OnImplementationDebugLog     func(message string) error
@@ -459,11 +459,14 @@ func (i *TestRuntimeInterface) GetAccountAvailableBalance(
 	return i.OnGetAccountAvailableBalance(context, address)
 }
 
-func (i *TestRuntimeInterface) GetStorageUsed(address runtime.Address) (uint64, error) {
+func (i *TestRuntimeInterface) GetStorageUsed(
+	context interpreter.InvocationContext,
+	address runtime.Address,
+) (uint64, error) {
 	if i.OnGetStorageUsed == nil {
 		panic("must specify TestRuntimeInterface.OnGetStorageUsed")
 	}
-	return i.OnGetStorageUsed(address)
+	return i.OnGetStorageUsed(context, address)
 }
 
 func (i *TestRuntimeInterface) GetStorageCapacity(

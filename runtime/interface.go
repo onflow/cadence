@@ -119,7 +119,7 @@ type Interface interface {
 	// GetAccountAvailableBalance gets accounts default flow token balance - balance that is reserved for storage.
 	GetAccountAvailableBalance(context interpreter.InvocationContext, address common.Address) (value uint64, err error)
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
-	GetStorageUsed(address Address) (value uint64, err error)
+	GetStorageUsed(context interpreter.InvocationContext, address Address) (value uint64, err error)
 	// GetStorageCapacity gets storage capacity in bytes on the address.
 	GetStorageCapacity(context interpreter.InvocationContext, address Address) (value uint64, err error)
 	// ImplementationDebugLog logs implementation log statements on a debug-level

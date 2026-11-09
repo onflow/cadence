@@ -271,7 +271,10 @@ func (*StandardLibraryHandler) CommitStorageTemporarily(_ interpreter.ValueTrans
 	return nil
 }
 
-func (*StandardLibraryHandler) GetStorageUsed(_ common.Address) (uint64, error) {
+func (*StandardLibraryHandler) GetStorageUsed(
+	_ interpreter.InvocationContext,
+	_ common.Address,
+) (uint64, error) {
 	return 0, goerrors.New("accounts are not supported in this environment")
 }
 

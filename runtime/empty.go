@@ -163,7 +163,10 @@ func (EmptyRuntimeInterface) GetAccountAvailableBalance(
 	panic("unexpected call to GetAccountAvailableBalance")
 }
 
-func (EmptyRuntimeInterface) GetStorageUsed(_ Address) (value uint64, err error) {
+func (EmptyRuntimeInterface) GetStorageUsed(
+	_ interpreter.InvocationContext,
+	_ Address,
+) (value uint64, err error) {
 	panic("unexpected call to GetStorageUsed")
 }
 

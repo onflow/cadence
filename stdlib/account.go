@@ -523,7 +523,7 @@ func newAccountAvailableBalanceGetFunction(
 type StorageUsedProvider interface {
 	StorageCommitter
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
-	GetStorageUsed(address common.Address) (uint64, error)
+	GetStorageUsed(context interpreter.InvocationContext, address common.Address) (uint64, error)
 }
 
 func newStorageUsedGetFunction(
@@ -546,7 +546,7 @@ func newStorageUsedGetFunction(
 		return interpreter.NewUInt64Value(
 			context,
 			func() uint64 {
-				capacity, err := provider.GetStorageUsed(address)
+				capacity, err := provider.GetStorageUsed(context, address)
 				if err != nil {
 					panic(err)
 				}
@@ -557,7 +557,6 @@ func newStorageUsedGetFunction(
 }
 
 type StorageCapacityProvider interface {
-	StorageCommitter
 	// GetStorageCapacity gets storage capacity in bytes on the address.
 	GetStorageCapacity(context interpreter.InvocationContext, address common.Address) (uint64, error)
 }
@@ -572,13 +571,9 @@ func newStorageCapacityGetFunction(
 
 	return func(context interpreter.MemberAccessibleContext) interpreter.UInt64Value {
 
-		// NOTE: flush the cached values, so the host environment
-		// can properly calculate the amount of storage available for the account
-		err := provider.CommitStorageTemporarily(context)
-		if err != nil {
-			panic(err)
-		}
-
+		// NOTE: unlike for the storage used, the cached values are not flushed:
+		// the host environment calculates the capacity on the given context,
+		// which has the current values.
 		return interpreter.NewUInt64Value(
 			context,
 			func() uint64 {
@@ -589,7 +584,6 @@ func newStorageCapacityGetFunction(
 				return capacity
 			},
 		)
-
 	}
 }
 

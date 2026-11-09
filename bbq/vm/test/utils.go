@@ -48,7 +48,7 @@ type testAccountHandler struct {
 	getAccountBalance          func(context interpreter.InvocationContext, address common.Address) (uint64, error)
 	getAccountAvailableBalance func(context interpreter.InvocationContext, address common.Address) (uint64, error)
 	commitStorageTemporarily   func(context interpreter.ValueTransferContext) error
-	getStorageUsed             func(address common.Address) (uint64, error)
+	getStorageUsed             func(context interpreter.InvocationContext, address common.Address) (uint64, error)
 	getStorageCapacity         func(context interpreter.InvocationContext, address common.Address) (uint64, error)
 	validatePublicKey          func(key *stdlib.PublicKey) error
 	verifySignature            func(
@@ -148,11 +148,14 @@ func (t *testAccountHandler) CommitStorageTemporarily(context interpreter.ValueT
 	return t.commitStorageTemporarily(context)
 }
 
-func (t *testAccountHandler) GetStorageUsed(address common.Address) (uint64, error) {
+func (t *testAccountHandler) GetStorageUsed(
+	context interpreter.InvocationContext,
+	address common.Address,
+) (uint64, error) {
 	if t.getStorageUsed == nil {
 		panic(errors.NewUnexpectedError("unexpected call to GetStorageUsed"))
 	}
-	return t.getStorageUsed(address)
+	return t.getStorageUsed(context, address)
 }
 
 func (t *testAccountHandler) GetStorageCapacity(

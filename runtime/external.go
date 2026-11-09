@@ -359,9 +359,12 @@ func (e ExternalInterface) GetAccountAvailableBalance(
 	return
 }
 
-func (e ExternalInterface) GetStorageUsed(address Address) (usage uint64, err error) {
+func (e ExternalInterface) GetStorageUsed(
+	context interpreter.InvocationContext,
+	address Address,
+) (usage uint64, err error) {
 	errors.WrapPanic(func() {
-		usage, err = e.Interface.GetStorageUsed(address)
+		usage, err = e.Interface.GetStorageUsed(context, address)
 	})
 	if err != nil {
 		err = interpreter.WrappedExternalError(err)

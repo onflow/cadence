@@ -5590,7 +5590,7 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 			// return a dummy value
 			return 152300000000, nil
 		},
-		OnGetStorageUsed: func(_ Address) (uint64, error) {
+		OnGetStorageUsed: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			// return a dummy value
 			return 120, nil
 		},
@@ -8903,10 +8903,10 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
     `)
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAccountBalance:          noopRuntimeContextUInt64Getter,
-		OnGetAccountAvailableBalance: noopRuntimeContextUInt64Getter,
+		OnGetAccountBalance:          noopRuntimeUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
-		OnGetStorageCapacity:         noopRuntimeContextUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
 		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
@@ -8961,10 +8961,10 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
     `)
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAccountBalance:          noopRuntimeContextUInt64Getter,
-		OnGetAccountAvailableBalance: noopRuntimeContextUInt64Getter,
+		OnGetAccountBalance:          noopRuntimeUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
-		OnGetStorageCapacity:         noopRuntimeContextUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
 		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}

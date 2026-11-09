@@ -80,11 +80,7 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
 	assert.Contains(t, err.Error(), "cannot find variable in this scope: `AccountKey`")
 }
 
-func noopRuntimeUInt64Getter(_ common.Address) (uint64, error) {
-	return 0, nil
-}
-
-func noopRuntimeContextUInt64Getter(_ interpreter.InvocationContext, _ common.Address) (uint64, error) {
+func noopRuntimeUInt64Getter(_ interpreter.InvocationContext, _ common.Address) (uint64, error) {
 	return 0, nil
 }
 
@@ -105,10 +101,10 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
     `)
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAccountBalance:          noopRuntimeContextUInt64Getter,
-		OnGetAccountAvailableBalance: noopRuntimeContextUInt64Getter,
+		OnGetAccountBalance:          noopRuntimeUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
-		OnGetStorageCapacity:         noopRuntimeContextUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
 		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
@@ -141,10 +137,10 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
     `)
 
 	runtimeInterface := &TestRuntimeInterface{
-		OnGetAccountBalance:          noopRuntimeContextUInt64Getter,
-		OnGetAccountAvailableBalance: noopRuntimeContextUInt64Getter,
+		OnGetAccountBalance:          noopRuntimeUInt64Getter,
+		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
-		OnGetStorageCapacity:         noopRuntimeContextUInt64Getter,
+		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
 		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
@@ -184,6 +180,10 @@ func TestRuntimeAccountFieldsOnContext(t *testing.T) {
             access(all) fun capacity(_ account: auth(CopyValue) &Account): UInt64 {
                 return account.storage.copy<UInt64>(from: /storage/capacity)!
             }
+
+            access(all) fun used(_ account: auth(CopyValue) &Account): UInt64 {
+                return account.storage.copy<UInt64>(from: /storage/used)!
+            }
         }
     `)
 
@@ -195,10 +195,12 @@ func TestRuntimeAccountFieldsOnContext(t *testing.T) {
                 signer.storage.save(1.0, to: /storage/balance)
                 signer.storage.save(2.0, to: /storage/availableBalance)
                 signer.storage.save(UInt64(3), to: /storage/capacity)
+                signer.storage.save(UInt64(4), to: /storage/used)
 
                 assert(signer.balance == 1.0)
                 assert(signer.availableBalance == 2.0)
                 assert(signer.storage.capacity == 3)
+                assert(signer.storage.used == 4)
             }
         }
     `)
@@ -274,6 +276,10 @@ func TestRuntimeAccountFieldsOnContext(t *testing.T) {
 		OnGetStorageCapacity: func(context interpreter.InvocationContext, address Address) (uint64, error) {
 			capacity := invoke(context, "capacity", address).(cadence.UInt64)
 			return uint64(capacity), nil
+		},
+		OnGetStorageUsed: func(context interpreter.InvocationContext, address Address) (uint64, error) {
+			used := invoke(context, "used", address).(cadence.UInt64)
+			return uint64(used), nil
 		},
 	}
 
@@ -2870,7 +2876,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
         `)
 
 		runtimeInterface := &TestRuntimeInterface{
-			OnGetStorageUsed: func(_ Address) (uint64, error) {
+			OnGetStorageUsed: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				return 1, nil
 			},
 		}
@@ -2999,7 +3005,7 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
         `)
 
 		runtimeInterface := &TestRuntimeInterface{
-			OnGetStorageUsed: func(_ Address) (uint64, error) {
+			OnGetStorageUsed: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				return 1, nil
 			},
 		}
