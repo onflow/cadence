@@ -3405,7 +3405,30 @@ func TestRuntimeInvokeContractFunctionOnContext(t *testing.T) {
                 account.storage.save(42, to: /storage/setupValue)
             }
 
-            access(all) fun setup2(_ arg: String) {}
+            access(all) fun check(
+                address: Address,
+                path: PublicPath,
+                bytes: [UInt8],
+                indices: [UInt64],
+                signatures: [[UInt8]],
+                fixedBytes: [UInt8; 2],
+                message: String
+            ): String {
+                assert(address == Address(0x2))
+                assert(path == /public/foo)
+                assert(bytes.length == 3 && bytes[0] == 1 && bytes[1] == 2 && bytes[2] == 3)
+                assert(indices.length == 2 && indices[0] == 4 && indices[1] == 5)
+                assert(signatures.length == 2)
+                assert(signatures[0].length == 1 && signatures[0][0] == 6)
+                assert(signatures[1].length == 2 && signatures[1][0] == 7 && signatures[1][1] == 8)
+                assert(fixedBytes[0] == 9 && fixedBytes[1] == 10)
+                assert(message == "foo")
+                return "ok"
+            }
+
+            access(all) fun usePublicKey(_ key: PublicKey) {}
+
+            access(all) fun useHashAlgorithm(_ algorithm: HashAlgorithm) {}
         }
     `)
 
@@ -3474,21 +3497,78 @@ func TestRuntimeInvokeContractFunctionOnContext(t *testing.T) {
 			)
 			require.NoError(t, setupErr)
 
-			// An argument whose conversion would require an environment (here, a String)
-			// is unsupported and must be rejected.
-			_, setup2Err := InvokeContractFunctionOnContext(
+			// Arguments of other types are imported without an environment.
+			checkResult, checkErr := InvokeContractFunctionOnContext(
 				context,
 				testLocation,
-				"setup2",
+				"check",
 				[]cadence.Value{
+					cadence.Address(newAccountAddress),
+					cadence.Path{Domain: common.PathDomainPublic, Identifier: "foo"},
+					newBytesValue([]byte{1, 2, 3}),
+					cadence.NewArray([]cadence.Value{
+						cadence.NewUInt64(4),
+						cadence.NewUInt64(5),
+					}).WithType(cadence.NewVariableSizedArrayType(cadence.UInt64Type)),
+					cadence.NewArray([]cadence.Value{
+						newBytesValue([]byte{6}),
+						newBytesValue([]byte{7, 8}),
+					}).WithType(cadence.NewVariableSizedArrayType(
+						cadence.NewVariableSizedArrayType(cadence.UInt8Type),
+					)),
+					cadence.NewArray([]cadence.Value{
+						cadence.NewUInt8(9),
+						cadence.NewUInt8(10),
+					}).WithType(cadence.NewConstantSizedArrayType(2, cadence.UInt8Type)),
 					cadence.String("foo"),
 				},
 				[]sema.Type{
+					sema.TheAddressType,
+					sema.PublicPathType,
+					sema.ByteArrayType,
+					sema.NewVariableSizedType(nil, sema.UInt64Type),
+					sema.NewVariableSizedType(nil, sema.ByteArrayType),
+					sema.NewConstantSizedType(nil, sema.UInt8Type, 2),
 					sema.StringType,
 				},
 			)
-			require.Error(t, setup2Err)
-			assert.ErrorContains(t, setup2Err, "without an environment")
+			require.NoError(t, checkErr)
+			assert.Equal(t, cadence.String("ok"), checkResult)
+
+			// Values that need the standard library handler
+			// cannot be imported without an environment and must be rejected.
+			_, publicKeyErr := InvokeContractFunctionOnContext(
+				context,
+				testLocation,
+				"usePublicKey",
+				[]cadence.Value{
+					cadence.NewStruct([]cadence.Value{
+						newBytesValue([]byte{1, 2, 3}),
+						newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+					}).WithType(PublicKeyType),
+				},
+				[]sema.Type{
+					sema.PublicKeyType,
+				},
+			)
+			require.Error(t, publicKeyErr)
+			assert.ErrorContains(t, publicKeyErr, "without a standard library handler")
+
+			_, hashAlgorithmErr := InvokeContractFunctionOnContext(
+				context,
+				testLocation,
+				"useHashAlgorithm",
+				[]cadence.Value{
+					cadence.NewEnum([]cadence.Value{
+						cadence.NewUInt8(sema.HashAlgorithmSHA3_256.RawValue()),
+					}).WithType(HashAlgoType),
+				},
+				[]sema.Type{
+					sema.HashAlgorithmType,
+				},
+			)
+			require.Error(t, hashAlgorithmErr)
+			assert.ErrorContains(t, hashAlgorithmErr, "without a standard library handler")
 
 			return newAccountAddress, setupErr
 		},
@@ -5502,19 +5582,19 @@ func TestRuntimeResourceOwnerFieldUseComposite(t *testing.T) {
 		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		OnGetAccountBalance: func(_ Address) (uint64, error) {
+		OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			// return a dummy value
 			return 12300000000, nil
 		},
-		OnGetAccountAvailableBalance: func(_ Address) (uint64, error) {
+		OnGetAccountAvailableBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			// return a dummy value
 			return 152300000000, nil
 		},
-		OnGetStorageUsed: func(_ Address) (uint64, error) {
+		OnGetStorageUsed: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			// return a dummy value
 			return 120, nil
 		},
-		OnGetStorageCapacity: func(_ Address) (uint64, error) {
+		OnGetStorageCapacity: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			// return a dummy value
 			return 1245, nil
 		},
@@ -13830,7 +13910,7 @@ func TestRuntimeInvokeContractFunctionImported(t *testing.T) {
 			events = append(events, event)
 			return nil
 		},
-		OnGetAccountBalance: func(_ Address) (uint64, error) {
+		OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 			return 0, nil
 		},
 		OnGenerateUUID: func() (uint64, error) {
@@ -14330,7 +14410,7 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			OnGetAccountBalance: func(_ Address) (uint64, error) {
+			OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				return 0, nil
 			},
 			OnGenerateUUID: func() (uint64, error) {
@@ -14434,7 +14514,7 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			OnGetAccountBalance: func(_ Address) (uint64, error) {
+			OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				return 0, nil
 			},
 			OnGenerateUUID: func() (uint64, error) {
@@ -14545,7 +14625,7 @@ func TestRuntimeContractAccessInInheritedCode(t *testing.T) {
 				events = append(events, event)
 				return nil
 			},
-			OnGetAccountBalance: func(_ Address) (uint64, error) {
+			OnGetAccountBalance: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				return 0, nil
 			},
 			OnGenerateUUID: func() (uint64, error) {

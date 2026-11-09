@@ -314,8 +314,8 @@ func NewAccountValue(
 	return interpreter.NewAccountValue(
 		context,
 		addressValue,
-		newAccountBalanceGetFunction(context, handler, addressValue),
-		newAccountAvailableBalanceGetFunction(context, handler, addressValue),
+		newAccountBalanceGetFunction(handler, addressValue),
+		newAccountAvailableBalanceGetFunction(handler, addressValue),
 		func() interpreter.Value {
 			return newAccountStorageValue(
 				context,
@@ -472,21 +472,20 @@ func newAccountKeysValue(
 
 type BalanceProvider interface {
 	// GetAccountBalance gets accounts default flow token balance.
-	GetAccountBalance(address common.Address) (uint64, error)
+	GetAccountBalance(context interpreter.InvocationContext, address common.Address) (uint64, error)
 }
 
 func newAccountBalanceGetFunction(
-	gauge common.MemoryGauge,
 	provider BalanceProvider,
 	addressValue interpreter.AddressValue,
-) func() interpreter.UFix64Value {
+) func(context interpreter.MemberAccessibleContext) interpreter.UFix64Value {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return func() interpreter.UFix64Value {
-		return interpreter.NewUFix64Value(gauge, func() uint64 {
-			balance, err := provider.GetAccountBalance(address)
+	return func(context interpreter.MemberAccessibleContext) interpreter.UFix64Value {
+		return interpreter.NewUFix64Value(context, func() uint64 {
+			balance, err := provider.GetAccountBalance(context, address)
 			if err != nil {
 				panic(err)
 			}
@@ -498,21 +497,20 @@ func newAccountBalanceGetFunction(
 
 type AvailableBalanceProvider interface {
 	// GetAccountAvailableBalance gets accounts default flow token balance - balance that is reserved for storage.
-	GetAccountAvailableBalance(address common.Address) (uint64, error)
+	GetAccountAvailableBalance(context interpreter.InvocationContext, address common.Address) (uint64, error)
 }
 
 func newAccountAvailableBalanceGetFunction(
-	gauge common.MemoryGauge,
 	provider AvailableBalanceProvider,
 	addressValue interpreter.AddressValue,
-) func() interpreter.UFix64Value {
+) func(context interpreter.MemberAccessibleContext) interpreter.UFix64Value {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return func() interpreter.UFix64Value {
-		return interpreter.NewUFix64Value(gauge, func() uint64 {
-			balance, err := provider.GetAccountAvailableBalance(address)
+	return func(context interpreter.MemberAccessibleContext) interpreter.UFix64Value {
+		return interpreter.NewUFix64Value(context, func() uint64 {
+			balance, err := provider.GetAccountAvailableBalance(context, address)
 			if err != nil {
 				panic(err)
 			}
@@ -525,7 +523,7 @@ func newAccountAvailableBalanceGetFunction(
 type StorageUsedProvider interface {
 	StorageCommitter
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
-	GetStorageUsed(address common.Address) (uint64, error)
+	GetStorageUsed(context interpreter.InvocationContext, address common.Address) (uint64, error)
 }
 
 func newStorageUsedGetFunction(
@@ -548,7 +546,7 @@ func newStorageUsedGetFunction(
 		return interpreter.NewUInt64Value(
 			context,
 			func() uint64 {
-				capacity, err := provider.GetStorageUsed(address)
+				capacity, err := provider.GetStorageUsed(context, address)
 				if err != nil {
 					panic(err)
 				}
@@ -559,9 +557,8 @@ func newStorageUsedGetFunction(
 }
 
 type StorageCapacityProvider interface {
-	StorageCommitter
 	// GetStorageCapacity gets storage capacity in bytes on the address.
-	GetStorageCapacity(address common.Address) (uint64, error)
+	GetStorageCapacity(context interpreter.InvocationContext, address common.Address) (uint64, error)
 }
 
 func newStorageCapacityGetFunction(
@@ -574,24 +571,19 @@ func newStorageCapacityGetFunction(
 
 	return func(context interpreter.MemberAccessibleContext) interpreter.UInt64Value {
 
-		// NOTE: flush the cached values, so the host environment
-		// can properly calculate the amount of storage available for the account
-		err := provider.CommitStorageTemporarily(context)
-		if err != nil {
-			panic(err)
-		}
-
+		// NOTE: unlike for the storage used, the cached values are not flushed:
+		// the host environment calculates the capacity on the given context,
+		// which has the current values.
 		return interpreter.NewUInt64Value(
 			context,
 			func() uint64 {
-				capacity, err := provider.GetStorageCapacity(address)
+				capacity, err := provider.GetStorageCapacity(context, address)
 				if err != nil {
 					panic(err)
 				}
 				return capacity
 			},
 		)
-
 	}
 }
 

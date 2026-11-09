@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/errors"
+	"github.com/onflow/cadence/interpreter"
 	. "github.com/onflow/cadence/runtime"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 	. "github.com/onflow/cadence/test_utils/runtime_utils"
@@ -856,7 +857,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			OnGetStorageUsed: func(_ Address) (uint64, error) {
+			OnGetStorageUsed: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				// Before the storageUsed function is invoked, the deltas must have been committed.
 				// So the encoded slabs must have been metered at this point.
 				assert.Equal(t, uint64(0), memoryGauge.getMemory(common.MemoryKindAtreeEncodedSlab))
@@ -948,7 +949,7 @@ func TestRuntimeStorageCommitsMetering(t *testing.T) {
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
 			},
-			OnGetStorageUsed: func(_ Address) (uint64, error) {
+			OnGetStorageUsed: func(_ interpreter.InvocationContext, _ Address) (uint64, error) {
 				// Before the storageUsed function is invoked, the deltas must have been committed.
 				// So the encoded slabs must have been metered at this point.
 				assert.Equal(t,
